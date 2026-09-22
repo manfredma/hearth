@@ -118,7 +118,7 @@
 
 - [ ] **Step 5: Run module tests and architecture checks.**
 
-  Run `./mvnw -pl hearth-domain,hearth-start -Dtest='**/*Test' test` and the existing ArchUnit test after renaming its package to `manfred.hearth`.
+  Run `./mvnw -pl hearth-domain,hearth-start -am -Dtest='**/*Test' test` and the existing ArchUnit test after renaming its package to `manfred.hearth`.
 
 - [ ] **Step 6: Commit the boot skeleton.**
 
@@ -132,7 +132,9 @@
 **Files:**
 - Create: `hearth-domain/src/main/java/manfred/hearth/domain/identity/IdentityAccount.java`
 - Create: `hearth-domain/src/main/java/manfred/hearth/domain/access/ApplicationAccess.java`
+- Create: `hearth-app/src/main/java/manfred/hearth/app/identity/IdentityProfile.java`
 - Create: `hearth-app/src/main/java/manfred/hearth/app/identity/IdentityDirectoryPort.java`
+- Create: `hearth-app/src/main/java/manfred/hearth/app/application/ApplicationRegistrationRepository.java`
 - Create: `hearth-app/src/main/java/manfred/hearth/app/access/ApplicationAccessPort.java`
 - Create: `hearth-app/src/main/java/manfred/hearth/app/access/GrantApplicationAccessCmd.java`
 - Create: `hearth-app/src/main/java/manfred/hearth/app/access/GrantApplicationAccessCmdExe.java`
@@ -144,7 +146,9 @@
 - Modify: `hearth-start/src/test/java/manfred/hearth/MigrationScriptsTest.java`
 
 **Interfaces:**
+- `IdentityProfile(String displayName, String email)` is an immutable application DTO that allows a blank email but not a blank display name.
 - `IdentityDirectoryPort.findOrCreate(IdentitySubject subject, IdentityProfile profile): IdentityAccount`.
+- `ApplicationRegistrationRepository.findByKey(ApplicationKey key): Optional<ApplicationRegistration>` and `listAll(): List<ApplicationRegistration>`.
 - `ApplicationAccessPort.grant(UUID userId, ApplicationKey application, String roleKey): ApplicationAccess`.
 - `ApplicationAccessPort.hasAccess(UUID userId, ApplicationKey application): boolean`.
 - The schema uses `user_identity(issuer, subject)` as a unique key, `application`, `application_access`, and `audit_event`; it stores no password hash and no business resource ACL.
@@ -318,9 +322,9 @@
 
   Make staging require a distinct issuer, database name, Redis namespace, cookie name, and Client ID from production. Document that a future Keycloak/ZITADEL realm must be provisioned separately per environment and that credentials are injected by the deployment host, never committed.
 
-- [ ] **Step 5: Build and test the container locally.**
+- [ ] **Step 5: Validate deployment configuration locally.**
 
-  Run `bash scripts/test-deploy-hearth-config.sh`, `docker compose --env-file deploy/.env.example -f deploy/docker-compose.single-host.yml config`, and the Docker build with the repository's fixed Maven 25 image. Any warning or configuration error stops the task.
+  Run `bash scripts/test-deploy-hearth-config.sh` and `docker compose --env-file deploy/.env.example -f deploy/docker-compose.single-host.yml config`. Local Docker output is only a syntax/configuration check; image builds, MySQL, Redis, Flyway, and container integration evidence belong to staging. Any warning or configuration error stops the task.
 
 - [ ] **Step 6: Commit the isolated deployment topology.**
 
