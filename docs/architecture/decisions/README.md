@@ -1,6 +1,6 @@
 # 架构决策记录（ADR）
 
-本目录记录 bytedepth 的架构决策，随 Git 历史和对应 PR 一起评审。
+本目录记录 Hearth 的架构决策，随 Git 历史和对应 PR 一起评审。Hearth 使用 bytedepth 的工程规范和知识库结构作为模板，但身份领域的决策以本目录为准。
 
 ## 编号与状态
 
@@ -16,19 +16,15 @@
 
 小改动可只在提交信息和 PR 描述中说明。
 
-## 索引
+## Hearth 决策索引
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| [ADR-0001](0001-published-post-driven-rss.md) | 由已发布文章状态动态生成 RSS | Proposed | 2026-09-08 |
-| [ADR-0002](0002-staging-integration-test-boundary.md) | 将跨进程测试固定为 staging 集成测试 | Accepted | 2026-09-10 |
-| [ADR-0003](0003-observable-isolated-delivery-pipeline.md) | 可观测且隔离的交付流水线 | Accepted | 2026-09-12 |
-| [ADR-0004](0004-shared-staging-chromium.md) | 共享 staging Chromium 运行时 | Accepted | 2026-09-13 |
-| [ADR-0005](0005-pinned-maven-runtime.md) | 固定跨环境 Maven 运行时 | Accepted | 2026-09-13 |
-| [ADR-0006](0006-unified-release-pipeline.md) | 统一三项目发布流水线 | Accepted | 2026-09-13 |
-| [ADR-0007](0007-release-readiness-metadata-gate.md) | 将发布变更记录前置为 staging 硬门禁 | Proposed | 2026-09-15 |
-| [ADR-0008](0008-production-entry-and-staging-preview-route.md) | 统一生产远程部署入口与 staging 预览路由 | Proposed | 2026-09-16 |
-| [ADR-0009](0009-tiered-view-log-retention.md) | 分层保留访问统计并由 Spring 定时归档 | Accepted | 2026-09-18 |
-| [ADR-0010](0010-post-content-version.md) | 将文章内容版本号存储在文章主表 | Accepted | 2026-09-20 |
-| [ADR-0011](0011-rendered-text-annotation-anchors.md) | 批注使用阅读页渲染文本作为锚点 | Accepted | 2026-09-21 |
-| [ADR-0012](0012-page-navigation-over-partial-replacement.md) | 文章级导航使用完整页面导航而非局部替换 | Proposed | 2026-09-22 |
+| [ADR-0001](0001-unified-identity-and-authorization-boundary.md) | 统一身份认证与业务授权边界 | Proposed | 2026-09-22 |
+| [ADR-0002](0002-oidc-oauth2-application-integration.md) | 使用 OIDC 与 OAuth 2.0 接入业务应用 | Proposed | 2026-09-22 |
+| [ADR-0003](0003-use-mature-identity-provider.md) | 认证协议核心采用成熟身份提供商 | Proposed | 2026-09-22 |
+| [ADR-0004](0004-isolated-identity-environments-and-stable-subject.md) | 隔离 staging 与生产身份环境并使用稳定 subject | Proposed | 2026-09-22 |
+
+## 模板继承记录
+
+从 bytedepth 模板导入的通用工程、质量和发布文档仍保留在仓库中；博客领域专属 ADR 在 Hearth 完成领域清理时移除或重新评估，不作为 Hearth 身份领域决策的依据。
