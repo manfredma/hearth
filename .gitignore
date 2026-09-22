@@ -1,0 +1,81 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+replay_pid*
+
+# Maven build output
+target/
+*.class
+*.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Maven Release Plugin transaction state. These files are regenerated locally;
+# clean them with `mvn release:clean` and never commit them.
+*.releaseBackup
+release.properties
+
+# Maven local settings (may contain credentials)
+settings.xml
+!.mvn/
+!.mvn/settings.xml
+
+# Machine-private deployment secrets. Keep the tracked *.example templates only.
+.env
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+
+# Tools
+.worktrees/
+.omc/
+.omx/
+.claude/
+.gstack/
+__pycache__/
+/scripts/obsidian-import/sync_state.json
+.superpowers/
+
+# Tool-generated analysis artifacts
+.understand-anything/
+.codegraph/
+
+# Node.js / frontend tooling
+node_modules/
+coverage/
+
+# MaxMind GeoLite2 数据库（约 60MB，手动部署，勿提交）
+# 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+# 部署路径：/opt/bytedepth/GeoLite2-City.mmdb
+# 配置：export BYTEDEPTH_GEOIP_DB_PATH=/opt/bytedepth/GeoLite2-City.mmdb
+*.mmdb
+
+# Playwright 测试产物
+test-results/
+playwright-report/

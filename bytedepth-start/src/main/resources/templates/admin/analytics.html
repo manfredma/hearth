@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
+    <title>访问统计 - bytedepth</title>
+    <script th:src="@{/vendor/echarts/echarts.min.js}"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               margin: 0; background: #f0f2f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+        /* 页头 */
+        .page-header { display: flex; justify-content: space-between;
+                       align-items: center; margin-bottom: 16px; }
+        h1 { margin: 0; color: #1a1a2e; font-size: 1.4em; }
+        .back-link { font-size: .85em; color: #888; text-decoration: none; }
+        .back-link:hover { color: var(--admin-accent); }
+
+        /* 时间 Tab */
+        .period-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+        .period-tab { padding: 6px 18px; border-radius: 20px; border: 1px solid #ddd;
+                      background: white; cursor: pointer; font-size: .88em;
+                      color: #555; transition: all .15s; }
+        .period-tab:hover { border-color: var(--admin-accent); color: var(--admin-accent); }
+        .period-tab.active { background: var(--admin-accent); color: white;
+                             border-color: var(--admin-accent); font-weight: 600; }
+        .time-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .time-controls .period-tabs { margin-bottom: 0; }
+        .date-range-picker { position: relative; display: flex; align-items: center; }
+        .date-range-trigger { display: inline-flex; align-items: center; gap: 9px; min-width: 245px;
+                              padding: 8px 12px; border: 1px solid #d7e0eb; border-radius: 10px;
+                              background: #fbfcfe; color: #26364d; cursor: pointer; font-size: .88em;
+                              transition: border-color .15s, box-shadow .15s, background .15s; }
+        .date-range-trigger:hover, .date-range-trigger[aria-expanded="true"] { border-color: var(--admin-accent); background: white; box-shadow: 0 0 0 3px rgba(47,128,237,.10); }
+        .date-range-trigger svg { color: var(--admin-accent); flex: 0 0 auto; }
+        .date-range-popover { position: absolute; z-index: 20; display: none; width: 320px; padding: 14px;
+                              border: 1px solid #d7e0eb; border-radius: 12px; background: white;
+                              box-shadow: 0 14px 32px rgba(36,55,80,.16); }
+        .date-range-popover.open { display: block; }
+        .date-range-popover-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .date-range-popover-head button { border: 0; background: transparent; color: #64748b; cursor: pointer; font-size: 18px; }
+        .date-range-month { font-weight: 600; color: #26364d; }
+        .date-range-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+        .date-range-weekday { padding-bottom: 4px; color: #7b8aa0; font-size: 11px; }
+        .date-range-day { height: 30px; border: 0; border-radius: 6px; background: transparent; color: #26364d; cursor: pointer; }
+        .date-range-day:hover { background: #eaf3ff; color: var(--admin-accent); }
+        .date-range-day.muted { color: #b8c1cc; }
+        .date-range-day.range { background: #eaf3ff; color: #245b9f; border-radius: 0; }
+        .date-range-day.start, .date-range-day.end { background: var(--admin-accent); color: white; }
+        .date-range-day.start { border-radius: 6px 0 0 6px; }
+        .date-range-day.end { border-radius: 0 6px 6px 0; }
+        .date-range-popover-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
+                                   padding-top: 9px; border-top: 1px solid #edf1f5; color: #64748b; font-size: 11px; }
+        .date-range-clear { border: 0; background: transparent; color: var(--admin-accent); cursor: pointer; }
+
+        /* 面包屑 */
+        .breadcrumb { font-size: .85em; color: #888; margin-bottom: 14px;
+                      min-height: 20px; }
+        .bc-link { color: var(--admin-accent); cursor: pointer; text-decoration: underline; }
+        .bc-link:hover { color: var(--admin-accent-hover); }
+        .bc-sep { margin: 0 6px; color: #ccc; }
+        .bc-current { color: #333; font-weight: 500; }
+
+        /* 主图区 */
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+                      margin-bottom: 16px; }
+        .chart-card { background: white; border-radius: 10px;
+                      box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 16px; }
+        .chart-title { font-size: .9em; font-weight: 600; color: #555;
+                       margin-bottom: 8px; }
+        #bar-chart  { width: 100%; height: 380px; }
+        #pie-chart  { width: 100%; height: 380px; }
+
+        /* 趋势区 */
+        .trend-card { background: white; border-radius: 10px;
+                      box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 16px; }
+        .trend-header { display: flex; justify-content: space-between;
+                        align-items: center; margin-bottom: 8px; }
+        .trend-title { font-size: .9em; font-weight: 600; color: #555; }
+        .btn-close { padding: 3px 12px; background: #f0f0f0; color: #555;
+                     border: none; border-radius: 4px; cursor: pointer;
+                     font-size: .82em; display: none; }
+        .btn-close:hover { background: #e0e0e0; }
+        #trend-chart { width: 100%; height: 260px; }
+
+        @media (max-width: 768px) {
+            .charts-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('analytics')}"></aside>
+<div class="admin-main">
+<div class="container">
+
+    <div class="page-header">
+        <h1>📊 访问统计分析</h1>
+    </div>
+
+    <!-- 维度切换：文章统计 / 页面统计 -->
+    <div class="period-tabs" style="margin-bottom: 8px;">
+        <button class="period-tab active" data-dim="post">📄 文章统计</button>
+        <button class="period-tab" data-dim="page">🗂 页面统计</button>
+    </div>
+
+    <!-- 时间维度 Tab -->
+    <div class="time-controls">
+      <div class="period-tabs">
+          <button class="period-tab" data-period="today">今天</button>
+          <button class="period-tab active" data-period="week">本周</button>
+          <button class="period-tab" data-period="month">本月</button>
+          <button class="period-tab" data-period="year">本年</button>
+          <button class="period-tab" data-period="all">全部</button>
+      </div>
+      <div class="date-range-picker" id="analytics-date-range" aria-label="日期范围选择">
+        <button class="date-range-trigger" id="date-range-trigger" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.25" y="3.25" width="11.5" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 2.5v2M11 2.5v2M2.5 6h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span id="date-range-label">日期范围</span>
+        </button>
+        <input id="analytics-from" type="hidden"><input id="analytics-to" type="hidden">
+        <div class="date-range-popover" id="date-range-popover" role="dialog" aria-label="选择日期范围">
+            <div class="date-range-popover-head"><button type="button" id="date-range-prev" aria-label="上个月">‹</button><span class="date-range-month" id="date-range-month"></span><button type="button" id="date-range-next" aria-label="下个月">›</button></div>
+            <div class="date-range-grid" id="date-range-grid"></div>
+            <div class="date-range-popover-foot"><span id="date-range-selection">请选择开始日期</span><button class="date-range-clear" id="clear-date-range" type="button">清除</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 面包屑（下钻路径，无下钻时为空） -->
+    <div class="breadcrumb" id="breadcrumb"></div>
+
+    <!-- 主图区：文章排名 + 国家分布 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-title" id="bar-title">📈 文章访问排名 Top 20</div>
+            <div id="bar-chart"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">🌍 国家 / 地区流量分布</div>
+            <div id="pie-chart"></div>
+        </div>
+    </div>
+
+    <!-- 趋势区 -->
+    <div class="trend-card">
+        <div class="trend-header">
+            <span class="trend-title" id="trend-title">📉 总体访问趋势</span>
+            <button class="btn-close" id="trend-close" onclick="closeTrend()">× 关闭</button>
+        </div>
+        <div id="trend-chart"></div>
+    </div>
+
+</div>
+<script th:src="@{/js/analytics-date-range.js}"></script>
+<script>
+    // ─── 状态 ────────────────────────────────────────────────────
+    const initialRange = AnalyticsDateRange.rangeForPeriod('week', new Date());
+    const state = {
+        period:    'week',
+        country:   null,
+        postId:    null,
+        postTitle: '',
+        from:      initialRange.from,
+        to:        initialRange.to,
+        granularity: null,
+        dimension: 'post'
+    };
+
+    function adminAccent() {
+        return getComputedStyle(document.querySelector('.admin-shell'))
+            .getPropertyValue('--admin-accent').trim();
+    }
+
+    function adminAccentArea() {
+        const rgb = getComputedStyle(document.querySelector('.admin-shell'))
+            .getPropertyValue('--admin-accent-rgb').trim().replaceAll(' ', ', ');
+        return `rgba(${rgb}, .10)`;
+    }
+
+    // ─── ECharts 实例 ────────────────────────────────────────────
+    let barChart, pieChart, trendChart;
+    let pickerMonth = new Date();
+    let selecting = 'from';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        barChart   = echarts.init(document.getElementById('bar-chart'));
+        pieChart   = echarts.init(document.getElementById('pie-chart'));
+        trendChart = echarts.init(document.getElementById('trend-chart'));
+        renderDateRangeLabel();
+        renderCalendar();
+        window.addEventListener('resize', () => {
+            barChart.resize(); pieChart.resize(); trendChart.resize();
+        });
+
+        // 时间 Tab 点击
+        document.querySelectorAll('.period-tab').forEach(tab => {
+            if (tab.dataset.period) {
+                tab.addEventListener('click', () => {
+                    applyPeriod(tab.dataset.period);
+                    loadAll();
+                });
+            }
+        });
+
+        // 维度 Tab 点击
+        document.querySelectorAll('[data-dim]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                state.dimension = tab.dataset.dim;
+                state.country = null; state.postId = null;
+                state.granularity = null;
+                document.querySelectorAll('[data-dim]')
+                        .forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                loadAll();
+            });
+        });
+
+        document.getElementById('date-range-trigger').addEventListener('click', toggleDatePicker);
+        document.getElementById('date-range-prev').addEventListener('click', () => { pickerMonth.setMonth(pickerMonth.getMonth() - 1); renderCalendar(); });
+        document.getElementById('date-range-next').addEventListener('click', () => { pickerMonth.setMonth(pickerMonth.getMonth() + 1); renderCalendar(); });
+        document.getElementById('clear-date-range').addEventListener('click', () => { state.from = null; state.to = null; state.period = 'custom'; closeDatePicker(); renderDateRangeLabel(); loadAll(); });
+
+        loadAll();
+    });
+
+    function applyPeriod(period) {
+        state.period = period;
+        const range = AnalyticsDateRange.rangeForPeriod(period, new Date());
+        state.from = range.from; state.to = range.to; state.granularity = 'auto'; state.postId = null; state.country = null;
+        document.querySelectorAll('.period-tab').forEach(t => t.classList.toggle('active', t.dataset.period === period));
+        renderDateRangeLabel();
+        renderCalendar();
+    }
+
+    function renderDateRangeLabel() { document.getElementById('date-range-label').textContent = state.from && state.to ? `${state.from} 至 ${state.to}` : '全部数据'; }
+    function toggleDatePicker() { const popover = document.getElementById('date-range-popover'); const open = popover.classList.toggle('open'); document.getElementById('date-range-trigger').setAttribute('aria-expanded', String(open)); if (open) { selecting = 'from'; pickerMonth = state.from ? new Date(`${state.from}T00:00:00`) : new Date(); renderCalendar(); positionDatePicker(); } }
+    function closeDatePicker() { document.getElementById('date-range-popover').classList.remove('open'); document.getElementById('date-range-trigger').setAttribute('aria-expanded', 'false'); }
+    function positionDatePicker() { const picker = document.getElementById('analytics-date-range'); const trigger = document.getElementById('date-range-trigger'); const popover = document.getElementById('date-range-popover'); popover.style.left = `${trigger.offsetLeft}px`; popover.style.top = `${trigger.offsetTop + trigger.offsetHeight + 8}px`; }
+    function renderCalendar() {
+        const month = pickerMonth.getMonth(); const year = pickerMonth.getFullYear();
+        document.getElementById('date-range-month').textContent = `${year}年${month + 1}月`;
+        const grid = document.getElementById('date-range-grid'); grid.innerHTML = ['日','一','二','三','四','五','六'].map(day => `<span class="date-range-weekday">${day}</span>`).join('');
+        const first = new Date(year, month, 1); const offset = first.getDay(); const days = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < offset; i++) grid.insertAdjacentHTML('beforeend', '<span></span>');
+        for (let day = 1; day <= days; day++) {
+            const value = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const classes = ['date-range-day']; if (state.from && value > state.from && state.to && value < state.to) classes.push('range'); if (value === state.from) classes.push('start'); if (value === state.to) classes.push('end');
+            const button = document.createElement('button'); button.type = 'button'; button.className = classes.join(' '); button.textContent = day; button.dataset.date = value; button.addEventListener('click', () => selectCalendarDate(value)); grid.appendChild(button);
+        }
+        document.getElementById('date-range-selection').textContent = selecting === 'from' ? '请选择开始日期' : `开始：${state.from}，请选择结束日期`;
+    }
+    function selectCalendarDate(value) {
+        if (selecting === 'from') { state.from = value; state.to = null; selecting = 'to'; state.period = 'custom'; document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active')); renderCalendar(); renderDateRangeLabel(); return; }
+        if (value < state.from) [state.from, state.to] = [value, state.from]; else state.to = value;
+        state.period = 'custom'; state.granularity = 'auto'; state.postId = null; state.country = null; renderDateRangeLabel(); closeDatePicker(); loadAll();
+    }
+
+    // ─── URL 构造 ────────────────────────────────────────────────
+    function buildUrl(path, params) {
+        const url = new URL(path, window.location.origin);
+        Object.entries(params).forEach(([k, v]) => {
+            if (v != null && v !== '') url.searchParams.set(k, String(v));
+        });
+        return url.toString();
+    }
+
+    // ─── 数据加载 ────────────────────────────────────────────────
+    function loadAll() {
+        document.getElementById('bar-title').textContent =
+            state.dimension === 'page' ? '🗂 页面访问排名 Top 20' : '📈 文章访问排名 Top 20';
+        if (state.dimension === 'page') {
+            loadTopPages();
+            loadPageCountries();
+            loadPageOverviewTrend();
+        } else {
+            loadTopPosts();
+            loadCountries();
+            loadOverviewTrend();
+        }
+        updateBreadcrumb();
+    }
+
+    function loadTopPosts() {
+        const url = state.country
+            ? buildUrl('/admin/analytics/api/country-posts', {
+                country: state.country, period: state.period,
+                from: state.from, to: state.to, limit: 20 })
+            : buildUrl('/admin/analytics/api/top-posts', {
+                period: state.period, from: state.from, to: state.to, limit: 20 });
+        fetch(url).then(r => r.json()).then(renderBarChart);
+    }
+
+    function loadCountries() {
+        const url = buildUrl('/admin/analytics/api/countries', {
+            period: state.period, from: state.from, to: state.to });
+        fetch(url).then(r => r.json()).then(renderPieChart);
+    }
+
+    function loadOverviewTrend() {
+        const url = buildUrl('/admin/analytics/api/overview-trend', {
+            period: state.period, from: state.from, to: state.to, granularity: state.granularity });
+        fetch(url).then(r => r.json()).then(data => {
+            renderTrendChart(data, '总体访问趋势', false);
+        });
+    }
+
+    function loadPostTrend(postId, postTitle) {
+        state.postId    = postId;
+        state.postTitle = postTitle;
+        const url = buildUrl('/admin/analytics/api/post-trend', {
+            postId, period: state.period, from: state.from, to: state.to,
+            granularity: state.granularity });
+        fetch(url).then(r => r.json()).then(data => {
+            renderTrendChart(data, postTitle, true);
+            updateBreadcrumb();
+        });
+    }
+
+    // ─── 页面统计加载（dimension === 'page'）────────────────────────────────
+
+    function loadTopPages() {
+        const url = state.country
+            ? buildUrl('/admin/analytics/api/country-pages', {
+                country: state.country, period: state.period,
+                from: state.from, to: state.to, limit: 20 })
+            : buildUrl('/admin/analytics/api/top-pages', {
+                period: state.period, from: state.from, to: state.to, limit: 20 });
+        fetch(url).then(r => r.json()).then(renderPageBarChart);
+    }
+
+    function loadPageCountries() {
+        const url = buildUrl('/admin/analytics/api/page-countries', {
+            period: state.period, from: state.from, to: state.to });
+        fetch(url).then(r => r.json()).then(renderPieChart);
+    }
+
+    function loadPageOverviewTrend() {
+        const url = buildUrl('/admin/analytics/api/page-overview-trend', {
+            period: state.period, from: state.from, to: state.to, granularity: state.granularity });
+        fetch(url).then(r => r.json()).then(data => {
+            renderTrendChart(data, '总体访问趋势', false);
+        });
+    }
+
+    function loadPageTrend(pagePath) {
+        state.postId    = null;
+        state.postTitle = pagePath;
+        const url = buildUrl('/admin/analytics/api/page-trend', {
+            pagePath, period: state.period, from: state.from, to: state.to,
+            granularity: state.granularity });
+        fetch(url).then(r => r.json()).then(data => {
+            renderTrendChart(data, pagePath, true);
+            updateBreadcrumb();
+        });
+    }
+
+    // ─── 图表渲染 ────────────────────────────────────────────────
+    function renderBarChart(data) {
+        if (!data.length) {
+            barChart.setOption({
+                graphic: [{ type: 'text', left: 'center', top: 'middle',
+                    style: { text: '暂无数据', fill: '#bbb', fontSize: 14 } }]
+            }, true);
+            return;
+        }
+        // ECharts 横向柱状图需要倒序（yAxis 从下到上显示）
+        const rev = [...data].reverse();
+        barChart.setOption({
+            tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' },
+                formatter: p => {
+                    const item = data[data.length - 1 - p[0].dataIndex];
+                    return `${p[0].name}<br/>访问量: <b>${p[0].value}</b> (${item?.percent ?? 0}%)`;
+                }
+            },
+            grid: { left: '2%', right: '70px', top: '8px', bottom: '4%', containLabel: true },
+            xAxis: { type: 'value', minInterval: 1 },
+            yAxis: {
+                type: 'category',
+                data: rev.map(d => d.postTitle || `#${d.postId}`),
+                axisLabel: { width: 160, overflow: 'truncate', fontSize: 11 }
+            },
+            series: [{
+                type: 'bar', data: rev.map(d => d.viewCount),
+                itemStyle: { color: adminAccent(), borderRadius: [0, 3, 3, 0] },
+                label: { show: true, position: 'right', fontSize: 11,
+                         formatter: '{c}', color: '#555' }
+            }]
+        }, true);
+
+        barChart.off('click');
+        barChart.on('click', params => {
+            const item = data[data.length - 1 - params.dataIndex];
+            if (item) loadPostTrend(item.postId,
+                item.postTitle || `文章 #${item.postId}`);
+        });
+    }
+
+    function renderPageBarChart(data) {
+        if (!data.length) {
+            barChart.setOption({
+                graphic: [{ type: 'text', left: 'center', top: 'middle',
+                    style: { text: '暂无数据', fill: '#bbb', fontSize: 14 } }]
+            }, true);
+            return;
+        }
+        const rev = [...data].reverse();
+        barChart.setOption({
+            tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' },
+                formatter: p => {
+                    const item = data[data.length - 1 - p[0].dataIndex];
+                    return `${p[0].name}<br/>访问量: <b>${p[0].value}</b> (${item?.percent ?? 0}%)`;
+                }
+            },
+            grid: { left: '2%', right: '70px', top: '8px', bottom: '4%', containLabel: true },
+            xAxis: { type: 'value', minInterval: 1 },
+            yAxis: {
+                type: 'category',
+                data: rev.map(d => d.pagePath),
+                axisLabel: { width: 160, overflow: 'truncate', fontSize: 11 }
+            },
+            series: [{
+                type: 'bar', data: rev.map(d => d.viewCount),
+                itemStyle: { color: adminAccent(), borderRadius: [0, 3, 3, 0] },
+                label: { show: true, position: 'right', fontSize: 11,
+                         formatter: '{c}', color: '#555' }
+            }]
+        }, true);
+
+        barChart.off('click');
+        barChart.on('click', params => {
+            const item = data[data.length - 1 - params.dataIndex];
+            if (item) loadPageTrend(item.pagePath);
+        });
+    }
+
+    function renderPieChart(data) {
+        if (!data.length) {
+            pieChart.setOption({
+                graphic: [{ type: 'text', left: 'center', top: 'middle',
+                    style: { text: '暂无数据', fill: '#bbb', fontSize: 14 } }]
+            }, true);
+            return;
+        }
+        pieChart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+            legend: { orient: 'vertical', right: '2%', top: 'middle',
+                      textStyle: { fontSize: 11 }, type: 'scroll' },
+            series: [{
+                type: 'pie', radius: ['35%', '62%'], center: ['42%', '50%'],
+                data: data.map(d => ({ name: d.country, value: d.viewCount })),
+                emphasis: {
+                    itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.2)' }
+                },
+                label: { formatter: '{b}\n{d}%', fontSize: 11 },
+                selectedMode: 'single'
+            }]
+        }, true);
+
+        pieChart.off('click');
+        pieChart.on('click', params => {
+            state.country = (state.country === params.name) ? null : params.name;
+            state.postId  = null;
+            if (state.dimension === 'page') {
+                loadTopPages();
+                loadPageOverviewTrend();
+            } else {
+                loadTopPosts();
+                loadOverviewTrend();
+            }
+            updateBreadcrumb();
+        });
+    }
+
+    function renderTrendChart(comparison, title, showClose) {
+        document.getElementById('trend-title').textContent =
+            (showClose ? '📈 ' : '📉 ') + title;
+        document.getElementById('trend-close').style.display =
+            showClose ? 'inline-block' : 'none';
+
+        const current = comparison.current || [];
+        const previous = comparison.previous || [];
+        if (!current.length) {
+            trendChart.setOption({
+                graphic: [{ type: 'text', left: 'center', top: 'middle',
+                    style: { text: '暂无数据', fill: '#bbb', fontSize: 14 } }]
+            }, true);
+            return;
+        }
+
+        trendChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: {
+                data: [comparison.currentPeriod, comparison.previousPeriod],
+                bottom: 25, textStyle: { fontSize: 11 }
+            },
+            toolbox: {
+                feature: {
+                    dataZoom: { yAxisIndex: 'none', title: { zoom: '缩放', back: '还原' } },
+                    saveAsImage: { title: '保存图片' }
+                }
+            },
+            dataZoom: [
+                { type: 'slider', bottom: '2%', height: 20 },
+                { type: 'inside' }
+            ],
+            grid: { left: '3%', right: '4%', top: '10px',
+                    bottom: '55px', containLabel: true },
+            xAxis: { type: 'category', data: current.map(d => d.label),
+                     boundaryGap: false },
+            yAxis: { type: 'value', minInterval: 1 },
+            series: [{
+                name: comparison.currentPeriod,
+                type: 'line', data: current.map(d => d.viewCount),
+                smooth: true, symbol: 'circle', symbolSize: 6,
+                areaStyle: { color: adminAccentArea() },
+                itemStyle: { color: adminAccent() },
+                lineStyle: { color: adminAccent(), width: 2 }
+            }, {
+                name: comparison.previousPeriod,
+                type: 'line', data: previous.map(d => d.viewCount),
+                smooth: true, symbol: 'circle', symbolSize: 5,
+                itemStyle: { color: '#6c8ebf' },
+                lineStyle: { color: '#6c8ebf', width: 2, type: 'dashed' }
+            }]
+        }, true);
+
+        // 时间粒度下钻（仅在总体趋势模式下）
+        trendChart.off('click');
+        if (!showClose) {
+            trendChart.on('click', params => drillTimeGranularity(params.name));
+        }
+    }
+
+    // ─── 下钻 C：时间粒度 ────────────────────────────────────────
+    function drillTimeGranularity(label) {
+        // label 格式 "%Y-%m" → "2026-05"：钻到该月的每日视图
+        const monthMatch = label.match(/^(\d{4})-(\d{2})$/);
+        // label 格式 "%m-%d" → "05-31"：钻到该天的每小时视图
+        const dayMatch   = label.match(/^(\d{2})-(\d{2})$/);
+
+        if (monthMatch) {
+            const [, yr, mo] = monthMatch;
+            const lastDay = new Date(parseInt(yr), parseInt(mo), 0).getDate();
+            state.from = `${yr}-${mo}-01`;
+            state.to   = `${yr}-${mo}-${String(lastDay).padStart(2, '0')}`;
+            state.granularity = 'day';
+        } else if (dayMatch) {
+            const [, mo, dy] = dayMatch;
+            const yr = state.from ? state.from.substring(0, 4) : new Date().getFullYear();
+            state.from = `${yr}-${mo}-${dy}`;
+            state.to   = `${yr}-${mo}-${dy}`;
+            state.granularity = 'hour';
+        } else {
+            return; // "%H:00" 格式已是最小粒度，不再下钻
+        }
+
+        document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+        if (state.dimension === 'page') {
+            loadTopPages();
+            loadPageCountries();
+            if (state.postTitle) {
+                loadPageTrend(state.postTitle);
+            } else {
+                loadPageOverviewTrend();
+            }
+        } else {
+            loadTopPosts();
+            loadCountries();
+            if (state.postId) {
+                loadPostTrend(state.postId, state.postTitle);
+            } else {
+                loadOverviewTrend();
+            }
+        }
+        updateBreadcrumb();
+    }
+
+    // ─── 面包屑 ──────────────────────────────────────────────────
+    function updateBreadcrumb() {
+        const crumbs = [];
+        if (state.country) {
+            crumbs.push(`<span class="bc-link" onclick="resetToCountry()">`
+                       + `🌍 ${state.country}</span>`);
+        }
+        if (state.postId || state.postTitle) {
+            crumbs.push(`<span class="bc-current">${state.postTitle}</span>`);
+        }
+        document.getElementById('breadcrumb').innerHTML = crumbs.join(' <span class="bc-sep">›</span> ');
+    }
+
+    // ─── 回退操作 ────────────────────────────────────────────────
+
+    function resetToCountry() {
+        state.postId = null;
+        if (state.dimension === 'page') {
+            loadTopPages();
+            loadPageOverviewTrend();
+        } else {
+            loadTopPosts();
+            loadOverviewTrend();
+        }
+        updateBreadcrumb();
+    }
+
+    function resetTimeRange() {
+        state.from = null; state.to = null; state.granularity = null;
+        document.querySelectorAll('.period-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.period === state.period);
+        });
+        loadAll();
+    }
+
+    function closeTrend() {
+        state.postId = null;
+        if (state.dimension === 'page') {
+            loadPageOverviewTrend();
+        } else {
+            loadOverviewTrend();
+        }
+        updateBreadcrumb();
+    }
+</script>
+</div>
+</div>
+</body>
+</html>

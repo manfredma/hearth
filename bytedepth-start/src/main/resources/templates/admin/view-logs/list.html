@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
+    <title>访问日志 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { color: #1a1a2e; margin: 0; }
+        .total-info { font-size: 0.9em; color: #888; }
+        .filter-bar { background: white; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .filter-bar input { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.88em; width: 140px; }
+        .btn-filter { padding: 6px 16px; background: var(--admin-accent); color: white; border: none; border-radius: 4px; font-size: 0.88em; cursor: pointer; }
+        .btn-filter:hover { background: var(--admin-accent-hover); }
+        .btn-reset { padding: 6px 14px; background: #f0f0f0; color: #555; text-decoration: none; border-radius: 4px; font-size: 0.88em; }
+        .btn-reset:hover { background: #e0e0e0; }
+        .back-link { font-size: 0.88em; color: #888; text-decoration: none; }
+        .back-link:hover { color: var(--admin-accent); }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+        th { background: #f8f9fa; padding: 11px 14px; text-align: left; font-size: 0.82em; color: #666; font-weight: 600; border-bottom: 1px solid #eee; }
+        td { padding: 10px 14px; font-size: 0.85em; color: #333; border-bottom: 1px solid #f3f3f3; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+        .visitor-user { color: #1967d2; font-weight: 500; }
+        .visitor-anon { color: #888; font-family: monospace; font-size: 0.92em; }
+        .geo { color: #555; }
+        .geo-empty { color: #ccc; }
+        .referer { color: #555; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .ua { color: #999; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .reading { white-space: nowrap; font-size: 0.82em; color: #666; }
+        .reading-status { display: inline-block; margin-left: 4px; padding: 2px 5px; border-radius: 10px; font-size: 0.9em; }
+        .reading-completed { color: #16794b; background: #e8f7ee; }
+        .reading-pending { color: #777; background: #f1f1f1; }
+        .time { color: #888; white-space: nowrap; }
+        .post-link { color: var(--admin-accent); text-decoration: none; font-weight: 500; }
+        .post-link:hover { text-decoration: underline; }
+        .empty { text-align: center; padding: 60px; color: #aaa; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 24px 0 8px; flex-wrap: wrap; }
+        .page-btn { padding: 6px 12px; border-radius: 4px; font-size: 0.88em; text-decoration: none;
+                    background: white; border: 1px solid #ddd; color: #333; }
+        .page-btn:hover { background: #f0f0f0; }
+        .page-btn.current { background: var(--admin-accent); color: white; border-color: var(--admin-accent); font-weight: 600; }
+        .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
+        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('view-logs')}"></aside>
+<div class="admin-main">
+<div class="container">
+    <div class="page-header">
+        <h1>📋 文章访问日志</h1>
+        <span class="total-info">共 <strong th:text="${total}">0</strong> 条记录</span>
+    </div>
+
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/view-logs', ${filterFields})}"></div>
+
+    <!-- 日志表格 -->
+    <table>
+        <thead>
+        <tr>
+            <th>文章 ID</th>
+            <th>文章名称</th>
+            <th>访客</th>
+            <th>IP</th>
+            <th>国家 / 城市</th>
+            <th>来源</th>
+            <th>浏览器</th>
+            <th>阅读情况</th>
+            <th>时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="log : ${logs}">
+            <td>
+                <a class="post-link"
+                   th:href="@{/posts/{id}(id=${log.postId})}"
+                   target="_blank"
+                   th:text="'#' + ${log.postId}">#1</a>
+            </td>
+            <td>
+                <span th:if="${log.postTitle != null}" th:text="${log.postTitle}">文章标题</span>
+                <span th:if="${log.postTitle == null}" class="geo-empty">文章已删除</span>
+            </td>
+            <td>
+                <span th:if="${log.userId != null}"
+                      class="visitor-user"
+                      th:text="'用户 #' + ${log.userId}">用户</span>
+                <span th:if="${log.userId == null}"
+                      class="visitor-anon"
+                      th:text="${log.ip}">匿名</span>
+            </td>
+            <td th:text="${log.ip}" class="visitor-anon">IP</td>
+            <td>
+                <span th:if="${log.country != null and !log.country.isEmpty()}"
+                      class="geo"
+                      th:text="${log.country} + (${log.city != null and !log.city.isEmpty()} ? ' / ' + ${log.city} : '')">-</span>
+                <span th:if="${log.country == null or log.country.isEmpty()}"
+                      class="geo-empty">-</span>
+            </td>
+            <td>
+                <span th:if="${log.referer != null}"
+                      class="referer"
+                      th:title="${log.referer}"
+                      th:text="${log.referer}">-</span>
+                <span th:if="${log.referer == null}" class="geo-empty">直接访问</span>
+            </td>
+            <td>
+                <span th:if="${log.userAgent != null}"
+                      class="ua"
+                      th:title="${log.userAgent}"
+                      th:text="${log.userAgent}">-</span>
+            </td>
+            <td class="reading">
+                <span th:if="${log.visitToken == null}" class="geo-empty">—</span>
+                <th:block th:if="${log.visitToken != null}">
+                    <span th:text="${log.activeReadSeconds / 60} + '分' + ${log.activeReadSeconds % 60} + '秒 · ' + ${log.maxScrollDepth} + '%'">0分0秒 · 0%</span>
+                    <span th:if="${log.completedAt != null}" class="reading-status reading-completed">已完成</span>
+                    <span th:if="${log.completedAt == null}" class="reading-status reading-pending">未完成</span>
+                </th:block>
+            </td>
+            <td class="time"
+                th:text="${#temporals.format(log.visitedAt, 'MM-dd HH:mm')}">时间</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(logs)}">
+            <td colspan="9" class="empty">暂无访问记录</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 分页（baseUrl 按需拼接筛选参数）-->
+    <div th:if="${totalPages > 1}">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${filterBaseUrl})}"></div>
+    </div>
+</div>
+</div>
+</div>
+</body>
+</html>

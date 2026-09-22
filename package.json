@@ -1,0 +1,23 @@
+{
+  "name": "bytedepth-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ByteDepth 前端脚本与测试",
+  "scripts": {
+    "test": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "lint": "eslint bytedepth-start/src/main/resources/static/js/ tests/ playwright.config.mjs",
+    "test:e2e": "env -u NO_COLOR -u FORCE_COLOR playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "^1.62.1",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "10.9.0",
+    "globals": "^17.10.0",
+    "happy-dom": "^20.11.6",
+    "jsdom": "^27.4.0",
+    "vitest": "^4.1.11"
+  }
+}
