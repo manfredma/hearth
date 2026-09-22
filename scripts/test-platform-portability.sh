@@ -6,8 +6,9 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly JAVA_RUNTIME="$SOURCE_ROOT/scripts/lib/java-25.sh"
 readonly PORTABLE_SCRIPTS=(
     "$SOURCE_ROOT/scripts/run-local-quality.sh"
-    "$SOURCE_ROOT/scripts/prepare-release.sh"
+    "$SOURCE_ROOT/scripts/check-release-readiness.sh"
     "$SOURCE_ROOT/scripts/verify-changed-coverage.sh"
+    "$SOURCE_ROOT/scripts/check-staging-checklist.sh"
 )
 
 [[ -f "$JAVA_RUNTIME" ]]

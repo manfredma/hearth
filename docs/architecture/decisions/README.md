@@ -1,6 +1,6 @@
 # 架构决策记录（ADR）
 
-本目录记录 Hearth 的架构决策，随 Git 历史和对应 PR 一起评审。Hearth 使用 bytedepth 的工程规范和知识库结构作为模板，但身份领域的决策以本目录为准。
+本目录记录 Hearth 的架构决策，随 Git 历史和对应 PR 一起评审。项目沿用成熟的工程规范和知识库结构，但身份领域的决策以本目录为准。
 
 ## 编号与状态
 
@@ -20,11 +20,11 @@
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| [ADR-0001](0001-unified-identity-and-authorization-boundary.md) | 统一身份认证与业务授权边界 | Proposed | 2026-09-22 |
-| [ADR-0002](0002-oidc-oauth2-application-integration.md) | 使用 OIDC 与 OAuth 2.0 接入业务应用 | Proposed | 2026-09-22 |
-| [ADR-0003](0003-use-mature-identity-provider.md) | 认证协议核心采用成熟身份提供商 | Proposed | 2026-09-22 |
-| [ADR-0004](0004-isolated-identity-environments-and-stable-subject.md) | 隔离 staging 与生产身份环境并使用稳定 subject | Proposed | 2026-09-22 |
+| [ADR-0001](0001-unified-identity-and-authorization-boundary.md) | 统一身份认证与业务授权边界 | Accepted | 2026-09-22 |
+| [ADR-0002](0002-oidc-oauth2-application-integration.md) | 使用 OIDC 与 OAuth 2.0 接入业务应用 | Accepted | 2026-09-22 |
+| [ADR-0003](0003-use-mature-identity-provider.md) | 认证协议核心采用成熟身份提供商 | Accepted | 2026-09-22 |
+| [ADR-0004](0004-isolated-identity-environments-and-stable-subject.md) | 隔离 staging 与生产身份环境并使用稳定 subject | Accepted | 2026-09-22 |
 
-## 模板继承记录
+## 维护边界
 
-从 bytedepth 模板导入的通用工程、质量和发布文档仍保留在仓库中；博客领域专属 ADR 在 Hearth 完成领域清理时移除或重新评估，不作为 Hearth 身份领域决策的依据。
+ADR 只记录 Hearth 的长期架构事实，不记录临时部署日志、个人记忆或业务应用内部权限规则。已经不适用于 Hearth 的模板内容应删除或重写，而不是继续作为隐含约束。

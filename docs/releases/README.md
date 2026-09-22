@@ -1,112 +1,20 @@
 # 发布管理
 
-本文件是版本、Tag、发布记录和回滚的唯一规则说明。`CHANGELOG.md` 同时记录 `## Unreleased` 与正式版本：任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有非空且分类明确的 `Unreleased` 条目；正式版本条目必须与不可变 annotated Tag 一一对应。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
-
-访问 staging 页面必须使用 `https://staging-bytedepth.bytedepth.cn/`。staging 按 `BYTEDEPTH_ENVIRONMENT=staging` 关闭 RSS、sitemap 和 RSS 自动发现，并返回 noindex；生产环境保持这些入口。新域名只是环境入口，不是安全认证。
+`CHANGELOG.md` 是 Hearth 的变更记录；所有用户可见、运行时、部署或配置改动，在首次 staging 前必须有非空且分类明确的 `## Unreleased` 条目。
 
 ## 不可变规则
 
-1. 每次生产部署都必须对应一个**新的**发布版本；重复部署已有 Tag、部署 `main`、裸 commit 或其他分支都不合规。
-2. 发布版本使用稳定 SemVer：`vMAJOR.MINOR.PATCH`，例如 `v1.2.3`。预发布仅可使用 `vMAJOR.MINOR.PATCH-rc.N`，不得进入生产。
-3. Tag 必须是 annotated tag，并受仓库 `v*` 保护；Tag 一经推送不得移动、删除或复用。
-4. Tag 所指提交中的 Maven 版本必须与 Tag 一致：`v1.2.3` 对应 `1.2.3`；发布后 `main` 必须推进到下一个 `-SNAPSHOT` 版本。
-5. 每个版本必须在 [CHANGELOG.md](CHANGELOG.md) 中记录用户可见变更、风险或迁移说明；无变更记录不允许打 Tag。运行时代码进入 staging 前必须先通过 `Unreleased` 门禁。
-6. 部署结果必须记录版本、完整 commit SHA、目标节点、时间、验收结论和回滚基线。机器上的运行状态用于实时查询；变更内容以 Git Tag 和 Changelog 为准。
-7. `CHANGELOG.md` 的 `## Unreleased` 必须置顶；正式版本必须按 SemVer 版本号严格倒序排列。版本页按文件顺序渲染，不在运行时自行排序；`scripts/check-changelog-order.sh` 及其契约测试会在本地质量、staging 清单和发布前门禁中校验该规则。
+1. 生产只能部署新的 annotated SemVer Tag：`vMAJOR.MINOR.PATCH`。
+2. 不得部署 `main`、分支、裸 commit 或已部署过的 Tag。
+3. Tag 指向的提交必须与 staging 验收候选的完整 SHA 一致。
+4. 创建 Tag 前工作区必须干净，Maven release 事务残留必须清理。
+5. 发布失败时保留原 Tag；修复后创建新的 PATCH 版本，不移动或复用旧 Tag。
 
-## 标准开发到发布流程
-
-```text
-main（下一版本 -SNAPSHOT）
-  → 实现与测试
-  → 候选分支冻结正式版本与 CHANGELOG
-  → 将远程最新 main 合并到候选分支
-  → `deploy-staging.sh <候选分支或Tag>`（候选范围必须包含 CHANGELOG 修改）
-  → 在 staging 运行集成与 E2E，验收的就是待上线版本
-  → 验收通过后将候选分支 fast-forward 合并到 main（SHA 不得变化）
-  → 将两份 staging evidence 复制到本地 `mktemp -d` 目录
-  → `prepare-release.sh` 创建新的 annotated tag vX.Y.Z
-  → 部署该 tag 并完成生产验收
-  → main 推进到下一个 -SNAPSHOT
-```
-
-### 冻结与 staging 验收（唯一发布路径）
-
-staging 只验收待上线版本，不提供“先预览、之后再决定是否发布”的第二条发布路径。候选分支必须在首次 staging 部署前确定正式版本、下一开发版本并冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和发布说明），随后吸收远程最新 `main`，再以候选分支部署 staging。`deploy-staging.sh` 会拒绝与 `origin/main` 相同的 ref，并拒绝候选提交范围未修改 `docs/releases/CHANGELOG.md` 的部署。
-
-集成、E2E 和项目所有者验收都针对这个冻结候选版本。验收通过后只能将候选分支 fast-forward 合并到 `main`，完整 SHA 必须保持不变；随后直接执行 `prepare-release.sh` 和生产发布。验收失败时才允许修改代码或 Changelog；修改后旧 evidence 作废，必须重新冻结、重新部署和重新验收。
-
-**CHANGELOG 版本号标题时序**：开发改动在 PR 阶段往 `## Unreleased` 下写变更内容（`### Changed`/`### Fixed`），合并 `main`；发版前在 `main` 上把 `## Unreleased` 改为 `## [vX.Y.Z] - 日期` 标题，填 `**Tag**`、`**回滚基线**`（`**Commit**`/`**部署**` 等 release:prepare 与部署后再补），提交。`prepare-release.sh` grep 校验 CHANGELOG 含 `## [vX.Y.Z]`，缺失则拒绝——版本号标题必须在 `prepare-release.sh` 之前出现在 `main`。该标题改动与部署后的验收记录补填，均属发布流程的 `docs(release)` 提交（先例 `36918d0`），非普通开发改动，不与「`main` 仅允许受控发布流程写入」冲突。
-
-发布工具必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
-
-创建版本只使用受控脚本；它会校验 `main`、干净工作区、Tag 唯一性和 Changelog 条目，并按项目规则刷新缓存、执行全量测试、创建 annotated Tag、推送以及清理本机事务状态。它还会在 Maven Release Plugin 前拒绝没有两份 commit-bound staging evidence、格式错误的记录，或记录 SHA 与当前 `main` HEAD 不一致的情况。操作员必须先从 staging 复制**恰好**两份无凭据记录到新临时目录，再显式传入该目录；不能传入“green”文本、其他 ref 的结果或长期复用的目录：
+## 发布前检查
 
 ```bash
-evidence_dir="$(mktemp -d)"
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
-  'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-integration' \
-  > "$evidence_dir/staging-integration"
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
-  'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-e2e' \
-  > "$evidence_dir/staging-e2e"
-    BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
-rm -rf "$evidence_dir"
+bash scripts/run-local-quality.sh
+bash scripts/check-staging-checklist.sh
 ```
 
-每份记录必须分别为 `staging-integration` 或 `staging-e2e`，并严格包含 `commit=<完整 40 位 SHA>`、对应的 `command=`、UTC `timestamp=` 和 `result=passed`；不得包含凭据。以上命令示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：
-
-```bash
-evidence_dir="$(mktemp -d)"
-# 先按上例复制 evidence，再执行：
-BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
-```
-
-脚本内的 Maven Release Plugin 会将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。`release:prepare` 会在本机生成 `release.properties` 和各模块的 `pom.xml.releaseBackup`，它们只用于插件的恢复流程，绝不提交；脚本退出时会执行 `release:clean`。覆盖率门禁会自动识别相对最近正式 Tag 的生产 Java 变更；`COVERAGE_INCLUDES='**'` 仅用于清理历史覆盖债务。禁止绕过脚本手工编辑多个 POM 或创建轻量 Tag。
-
-发布前的全量测试、缓存刷新和变更覆盖率仍须严格按 [Maven 指南](../agent-guides/maven.md) 执行。`verify-changed-coverage.sh` 默认以最近正式 Tag 为基线，同时包含未暂存与暂存的生产 Java 改动；若 Maven 输出任何 WARNING 或覆盖率不是 100%，会直接失败。该脚本必须在开发完成时独立执行，发布脚本只作防御性复核。下一开发版本必须依据版本选择表显式指定；例如修复发布 `1.0.1` 后通常为 `1.0.2-SNAPSHOT`，新增向后兼容功能后通常为 `1.1.0-SNAPSHOT`，不得无意跳号。
-
-### 中断与恢复
-
-1. 未产生发布提交或 Tag：保留现场以判断失败原因；不需要回滚插件事务时执行 `release:clean`，修复后从干净工作区重新开始。
-2. 已产生 Tag、尚未部署或验收失败：Tag 保持不可变，不得移动、删除或重用；修复后创建新的 PATCH 版本。
-3. 部署中失败：记录已执行节点、完整 SHA、失败阶段和日志位置；停止后续节点。仅在数据库迁移兼容时，才可部署已验收的回滚基线。
-
-## 版本选择
-
-按语义化版本（SemVer）规则，依据本次变更类型选择版本号；不得将高类别变更误作低类别升级（例如把应升 MINOR 的新功能当作 PATCH 发布，或把应升 MAJOR 的破坏性变更当作 MINOR）。
-
-| 变更类型 | 版本变化 | 示例 |
-| --- | --- | --- |
-| bugfix：修复缺陷、无行为破坏的内部改进 | PATCH | `v1.2.3` → `v1.2.4` |
-| 新功能：向后兼容的新增能力 | MINOR | `v1.2.3` → `v1.3.0` |
-| 破坏性：破坏 API、数据语义或部署兼容性 | MAJOR | `v1.2.3` → `v2.0.0` |
-
-当前版本为 `v1.0.2` 时：bugfix 发布 `v1.0.3`（下一开发 `1.0.4-SNAPSHOT`）；新功能发布 `v1.1.0`（下一开发 `1.1.1-SNAPSHOT`）。同一版本既含 bugfix 又含新功能时按最高类别升 MINOR。
-
-数据库迁移默认只前进。含不兼容 Flyway 迁移的版本必须在 Changelog 说明影响、备份要求与可否仅回滚代码。
-
-## staging 预检与生产单机发布
-
-**发布前置**：进入发布流程前，所有待办任务必须全部解决；有阻塞项先解决或与项目所有者确认暂缓（需明确说"暂时不解决"），不得带遗留项上线。
-
-1. 记录当前已验收发布的 Tag，作为回滚基线。
-2. 在 staging 部署冻结候选 ref 并用真实数据预检：`deploy-staging.sh <候选分支或Tag>`；候选范围必须包含 Changelog 修改，项目所有者验收通过后 fast-forward 合并 `main`。
-3. 合并后必须比较完整 SHA：只有 fast-forward 且 `main` HEAD 与已验收候选 SHA 完全一致时，候选 staging 部署和两份 evidence 才可复用；SHA 变化必须停止发布并重新冻结、部署和验收。两份记录的完整 SHA 始终必须等于 `main` HEAD。
-4. 使用 SSH 上受控的 `sudo cat` 读取 root-owned `0700` `/var/lib/bytedepth-staging/test-history/` 内的 `staging-integration` 与 `staging-e2e`，写入本地新建的 `mktemp -d` 目录；不得用普通用户 `scp` 不可读路径。以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
-5. 通过后，生产打新 SemVer Tag，从本机使用 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh vTag` 部署到 175；该入口会在远端运行 `deploy/deploy-production.sh vTag` 并随后执行 `scripts/verify-production-release.sh vTag`。发布 SSH 必须使用已存在的 known_hosts，禁止首次连接自动接受主机密钥。
-6. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
-7. 失败时，仅在数据库迁移兼容的前提下，才可部署回滚基线 Tag。数据恢复遵循部署手册。
-
-staging 回滚非无风险：候选 ref 已执行 Flyway 后，直接部署旧 ref 可能不兼容当前 schema。正确回滚：停止 app → 重新灌入生产基线 → 部署目标 ref → Flyway → 验证。
-
-网页运维页只可展示或请求经过验证的发布版本；它不能把任意 ref、分支或命令交给宿主机。staging 部署只走 SSH 脚本，不使用网页运维部署按钮。
-
-一次生产发布只能部署一个**新的** Tag 到 175 一次；禁止重复部署已成功记录的 Tag，或把旧 Tag 当作新的生产发布。验收前该 Tag 状态为“待验收”，不能作为回滚基线。
-
-## 记录格式
-
-`CHANGELOG.md` 是在创建 Tag 前冻结的变更说明，至少包含：版本号、发布日期、变更摘要、兼容性/迁移说明、发布 Tag 和完整 commit SHA。Tag 已创建但尚未验收的条目必须明确标注“待验收”。实际部署验收不得回写已发布 Tag；应在 `main` 上的对应条目或受控发布工具的发布台账中追加目标节点、时间、验收结论和回滚基线。
-## 发布顺序（唯一候选路径）
-
-发布必须严格按以下顺序执行：候选分支变更冻结（含版本说明）→ 将远程最新 `main` 合并到候选分支 → 通过 Changelog 门禁后以候选分支部署 staging，并一次性完成集成、E2E 和验收 → 验收通过后将候选分支 fast-forward 合并到 `main` → 校验 SHA 未变化后创建 Tag 并发布。验收失败才允许修改；任何修改都会作废旧 evidence，必须重新冻结并重新 staging。验收通过后禁止追加 Changelog、文档或其他提交。
+staging 部署、集成测试、E2E、生产发布和回滚的唯一操作说明见 [`deploy/README.md`](../../deploy/README.md)。没有 staging 的完整验收证据，不得创建生产 Tag。

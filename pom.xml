@@ -2,18 +2,18 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>manfred.bytedepth</groupId>
-    <artifactId>bytedepth</artifactId>
-    <version>2.24.3-SNAPSHOT</version>
+    <groupId>manfred.hearth</groupId>
+    <artifactId>hearth</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>bytedepth</name>
+    <name>hearth</name>
 
     <modules>
-        <module>bytedepth-domain</module>
-        <module>bytedepth-app</module>
-        <module>bytedepth-infrastructure</module>
-        <module>bytedepth-adapter</module>
-        <module>bytedepth-start</module>
+        <module>hearth-domain</module>
+        <module>hearth-app</module>
+        <module>hearth-infrastructure</module>
+        <module>hearth-adapter</module>
+        <module>hearth-start</module>
     </modules>
 
     <properties>
@@ -33,7 +33,7 @@
         <mockito.version>5.23.0</mockito.version>
         <byte-buddy.version>1.18.10</byte-buddy.version>
         <archunit.version>1.5.0</archunit.version>
-        <coverage.data-file>${maven.multiModuleProjectDirectory}/bytedepth-start/target/jacoco-merged.exec</coverage.data-file>
+        <coverage.data-file>${maven.multiModuleProjectDirectory}/hearth-start/target/jacoco-merged.exec</coverage.data-file>
         <coverage.check.skip>true</coverage.check.skip>
     </properties>
 
@@ -91,23 +91,23 @@
                 <version>${owasp.html.sanitizer.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-domain</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-app</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-infrastructure</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-infrastructure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-adapter</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
@@ -228,10 +228,10 @@
     </build>
 
     <scm>
-        <connection>scm:git:git@github.com:manfredma/bytedepth.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/manfredma/bytedepth.git</developerConnection>
-        <url>https://github.com/manfredma/bytedepth</url>
-        <tag>v1.5.0</tag>
+        <connection>scm:git:git@github.com:manfredma/hearth.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/manfredma/hearth.git</developerConnection>
+        <url>https://github.com/manfredma/hearth</url>
+    <tag>v0.1.0</tag>
     </scm>
 
     <profiles>
@@ -265,7 +265,7 @@
                                 <include>**/*IT.java</include>
                             </includes>
                             <systemPropertyVariables>
-                                <bytedepth.it.redis.password>${env.BYTEDEPTH_IT_REDIS_PASSWORD}</bytedepth.it.redis.password>
+                                <hearth.it.redis.password>${env.HEARTH_IT_REDIS_PASSWORD}</hearth.it.redis.password>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>

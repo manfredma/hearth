@@ -45,33 +45,33 @@
 - Produces runtime prefix `HEARTH_` and Compose service prefix `hearth-`.
 - Produces a naming guard that fails on bytedepth identifiers in runtime code, build files, deployment scripts, package metadata, and generated asset paths; references in the template migration note are allowed only in `docs/`.
 
-- [ ] **Step 1: Write the failing naming test.**
+- [x] **Step 1: Write the failing naming test.**
 
   Add `scripts/test-hearth-naming.sh` that creates a temporary fixture containing an illegal `bytedepth-app` service and verifies `scripts/check-hearth-naming.sh` exits non-zero; add a legal Hearth fixture and verify it exits zero.
 
-- [ ] **Step 2: Run the naming test and verify it fails.**
+- [x] **Step 2: Run the naming test and verify it fails.**
 
   Run `bash scripts/test-hearth-naming.sh`.
 
   Expected: FAIL because `scripts/check-hearth-naming.sh` does not exist.
 
-- [ ] **Step 3: Rename the modules and coordinates.**
+- [x] **Step 3: Rename the modules and coordinates.**
 
   Rename the five module directories with `git mv`; replace `manfred.bytedepth` with `manfred.hearth`, artifact IDs with `hearth-*`, application class packages with `manfred.hearth`, and root metadata with product name `Hearth`. Update Docker COPY paths and the package name to `hearth-frontend`.
 
-- [ ] **Step 4: Remove the copied blog runtime entry points.**
+- [x] **Step 4: Remove the copied blog runtime entry points.**
 
   Keep the module boundaries and shared quality/deploy assets, but remove the copied blog controllers, article templates, Obsidian sync entry points, Meilisearch integration, GeoIP/image mounts, RSS/sitemap runtime routes, and blog-only frontend tests. Do not remove the generic Spring Security, Flyway/MySQL, Redis Session, test, deploy, and knowledge-base conventions that the Hearth service reuses.
 
-- [ ] **Step 5: Implement the naming guard.**
+- [x] **Step 5: Implement the naming guard.**
 
   Make `scripts/check-hearth-naming.sh` scan tracked runtime, build, deployment, workflow, package, Docker and Compose files. Allow historical template references only inside the explicitly marked migration paragraph in `docs/architecture/decisions/README.md` and the Hearth design spec.
 
-- [ ] **Step 6: Run the naming test and static checks.**
+- [x] **Step 6: Run the naming test and static checks.**
 
   Run `bash scripts/test-hearth-naming.sh`, `bash scripts/check-hearth-naming.sh`, and `git diff --check`.
 
-- [ ] **Step 7: Commit the template conversion.**
+- [x] **Step 7: Commit the template conversion.**
 
   ```bash
   git add -A
@@ -98,29 +98,29 @@
 - `ApplicationKey(String value)` accepts lowercase names separated by `-` and rejects invalid keys.
 - `ApplicationRegistration(ApplicationKey key, String displayName, Set<String> redirectUris)` validates a non-empty name and HTTPS redirect URIs except for the explicit local development URI `http://localhost`.
 
-- [ ] **Step 1: Write domain validation tests.**
+- [x] **Step 1: Write domain validation tests.**
 
   Cover blank issuer/subject, valid subject, invalid application key, blank display name, non-HTTPS production redirect URI, and the localhost development exception.
 
-- [ ] **Step 2: Run the focused tests to verify failure.**
+- [x] **Step 2: Run the focused tests to verify failure.**
 
   Run `./mvnw -pl hearth-domain -Dtest=IdentitySubjectTest,ApplicationRegistrationTest test`.
 
   Expected: FAIL because the domain types do not exist.
 
-- [ ] **Step 3: Implement the immutable domain types.**
+- [x] **Step 3: Implement the immutable domain types.**
 
   Use Java records or final value objects with canonical validation. Do not add a framework dependency to `hearth-domain`.
 
-- [ ] **Step 4: Replace the boot entry point and configuration.**
+- [x] **Step 4: Replace the boot entry point and configuration.**
 
   Create `HearthApplication` and a minimal `application.yml` with environment-backed MySQL, Redis Session, OIDC issuer, and client settings. Fail closed when production settings are missing; keep a test profile with in-memory substitutes.
 
-- [ ] **Step 5: Run module tests and architecture checks.**
+- [x] **Step 5: Run module tests and architecture checks.**
 
   Run `./mvnw -pl hearth-domain,hearth-start -am -Dtest='**/*Test' test` and the existing ArchUnit test after renaming its package to `manfred.hearth`.
 
-- [ ] **Step 6: Commit the boot skeleton.**
+- [x] **Step 6: Commit the boot skeleton.**
 
   ```bash
   git add pom.xml hearth-domain hearth-app hearth-infrastructure hearth-adapter hearth-start
@@ -153,29 +153,29 @@
 - `ApplicationAccessPort.hasAccess(UUID userId, ApplicationKey application): boolean`.
 - The schema uses `user_identity(issuer, subject)` as a unique key, `application`, `application_access`, and `audit_event`; it stores no password hash and no business resource ACL.
 
-- [ ] **Step 1: Write the application-service tests.**
+- [x] **Step 1: Write the application-service tests.**
 
   Test first grant, duplicate grant idempotency, missing identity, invalid role key, and access lookup. Use in-memory fakes only.
 
-- [ ] **Step 2: Run the tests to verify failure.**
+- [x] **Step 2: Run the tests to verify failure.**
 
   Run `./mvnw -pl hearth-app -Dtest=GrantApplicationAccessCmdExeTest test`.
 
   Expected: FAIL because the command and ports do not exist.
 
-- [ ] **Step 3: Implement the domain and application service.**
+- [x] **Step 3: Implement the domain and application service.**
 
   Keep `roleKey` namespaced, such as `release:operator`; reject blank or unnamespaced keys. The service must not interpret release, career, article, diary, or candidate rules.
 
-- [ ] **Step 4: Write the Flyway migration and MySQL adapters.**
+- [x] **Step 4: Write the Flyway migration and MySQL adapters.**
 
   Create tables with UUID primary keys, UTC timestamps, unique `(issuer, subject)`, unique `(user_id, application_id, role_key)`, foreign keys, and indexes for subject lookup and application access lookup. Use parameterized MyBatis statements or the existing repository pattern; never build SQL from role or application input.
 
-- [ ] **Step 5: Run database-independent adapter tests and migration static checks.**
+- [x] **Step 5: Run database-independent adapter tests and migration static checks.**
 
   Run the fake-backed adapter contract tests locally and `./mvnw -pl hearth-start -Dtest=MigrationScriptsTest test`. The real MySQL migration test belongs to staging integration.
 
-- [ ] **Step 6: Commit the identity data layer.**
+- [x] **Step 6: Commit the identity data layer.**
 
   ```bash
   git add hearth-domain hearth-app hearth-infrastructure hearth-start/src/test
@@ -203,29 +203,29 @@
 - `POST /logout` invalidates the local session and initiates the configured OIDC logout flow.
 - `OidcIdentityMapper.map(OidcUser): IdentitySubject` uses the verified `iss` and `sub` claims and rejects missing claims.
 
-- [ ] **Step 1: Write security routing tests.**
+- [x] **Step 1: Write security routing tests.**
 
   Verify unauthenticated `/api/session` returns 401, the OIDC authorization endpoint is reachable, protected API routes require authentication, logout is POST-only, and no password-login route exists.
 
-- [ ] **Step 2: Run focused security tests to verify failure.**
+- [x] **Step 2: Run focused security tests to verify failure.**
 
   Run `./mvnw -pl hearth-adapter -Dtest=SecurityRoutingTest,OidcIdentityMapperTest,SessionControllerTest test`.
 
   Expected: FAIL because the Hearth security configuration does not exist.
 
-- [ ] **Step 3: Add Spring Security OIDC dependencies and configuration.**
+- [x] **Step 3: Add Spring Security OIDC dependencies and configuration.**
 
   Use `spring-boot-starter-oauth2-client`, `spring-boot-starter-oauth2-resource-server`, and Spring Session Redis. Configure issuer discovery from `HEARTH_OIDC_ISSUER_URI`, client ID/secret from environment, Authorization Code + PKCE, and strict redirect URI validation.
 
-- [ ] **Step 4: Implement identity mapping and local session creation.**
+- [x] **Step 4: Implement identity mapping and local session creation.**
 
   On successful OIDC login, call `IdentityDirectoryPort.findOrCreate`, store only the stable identity and display profile in the local session, and set `HttpOnly`, `Secure`, and `SameSite=Lax` cookie attributes. Do not persist tokens in localStorage or return them from the session API.
 
-- [ ] **Step 5: Implement logout and session invalidation.**
+- [x] **Step 5: Implement logout and session invalidation.**
 
   Invalidate the local session first, then redirect to the provider's RP-initiated logout endpoint when configured. Treat missing provider logout configuration as a safe local logout, not as a successful global logout claim.
 
-- [ ] **Step 6: Run tests and commit the OIDC boundary.**
+- [x] **Step 6: Run tests and commit the OIDC boundary.**
 
   Run the focused security tests, `./mvnw -pl hearth-adapter,hearth-start test`, and `git diff --check`; then commit:
 
@@ -255,29 +255,29 @@
 - `GET /api/applications/{applicationKey}` returns display metadata and login URL, never client secrets.
 - `session.js` calls `/api/session` with cookies and keeps session state in memory only.
 
-- [ ] **Step 1: Add React test dependencies and write the shell test.**
+- [x] **Step 1: Add React test dependencies and write the shell test.**
 
   Add pinned React, React DOM, Vite, and testing-library dependencies. Test loading, authenticated session rendering, unauthenticated redirect affordance, and API failure rendering with a mocked `fetch`.
 
-- [ ] **Step 2: Run frontend setup and test to verify failure.**
+- [x] **Step 2: Run frontend setup and test to verify failure.**
 
   Run `npm ci --ignore-scripts --no-audit --no-fund` followed by `npm test -- --run hearth-start/src/main/frontend/src/app/App.test.jsx`.
 
   Expected: FAIL because the React source files do not exist.
 
-- [ ] **Step 3: Implement the minimal React shell.**
+- [x] **Step 3: Implement the minimal React shell.**
 
   Render Hearth branding, current user, available applications, login/logout controls, and a clear error state. Use same-origin fetch with credentials; do not use localStorage, IndexedDB, or client-side private-data persistence.
 
-- [ ] **Step 4: Implement application registry endpoints.**
+- [x] **Step 4: Implement application registry endpoints.**
 
   Add controller tests for authenticated access, empty registry, application metadata, missing application, and secret redaction. Delegate lookup to `ApplicationAccessPort` and `ApplicationRegistrationRepository` rather than querying the database from the controller.
 
-- [ ] **Step 5: Configure the frontend build output.**
+- [x] **Step 5: Configure the frontend build output.**
 
   Build into `hearth-start/src/main/resources/static/` and configure Spring fallback routing for the React shell. Keep the application-independent CSS in the shell's own stylesheet and add an asset ownership check for the static output.
 
-- [ ] **Step 6: Run frontend and backend tests and commit.**
+- [x] **Step 6: Run frontend and backend tests and commit.**
 
   Run `npm ci --ignore-scripts --no-audit --no-fund`, `npm test`, `npm run lint`, and the focused Maven adapter tests. Commit:
 
@@ -304,29 +304,29 @@
 - Compose services are `hearth-app`, `hearth-mysql`, and `hearth-redis`; no `app` alias is defined.
 - `deploy/check-environment-isolation.sh` rejects production issuer/database/Redis values in staging configuration and rejects missing OIDC issuer, client, cookie, or database secrets.
 
-- [ ] **Step 1: Write deployment configuration tests.**
+- [x] **Step 1: Write deployment configuration tests.**
 
   Add fixtures for valid staging, missing staging issuer, staging pointing to production issuer, generic `app` service, and shared production database URL. Assert the checker fails closed for each invalid fixture.
 
-- [ ] **Step 2: Run deployment tests to verify failure.**
+- [x] **Step 2: Run deployment tests to verify failure.**
 
   Run `bash scripts/test-deploy-hearth-config.sh`.
 
   Expected: FAIL because the Hearth deployment checker and Compose files do not exist.
 
-- [ ] **Step 3: Create the minimal Compose topology.**
+- [x] **Step 3: Create the minimal Compose topology.**
 
   Define MySQL and Redis with persistent named volumes, the app with the `hearth-app` service name, and required environment variables. Do not include Meilisearch, image mounts, Obsidian mounts, or generic shared service names.
 
-- [ ] **Step 4: Add environment isolation checks and documentation.**
+- [x] **Step 4: Add environment isolation checks and documentation.**
 
   Make staging require a distinct issuer, database name, Redis namespace, cookie name, and Client ID from production. Document that a future Keycloak/ZITADEL realm must be provisioned separately per environment and that credentials are injected by the deployment host, never committed.
 
-- [ ] **Step 5: Validate deployment configuration locally.**
+- [x] **Step 5: Validate deployment configuration locally.**
 
   Run `bash scripts/test-deploy-hearth-config.sh` and `docker compose --env-file deploy/.env.example -f deploy/docker-compose.single-host.yml config`. Local Docker output is only a syntax/configuration check; image builds, MySQL, Redis, Flyway, and container integration evidence belong to staging. Any warning or configuration error stops the task.
 
-- [ ] **Step 6: Commit the isolated deployment topology.**
+- [x] **Step 6: Commit the isolated deployment topology.**
 
   ```bash
   git add Dockerfile deploy scripts
@@ -349,21 +349,21 @@
 - `docs/security/authentication.md` defines OIDC identity mapping, cookie behavior, logout, and token handling.
 - `docs/security/application-access.md` defines the central-vs-business authorization boundary with examples for all five consuming systems.
 
-- [ ] **Step 1: Write documentation checks.**
+- [x] **Step 1: Write documentation checks.**
 
   Verify the project name is Hearth in operational docs, the four ADRs are indexed, the Unreleased changelog entry is non-empty, and no document instructs agents to store private data in browser storage or share production and staging identity data.
 
-- [ ] **Step 2: Run the documentation test to verify failure.**
+- [x] **Step 2: Run the documentation test to verify failure.**
 
   Run `bash scripts/test-hearth-documentation.sh`.
 
   Expected: FAIL while copied bytedepth operational documents and missing Hearth security guides remain.
 
-- [ ] **Step 3: Update operational documentation and Changelog.**
+- [x] **Step 3: Update operational documentation and Changelog.**
 
   Replace template-specific commands and service names with Hearth equivalents, record the initial identity-service change under `## Unreleased` with `### Added` and `### Security`, and link the approved spec and ADR index.
 
-- [ ] **Step 4: Run the complete local quality gate.**
+- [x] **Step 4: Run the complete local quality gate.**
 
   Run in this order:
 
@@ -380,18 +380,18 @@
 
   Treat every `WARNING`/`WARN` as a failure requiring remediation.
 
-- [ ] **Step 5: Run staging-only integration preparation.**
+- [x] **Step 5: Run staging-only integration preparation.**
 
   Do not run MySQL, Redis, Flyway, Docker, or external OIDC-provider integration tests locally. Add the staging commands and explicit credential/issuer injection to `deploy/README.md`; the staging runner must record the deployed full SHA and produce integration evidence only after all tests and warning checks pass.
 
-- [ ] **Step 6: Commit the documentation and quality gate.**
+- [x] **Step 6: Commit the documentation and quality gate.**
 
   ```bash
   git add AGENTS.md CLAUDE.md docs scripts
   git commit -m "docs: define hearth operations and security boundaries"
   ```
 
-- [ ] **Step 7: Prepare the staging handoff.**
+- [x] **Step 7: Prepare the staging handoff.**
 
   Run `git status --short`, `bash scripts/check-staging-checklist.sh`, and the complete local quality gate again. Report the branch, commit SHA, remaining external prerequisite (OIDC provider provisioning), and exact staging deployment command without claiming staging success before the remote run completes.
 

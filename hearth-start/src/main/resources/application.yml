@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: hearth
+  datasource:
+    url: ${HEARTH_DATASOURCE_URL:jdbc:mysql://localhost:3306/hearth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${HEARTH_DATASOURCE_USERNAME:hearth}
+    password: ${HEARTH_DATASOURCE_PASSWORD:}
+  session:
+    store-type: ${HEARTH_SESSION_STORE_TYPE:redis}
+    timeout: ${HEARTH_SESSION_TIMEOUT:60m}
+    redis:
+      namespace: ${HEARTH_SESSION_REDIS_NAMESPACE:hearth:session:v1}
+  data:
+    redis:
+      host: ${HEARTH_REDIS_HOST:localhost}
+      port: ${HEARTH_REDIS_PORT:6379}
+      password: ${HEARTH_REDIS_PASSWORD:}
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        name: ${HEARTH_SESSION_COOKIE_NAME:HEARTH_SESSION}
+        http-only: true
+        secure: ${HEARTH_SESSION_COOKIE_SECURE:false}
+        same-site: ${HEARTH_SESSION_COOKIE_SAME_SITE:lax}
+
+hearth:
+  environment: ${HEARTH_ENVIRONMENT:local}
+  oidc:
+    enabled: ${HEARTH_OIDC_ENABLED:false}
+    issuer-uri: ${HEARTH_OIDC_ISSUER_URI:}
+    client-id: ${HEARTH_OIDC_CLIENT_ID:}
+    client-secret: ${HEARTH_OIDC_CLIENT_SECRET:}
+    post-logout-redirect-uri: ${HEARTH_OIDC_POST_LOGOUT_REDIRECT_URI:}
