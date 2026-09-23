@@ -1,6 +1,6 @@
 # Hearth 统一身份中心设计规格
 
-- **状态**: Proposed
+- **状态**: Superseded by `2026-09-23-hearth-self-hosted-oidc-provider-design.md`
 - **日期**: 2026-09-22
 - **项目**: Hearth
 
@@ -8,9 +8,11 @@
 
 Hearth 为 toolbox、release、career、bytedepth、daylilt 等独立应用提供统一身份入口和单点登录能力。Hearth 解决用户身份认证、应用访问和跨应用的粗粒度授权，不接管各业务系统的资源权限和业务规则。
 
+> 2026-09-23 决策变更：Hearth 不再接入外部身份提供商，改为自建 OIDC Provider。具体协议、用户认证和轻量化范围以新的设计规格与 ADR-0006 为准。
+
 ## 2. 非目标
 
-- 不自行实现密码协议、OAuth 令牌签发或 OIDC 核心协议。
+- 不从零实现密码学算法、JWT 编码或 OAuth/OIDC 协议底层；协议由 Spring Authorization Server 提供。
 - 不把日记、文章、候选人、发布环境等业务数据权限集中到 Hearth。
 - 不让所有应用共享一个业务 Session Cookie。
 - 不让 staging 访问生产身份数据或生产业务数据。

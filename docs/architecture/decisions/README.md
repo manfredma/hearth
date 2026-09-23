@@ -22,8 +22,9 @@
 |------|------|------|------|
 | [ADR-0001](0001-unified-identity-and-authorization-boundary.md) | 统一身份认证与业务授权边界 | Accepted | 2026-09-22 |
 | [ADR-0002](0002-oidc-oauth2-application-integration.md) | 使用 OIDC 与 OAuth 2.0 接入业务应用 | Accepted | 2026-09-22 |
-| [ADR-0003](0003-use-mature-identity-provider.md) | 认证协议核心采用成熟身份提供商 | Accepted | 2026-09-22 |
+| [ADR-0003](0003-use-mature-identity-provider.md) | 认证协议核心采用成熟身份提供商 | Superseded | 2026-09-22 |
 | [ADR-0004](0004-isolated-identity-environments-and-stable-subject.md) | 隔离 staging 与生产身份环境并使用稳定 subject | Accepted | 2026-09-22 |
+| [ADR-0006](0006-self-hosted-oidc-provider.md) | Hearth 自建 OIDC Provider，使用协议框架作为内核 | Accepted | 2026-09-23 |
 
 ## 维护边界
 
