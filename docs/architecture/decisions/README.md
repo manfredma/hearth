@@ -26,6 +26,8 @@
 | [ADR-0004](0004-isolated-identity-environments-and-stable-subject.md) | 隔离 staging 与生产身份环境并使用稳定 subject | Accepted | 2026-09-22 |
 | [ADR-0006](0006-self-hosted-oidc-provider.md) | Hearth 自建 OIDC Provider，使用协议框架作为内核 | Accepted | 2026-09-23 |
 | [ADR-0007](0007-mysql-identity-lookup-indexes.md) | MySQL 身份键保留原文并使用哈希联合唯一索引 | Accepted | 2026-09-23 |
+| [ADR-0008](0008-application-user-provisioning-and-identity-mapping.md) | 业务应用按稳定 subject 建立本地用户映射 | Accepted | 2026-09-23 |
+| [ADR-0009](0009-central-sso-session-and-logout.md) | Hearth 管理统一 SSO Session、记住登录与统一退出 | Accepted | 2026-09-23 |
 
 ## 维护边界
 

@@ -1,6 +1,6 @@
 # ADR-0002: 使用 OIDC 与 OAuth 2.0 接入业务应用
 
-- **状态**: Proposed
+- **状态**: Accepted
 - **日期**: 2026-09-22
 - **决策者**: 项目所有者
 
@@ -21,6 +21,7 @@ Hearth 与业务应用之间采用 OpenID Connect；需要 API 访问授权时�
 - Spring Boot、React 和其他技术栈可以使用成熟的 OIDC 客户端。
 - 每个应用拥有独立 Client、回调地址和本地会话边界。
 - 可以按应用和 API 使用最小化 Scope。
+- 统一登录 Session、记住登录和统一退出由 Hearth 提供；业务应用仍维护自己的本地 Session。
 
 **负向**
 
