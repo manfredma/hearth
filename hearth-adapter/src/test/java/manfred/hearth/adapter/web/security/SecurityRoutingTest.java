@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 class SecurityRoutingTest {
@@ -24,9 +26,11 @@ class SecurityRoutingTest {
     void apiCsrfConfigurationUsesAnUnmaskedTokenAcrossRequests() {
         CsrfConfigurer<HttpSecurity> csrf = mock(CsrfConfigurer.class);
         when(csrf.ignoringRequestMatchers(any(String[].class))).thenReturn(csrf);
+        when(csrf.csrfTokenRepository(any(CsrfTokenRepository.class))).thenReturn(csrf);
 
         SecurityConfig.configureCsrf(csrf);
 
         verify(csrf).csrfTokenRequestHandler(isA(CsrfTokenRequestAttributeHandler.class));
+        verify(csrf).csrfTokenRepository(isA(CookieCsrfTokenRepository.class));
     }
 }

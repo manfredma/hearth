@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
@@ -36,6 +37,9 @@ public class SecurityConfig {
 
     static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
         csrf.ignoringRequestMatchers("/api/health");
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setHeaderName("X-CSRF-TOKEN");
+        csrf.csrfTokenRepository(repository);
         csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler());
     }
 }
