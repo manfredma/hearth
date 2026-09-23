@@ -1,36 +1,16 @@
-# 会话与认证
+# Hearth 认证与会话
 
-网页端使用 Spring Security 表单登录 + CSRF + HttpSession，不引入 JWT。认证与 CSRF 配置位于 `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/security/SecurityConfig.java`。
+Hearth 自己提供 OIDC，Spring Security 7 Authorization Server 负责协议端点和令牌协议，Redis 存储服务端 Session。业务系统只需要信任 Hearth 的 issuer；浏览器只持有 HttpOnly Session Cookie，不持有访问令牌或身份目录数据。
 
-## 共享 Session
+## 配置
 
-多实例共享 Spring Session Redis，负载均衡无需 sticky session。配置见 `bytedepth-start/src/main/resources/application.yml`：
-
-- `spring.session.store-type=redis`
-- `spring.session.timeout=60m`（空闲 60 分钟过期）
-- `spring.session.redis.namespace=bytedepth:session:v2`
-
-Redis 重启会丢失普通 Session；勾选记住我的用户靠签名 cookie 恢复登录，无需重新登录。
-
-## 记住我
-
-实际实现为无状态 `TokenBasedRememberMeServices`——自包含签名 cookie（用户名 + 过期时间 + HMAC），不依赖数据库存储。历史设计曾用 JDBC `PersistentTokenRepositoryImpl` + `persistent_logins` 表，V13 建表后 V23 删除，已改为无状态方案。
-
-| 配置 | 值 |
-| --- | --- |
-| Cookie 名 | `bytedepth-remember-me` |
-| 表单参数 | `remember-me` |
-| 有效期 | 30 天（`30 * 24 * 60 * 60` 秒） |
-| HttpOnly | 是（Spring 默认） |
-| SameSite | `Lax` |
-| Secure | 由 `BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE` 控制，默认 `false`，HTTPS 部署设 `true` |
-| 签名密钥 | 由 `BYTEDEPTH_REMEMBER_ME_KEY` 注入，默认本地值不可用于生产 |
-
-无状态方案在 Session 过期后，浏览器并发请求各自校验同一 cookie，不会因 token 轮换互相失效。
+每个环境必须显式设置自己的 `HEARTH_OIDC_ISSUER` 和签名密钥来源 `HEARTH_SIGNING_KEY_LOCATION`。issuer 必须稳定且在 staging/production 使用 HTTPS；不同环境必须使用独立的数据库、Redis namespace、Client 注册和签名密钥。
 
 ## 约束
 
-- 不要重新引入基于数据库表的记住我实现；如需可撤销的记住我，应另选方案并同步更新本文。
-- 生产环境必须配置 `BYTEDEPTH_REMEMBER_ME_KEY` 与 `BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE=true`。
-- CSRF 仓库选型与历史故障见 [CSRF 决策记录](csrf-session-repository.md)。
-- 权限模型与授权执行见 [角色与权限模型](rbac.md)。
+- Hearth 的本地密码只用于 Hearth 登录，密码只以成熟密码哈希形式存储；业务系统不接收 Hearth 密码。
+- Session Cookie 必须在 HTTPS 环境启用 Secure，并设置合适的 SameSite 策略。
+- 第一阶段只允许 Authorization Code + PKCE；Refresh Token 不进入浏览器 JavaScript 或浏览器存储。
+- OIDC `sub` 使用 Hearth 身份 UUID，`iss` 永远等于当前环境的配置 issuer；业务系统不能用邮箱作为稳定身份键。
+- 修改 Session、CSRF 或 OIDC 回调行为时，必须补充适配层测试，并在 staging 做跨进程验收。
+- Hearth 只确认“你是谁”；业务功能权限仍由各业务系统管理。
