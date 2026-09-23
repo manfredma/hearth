@@ -5,12 +5,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import manfred.hearth.app.identity.IdentityCredentialPort;
 import manfred.hearth.app.identity.IdentityDirectoryPort;
 import manfred.hearth.app.identity.IdentityProfile;
 import manfred.hearth.app.identity.PasswordLoginService;
+import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 import manfred.hearth.domain.identity.IdentityAccount;
 import manfred.hearth.domain.identity.IdentitySubject;
 import manfred.hearth.domain.identity.PasswordCredential;
@@ -22,6 +24,8 @@ import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
+import jakarta.servlet.http.Cookie;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -36,9 +40,12 @@ class LoginControllerTest {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
     private final FakeCredentials credentials = new FakeCredentials();
     private final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
+    private final HearthRememberMeServices rememberMeServices = new HearthRememberMeServices(
+            "test-key", username -> org.springframework.security.core.userdetails.User.withUsername(username)
+                    .password(encoder.encode("secret")).authorities(List.of()).build(), false);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new LoginController(
             new PasswordLoginService(credentials, encoder, Clock.fixed(NOW, ZoneOffset.UTC), 3, Duration.ofMinutes(15)),
-            new FakeDirectory(), requestCache)).build();
+            new FakeDirectory(), requestCache, rememberMeServices)).build();
 
     @Test
     void returnsSessionIdentityAfterSuccessfulLogin() throws Exception {
@@ -77,6 +84,35 @@ class LoginControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(result -> assertThat(result.getResponse().getContentAsString())
                         .contains("\"authenticated\":false", "登录失败，请检查账号或密码"));
+    }
+
+    @Test
+    void selectedRememberMeLoginIssuesThirtyDayCookie() throws Exception {
+        credentials.credential = new PasswordCredential(USER_ID, "admin", encoder.encode("secret"), true, 0, null);
+
+        mvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"admin\",\"password\":\"secret\",\"rememberMe\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getCookie("hearth-remember-me")).isNotNull());
+    }
+
+    @Test
+    void unselectedLoginClearsAnExistingRememberMeCookie() throws Exception {
+        credentials.credential = new PasswordCredential(USER_ID, "admin", encoder.encode("secret"), true, 0, null);
+        MvcResult remembered = mvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"admin\",\"password\":\"secret\",\"rememberMe\":true}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Cookie existing = remembered.getResponse().getCookie("hearth-remember-me");
+
+        mvc.perform(post("/api/login")
+                        .cookie(existing)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"admin\",\"password\":\"secret\",\"rememberMe\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getCookie("hearth-remember-me").getMaxAge()).isZero());
     }
 
     private static final class FakeCredentials implements IdentityCredentialPort {

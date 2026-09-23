@@ -17,6 +17,11 @@ class HearthPrincipalTest {
         HearthPrincipal principal = new HearthPrincipal(
                 UUID.randomUUID(), "admin", "管理员", "admin@example.com");
 
+        assertThat(principal.getUsername()).isEqualTo("admin");
+        assertThat(principal.getPassword()).isNull();
+        assertThat(principal.getAuthorities()).isEmpty();
+        assertThat(principal.isEnabled()).isTrue();
+
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
             output.writeObject(principal);
