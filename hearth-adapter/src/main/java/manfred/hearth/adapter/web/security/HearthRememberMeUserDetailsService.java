@@ -37,7 +37,7 @@ public class HearthRememberMeUserDetailsService implements UserDetailsService {
                 account.id(), credential.login(), account.displayName(), account.email(), credential.passwordHash());
     }
 
-    static record PasswordBackedHearthPrincipal(
+    record PasswordBackedHearthPrincipal(
             java.util.UUID userId,
             String username,
             String displayName,
