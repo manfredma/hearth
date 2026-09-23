@@ -1,6 +1,6 @@
 # Hearth 部署说明
 
-Hearth 是统一身份服务。生产与 staging 必须使用不同的数据目录、Redis namespace、session cookie 和 OIDC client；staging 不得复用生产凭据或数据库。
+Hearth 是统一身份服务。staging 入口为 `https://staging-hearth.bytedepth.cn/`。生产与 staging 必须使用不同的数据目录、Redis namespace、session cookie 和 OIDC client；staging 不得复用生产凭据或数据库。
 
 ## 配置
 
@@ -17,4 +17,4 @@ bash scripts/test-deploy-hearth-config.sh
 docker compose --env-file deploy/.env -f deploy/docker-compose.single-host.yml config --quiet
 ```
 
-正式部署脚本将在 staging 部署阶段补充，必须遵守不可变版本、完整 compose 重建、集成测试和 E2E 验收顺序。
+staging 入口由 124 上共享的 bytedepth-nginx 承载，路由文件见 [`nginx/staging-hearth.conf`](nginx/staging-hearth.conf)。证书路径固定为 `/etc/letsencrypt/live/staging-hearth.bytedepth.cn/`，证书申请与续期必须先在 124 完成，再 reload Nginx。正式部署脚本将在 staging 部署阶段补充，必须遵守不可变版本、完整 compose 重建、集成测试和 E2E 验收顺序。
