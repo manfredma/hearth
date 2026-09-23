@@ -59,6 +59,7 @@ describe('Hearth application shell', () => {
     expect(screen.getByRole('heading', { name: '回到 hearth' })).toBeTruthy();
     expect(screen.getByLabelText('账号')).toBeTruthy();
     expect(screen.getByLabelText('密码')).toBeTruthy();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith('/api/csrf', { headers: { Accept: 'application/json' } }));
     expect(localStorageSetItem).not.toHaveBeenCalled();
   });
 
@@ -84,7 +85,7 @@ describe('Hearth application shell', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/oauth2/authorize?client_id=daylilt'));
     expect(globalThis.fetch).toHaveBeenLastCalledWith('/api/login', expect.objectContaining({
       method: 'POST',
-      headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }),
+      headers: expect.objectContaining({ 'X-CSRF-TOKEN': 'csrf-token' }),
     }));
   });
 

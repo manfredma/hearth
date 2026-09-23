@@ -19,6 +19,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 由 bytedepth 模板转换为独立的 Hearth 身份服务工程，模块、包名、运行时变量和服务名统一使用 Hearth 命名。
 - 基础设施 JDBC 仓储保持可代理，避免 Spring Repository 异常转换在启动阶段失败。
 - 修正 Spring Security 7 Authorization Server endpoint matcher 绑定，并移除未使用的 Thymeleaf 模板依赖。
+- 修正登录页 CSRF 请求头名称，使服务端会话登录请求能够通过 Spring Security 校验。
 
 ### Security
 

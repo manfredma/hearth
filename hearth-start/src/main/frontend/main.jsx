@@ -72,7 +72,7 @@ export function LoginPage({ navigate = redirectTo } = {}) {
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-XSRF-TOKEN': csrfToken || '' },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken || '' },
         body: JSON.stringify({ login, password }),
       });
       if (!response.ok) {
