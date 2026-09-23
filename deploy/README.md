@@ -4,7 +4,7 @@ Hearth 是统一身份服务。staging 入口为 `https://staging-hearth.bytedep
 
 ## 配置
 
-复制 `deploy/.env.example` 或 `deploy/.env.staging.example` 为宿主机私有的 `.env`，并由部署系统注入真正的数据库、Redis 和 RSA 私钥配置。`HEARTH_SIGNING_KEY` 使用 base64 编码的 PKCS#8 RSA 私钥 DER，私钥不得提交到仓库。不要把 `.env` 提交到仓库。`HEARTH_COMMIT_ID` 与 `HEARTH_BUILT_AT` 必须由发布流程显式注入，不接受隐式默认值。
+复制 `deploy/.env.example` 或 `deploy/.env.staging.example` 为宿主机私有的 `.env`，并由部署系统注入真正的数据库、Redis、RSA 私钥和 Remember-Me 签名密钥配置。`HEARTH_SIGNING_KEY` 使用 base64 编码的 PKCS#8 RSA 私钥 DER；`HEARTH_REMEMBER_ME_KEY` 必须是独立的高熵随机值，staging/production 不得共用。密钥不得提交到仓库。不要把 `.env` 提交到仓库。`HEARTH_COMMIT_ID` 与 `HEARTH_BUILT_AT` 必须由发布流程显式注入，不接受隐式默认值。
 
 生产使用 `docker-compose.single-host.yml`，staging 使用它叠加 `docker-compose.staging.yml`。服务名统一带 `hearth-` 前缀，避免与同机其他项目的 compose DNS 别名冲突；只有 `hearth-app` 接入共享 `bytedepth_default` 网络供边缘 Nginx 反向代理，MySQL/Redis 保持在 Hearth 私有网络。
 

@@ -11,7 +11,7 @@ Spring Boot 多模块统一身份服务（DDD 分层）+ React/Vite 管理端。
 - 改完代码必须跑测试；新增业务逻辑分支需要单元测试，模块覆盖率门禁必须通过。
 - 不新增 Maven 模块；只能在现有 `hearth-domain`、`hearth-app`、`hearth-infrastructure`、`hearth-adapter`、`hearth-start` 五个模块内实现。
 - 跨进程的 MySQL、Redis、Flyway、Docker、OIDC、Nginx 集成测试只能在 staging 执行；本机只执行断网单元测试、mock/fake、静态检查和配置语法检查。
-- 私人身份和业务数据不得写入 `localStorage`、IndexedDB 或其他浏览器持久化存储；浏览器只保留 HttpOnly Session Cookie。
+- 私人身份和业务数据不得写入 `localStorage`、IndexedDB 或其他浏览器持久化存储；浏览器只保留 Hearth 域的 HttpOnly Session/Remember-Me Cookie。
 - Hearth 只保存自己的本地登录凭据哈希，不接收业务系统密码。身份主键必须是经过验证的 `issuer + subject`，不能用用户名或邮箱自动合并身份。
 - 生产与 staging 必须隔离 MySQL 数据目录、Redis namespace、Session Cookie、OIDC client、签名密钥和回调地址。
 - Compose 服务名必须带 `hearth-` 前缀，禁止使用通用 `app`、`web` 等别名；完整 Compose 服务必须重建启动，不能只启动单个容器。

@@ -7,6 +7,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 ### Added
 
 - 初始化 Hearth 统一身份中心：OIDC 登录边界、服务端 Redis Session、MySQL 身份目录和应用访问数据模型。
+- 增加 Hearth 统一的 30 天免登录：复用 bytedepth 已验证的 Spring Security 无状态签名 Remember-Me Cookie。
 - 确定 Hearth 自建 OIDC Provider 方向，接入 Spring Security 7 Authorization Server 边界配置与标准 Provider 路由。
 - 新增本地密码凭据、服务端登录 Session，以及 OAuth Client、授权码、Consent 的 MySQL 持久化表。
 - 接入 Spring Security 7 的 Authorization Server filter chain、RSA JWK、OIDC claims 和 OAuth Client 管理 API。
@@ -30,3 +31,4 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 ### Security
 
 - Hearth 不保存业务密码；生产与 staging 必须使用不同 OIDC client、MySQL 数据目录、Redis namespace 和 Session Cookie。
+- Remember-Me 签名密钥由 `HEARTH_REMEMBER_ME_KEY` 注入，HTTPS 环境使用 HttpOnly、Secure、SameSite=Lax Cookie；业务应用不共享该 Cookie。

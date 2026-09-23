@@ -4,9 +4,10 @@ Hearth 是独立的统一身份服务，负责认证、身份目录、应用接�
 
 ## 技术边界
 
-- Spring Boot 4 + Spring Security 7，OIDC 登录，服务端 Redis Session。
+- Spring Boot 4 + Spring Security 7，OIDC 登录，服务端 Redis Session；30 天免登录使用无状态签名 Remember-Me Cookie。
 - React + Vite 管理端，后端提供 JSON API；不使用 Thymeleaf 页面渲染。
 - MySQL 8 + Flyway 是身份数据的唯一持久化来源；浏览器不保存私人身份数据。
+- Redis 只承载短期 Session 和临时认证状态，不承载 30 天登录凭据；长期登录凭据由 Hearth 签名 Cookie 表达。
 - staging 与生产使用不同 MySQL 数据目录、Redis namespace、Session Cookie 和 OIDC client。
 
 ## 模块和依赖方向

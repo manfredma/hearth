@@ -31,6 +31,8 @@ hearth:
   authentication:
     failure-threshold: ${HEARTH_LOGIN_FAILURE_THRESHOLD:5}
     lock-duration: ${HEARTH_LOGIN_LOCK_DURATION:15m}
+    remember-me-key: ${HEARTH_REMEMBER_ME_KEY:hearth-local-remember-me-key}
+    remember-me-cookie-secure: ${HEARTH_REMEMBER_ME_COOKIE_SECURE:false}
   authorization-server:
     issuer: ${HEARTH_OIDC_ISSUER:https://localhost:8080}
     signing-key-location: ${HEARTH_SIGNING_KEY_LOCATION:env:HEARTH_SIGNING_KEY}

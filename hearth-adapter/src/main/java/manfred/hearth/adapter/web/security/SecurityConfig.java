@@ -2,6 +2,7 @@ package manfred.hearth.adapter.web.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,13 +11,22 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    HearthRememberMeServices rememberMeServices(
+            UserDetailsService userDetailsService,
+            @Value("${hearth.authentication.remember-me-key}") String rememberMeKey,
+            @Value("${hearth.authentication.remember-me-cookie-secure:false}") boolean secureCookie) {
+        return new HearthRememberMeServices(rememberMeKey, userDetailsService, secureCookie);
+    }
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http, HearthRememberMeServices rememberMeServices) throws Exception {
         http
                 .csrf(SecurityConfig::configureCsrf)
                 .authorizeHttpRequests(auth -> auth
@@ -32,6 +42,7 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/api/session/logout")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
+        http.rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices));
         return http.build();
     }
 

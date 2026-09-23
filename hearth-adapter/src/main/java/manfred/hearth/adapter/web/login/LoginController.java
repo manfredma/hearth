@@ -6,6 +6,7 @@ import java.net.URI;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import manfred.hearth.adapter.web.security.HearthPrincipal;
+import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 import manfred.hearth.app.identity.IdentityDirectoryPort;
 import manfred.hearth.app.identity.PasswordLoginService;
 import org.springframework.http.HttpStatus;
@@ -28,13 +29,15 @@ public class LoginController {
     private final PasswordLoginService passwordLoginService;
     private final IdentityDirectoryPort identityDirectory;
     private final RequestCache requestCache;
+    private final HearthRememberMeServices rememberMeServices;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     public LoginController(PasswordLoginService passwordLoginService, IdentityDirectoryPort identityDirectory,
-                           RequestCache requestCache) {
+                           RequestCache requestCache, HearthRememberMeServices rememberMeServices) {
         this.passwordLoginService = passwordLoginService;
         this.identityDirectory = identityDirectory;
         this.requestCache = requestCache;
+        this.rememberMeServices = rememberMeServices;
     }
 
     @PostMapping("/api/login")
@@ -49,6 +52,8 @@ public class LoginController {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
+        rememberMeServices.onInteractiveLogin(httpRequest, httpResponse, context.getAuthentication(),
+                Boolean.TRUE.equals(request.rememberMe()));
         SavedRequest savedRequest = requestCache.getRequest(httpRequest, httpResponse);
         String redirectTo = savedRequest == null ? null : relativeRedirect(savedRequest.getRedirectUrl(), httpRequest);
         if (savedRequest != null) {
@@ -90,7 +95,10 @@ public class LoginController {
                 .body(new LoginErrorResponse(false, "登录失败，请检查账号或密码"));
     }
 
-    public record LoginRequest(String login, String password) {
+    public record LoginRequest(String login, String password, Boolean rememberMe) {
+        public LoginRequest {
+            rememberMe = Boolean.TRUE.equals(rememberMe);
+        }
     }
 
     public record LoginResponse(boolean authenticated, String displayName, String redirectTo) {

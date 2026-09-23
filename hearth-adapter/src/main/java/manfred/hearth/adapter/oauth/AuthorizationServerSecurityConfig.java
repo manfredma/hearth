@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
+import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerSecurityConfig {
@@ -30,7 +31,8 @@ public class AuthorizationServerSecurityConfig {
             OAuth2AuthorizationService authorizationService,
             OAuth2AuthorizationConsentService authorizationConsentService,
             AuthorizationServerSettings authorizationServerSettings,
-            RequestCache requestCache) throws Exception {
+            RequestCache requestCache,
+            HearthRememberMeServices rememberMeServices) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
         http
                 .securityMatcher(authorizationServer.getEndpointsMatcher())
@@ -41,6 +43,7 @@ public class AuthorizationServerSecurityConfig {
                         .authorizationServerSettings(authorizationServerSettings)
                         .oidc(Customizer.withDefaults()))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
                 .requestCache(cache -> cache.requestCache(requestCache))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HearthLoginAuthenticationEntryPoint()));
