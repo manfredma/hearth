@@ -5,8 +5,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableMethodSecurity
@@ -15,7 +17,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/health"))
+                .csrf(SecurityConfig::configureCsrf)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico", "/api/health",
                                 "/api/login", "/api/csrf", "/login", "/.well-known/openid-configuration", "/oauth2/jwks")
@@ -30,5 +32,10 @@ public class SecurityConfig {
                         .logoutUrl("/api/session/logout")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
         return http.build();
+    }
+
+    static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
+        csrf.ignoringRequestMatchers("/api/health");
+        csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler());
     }
 }

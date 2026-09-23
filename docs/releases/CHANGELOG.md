@@ -22,6 +22,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 修正登录页 CSRF 请求头名称，使服务端会话登录请求能够通过 Spring Security 校验。
 - 登录页在 CSRF token 准备完成前禁用提交，避免快速操作触发 403。
 - 显式启用 Redis-backed HTTP Session，并按环境使用隔离的 Redis namespace。
+- JSON 登录 API 使用跨请求稳定的非掩码 CSRF token handler，继续保留服务端 CSRF 校验。
 
 ### Security
 
