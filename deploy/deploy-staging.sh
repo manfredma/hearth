@@ -30,7 +30,7 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly REPOSITORY_URL="${HEARTH_REPOSITORY_URL:-https://github.com/manfredma/hearth.git}"
+readonly REPOSITORY_URL="${HEARTH_REPOSITORY_URL:-git@github.com:manfredma/hearth.git}"
 readonly STAGING_DOMAIN="staging-hearth.bytedepth.cn"
 readonly COMPOSE_PROJECT="hearth-staging"
 readonly ENV_FILE="$SOURCE_ROOT/deploy/.env"

@@ -25,7 +25,7 @@ bash deploy/deploy-staging.sh <candidate-branch-or-tag>
 
 脚本使用显式的 SSH 私钥和 `known_hosts`，在 124 上获取候选 ref，重建完整 Compose 服务，等待 Flyway/应用健康检查，再验证 HTTPS OIDC discovery；staging 的 `.env` 由宿主机私有配置提供，脚本不会把凭据写入 Git 或命令行。
 
-如果 staging 宿主机暂时无法访问 GitHub，可通过 `HEARTH_REPOSITORY_URL` 指向宿主机上的只读 Git mirror/bundle；默认仍使用官方 Hearth GitHub 仓库。
+部署脚本默认通过宿主机 root 的 GitHub SSH 凭据获取官方 Hearth 仓库：`git@github.com:manfredma/hearth.git`。如果 staging 宿主机暂时无法通过 SSH 访问 GitHub，可显式设置 `HEARTH_REPOSITORY_URL`，指向宿主机上的只读 Git mirror/bundle；该覆盖不会改变默认源仓库。
 
 部署脚本会在同一把 `/opt/shared-maven/repository.lock` 全局锁内，使用固定的 Java 25 Maven 镜像预热 `/opt/shared-maven/repository`，再执行 Dockerfile 的离线构建；预热日志中的未登记 `WARN`/`WARNING` 会直接阻断发布。
 
