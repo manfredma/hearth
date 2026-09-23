@@ -63,6 +63,19 @@ describe('Hearth application shell', () => {
     expect(localStorageSetItem).not.toHaveBeenCalled();
   });
 
+  it('does not allow login submission before the CSRF token is ready', async () => {
+    let resolveCsrf;
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise((resolve) => {
+      resolveCsrf = resolve;
+    }));
+    render(<LoginPage />);
+
+    const submit = screen.getByRole('button', { name: '登录' });
+    expect(submit.disabled).toBe(true);
+    resolveCsrf({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) });
+    await waitFor(() => expect(submit.disabled).toBe(false));
+  });
+
   it('shows an unavailable state when the csrf token cannot be loaded', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
     render(<LoginPage />);

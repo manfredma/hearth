@@ -101,7 +101,7 @@ export function LoginPage({ navigate = redirectTo } = {}) {
           <label htmlFor="login-password">密码</label>
           <input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
           {error && <p className="login-error" role="alert">{error}</p>}
-          <button className="button button-dark login-submit" type="submit" disabled={submitting}>{submitting ? '正在登录…' : '登录'}</button>
+          <button className="button button-dark login-submit" type="submit" disabled={submitting || !csrfToken}>{submitting ? '正在登录…' : '登录'}</button>
         </form>
         <p className="login-footnote">你的密码只提交给 Hearth，登录状态保存在服务端会话中。</p>
       </section>
