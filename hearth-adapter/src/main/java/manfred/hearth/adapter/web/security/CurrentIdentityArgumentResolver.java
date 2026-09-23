@@ -32,8 +32,14 @@ public class CurrentIdentityArgumentResolver implements HandlerMethodArgumentRes
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         Authentication authentication = (Authentication) webRequest.getUserPrincipal();
-        if (authentication == null || !(authentication.getPrincipal() instanceof OidcUser oidcUser)) {
+        if (authentication == null) {
             throw new IllegalStateException("Current identity requires an OIDC-authenticated principal");
+        }
+        if (authentication.getPrincipal() instanceof HearthPrincipal hearthPrincipal) {
+            return new CurrentIdentity(hearthPrincipal.userId(), hearthPrincipal.displayName());
+        }
+        if (!(authentication.getPrincipal() instanceof OidcUser oidcUser)) {
+            throw new IllegalStateException("Current identity requires an authenticated Hearth principal");
         }
         OidcIdentityMapper.MappedIdentity mapped = identityMapper.map(oidcUser);
         IdentityAccount account = identityDirectory.findOrCreate(mapped.subject(), mapped.profile());

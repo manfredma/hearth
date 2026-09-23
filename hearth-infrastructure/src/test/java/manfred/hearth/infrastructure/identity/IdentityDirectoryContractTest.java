@@ -32,7 +32,8 @@ class IdentityDirectoryContractTest {
         when(resultSet.getString("subject")).thenReturn("subject-1");
         when(resultSet.getString("display_name")).thenReturn("Feng");
         when(resultSet.getString("email")).thenReturn("feng@example.com");
-        when(jdbcTemplate.queryForObject(any(String.class), any(org.springframework.jdbc.core.RowMapper.class),
+        when(jdbcTemplate.queryForObject(any(String.class),
+                org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<IdentityAccount>>any(),
                 eq("https://auth.example"), eq("subject-1")))
                 .thenAnswer(invocation -> invocation.<org.springframework.jdbc.core.RowMapper<IdentityAccount>>getArgument(1)
                         .mapRow(resultSet, 0));

@@ -11,7 +11,7 @@ import manfred.hearth.domain.access.ApplicationAccess;
 import manfred.hearth.domain.application.ApplicationKey;
 
 @Repository
-public final class MySqlApplicationAccessRepository implements ApplicationAccessPort {
+public class MySqlApplicationAccessRepository implements ApplicationAccessPort {
 
     private final JdbcTemplate jdbcTemplate;
 

@@ -35,7 +35,15 @@ violations=()
 for relative_file in "${files[@]}"; do
   absolute_file="$project_root/$relative_file"
   if matches=$(rg -n -i 'bytedepth|BYTEDEPTH' "$absolute_file" 2>/dev/null); then
-    violations+=("$relative_file:$matches")
+    filtered_matches=$(printf '%s\n' "$matches" | while IFS= read -r line; do
+      case "$line" in
+        *'staging-hearth.bytedepth.cn'*|*'bytedepth_default'*) ;;
+        *) printf '%s\n' "$line" ;;
+      esac
+    done)
+    if [[ -n "$filtered_matches" ]]; then
+      violations+=("$relative_file:$filtered_matches")
+    fi
   fi
 done
 

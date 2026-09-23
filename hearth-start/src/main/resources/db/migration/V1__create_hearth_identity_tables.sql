@@ -4,10 +4,12 @@ CREATE TABLE user_identity (
     subject VARCHAR(512) NOT NULL,
     display_name VARCHAR(160) NOT NULL,
     email VARCHAR(320) NULL,
+    issuer_identity_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(issuer, 256))) STORED,
+    subject_identity_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(subject, 256))) STORED,
     created_at TIMESTAMP(6) NOT NULL,
     updated_at TIMESTAMP(6) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_user_identity_issuer_subject (issuer, subject)
+    UNIQUE KEY uk_user_identity_issuer_subject (issuer_identity_hash, subject_identity_hash)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE application (
@@ -22,7 +24,8 @@ CREATE TABLE application (
 CREATE TABLE application_redirect_uri (
     application_id CHAR(36) NOT NULL,
     redirect_uri VARCHAR(2048) NOT NULL,
-    PRIMARY KEY (application_id, redirect_uri),
+    redirect_uri_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(redirect_uri, 256))) STORED,
+    PRIMARY KEY (application_id, redirect_uri_hash),
     CONSTRAINT fk_application_redirect_uri_application FOREIGN KEY (application_id) REFERENCES application (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 

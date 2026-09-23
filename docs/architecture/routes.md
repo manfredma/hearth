@@ -8,6 +8,8 @@
 | `/api/health` | GET | 健康检查，不要求登录。 |
 | `/api/session` | GET | 返回当前服务端 Session 对应的身份摘要。 |
 | `/api/session/logout` | POST | 清理服务端 Session，受 CSRF 保护。 |
+| `/api/csrf` | GET | 返回当前服务端 CSRF token，供登录表单提交使用。 |
+| `/api/login` | POST | 使用 Hearth 本地账号建立服务端 Session。 |
 | `/.well-known/openid-configuration` | GET | Hearth OIDC Provider 元数据。 |
 | `/oauth2/authorize` | GET | Authorization Code 授权入口，要求登录并支持 PKCE。 |
 | `/oauth2/token` | POST | Authorization Code/Refresh Token 交换入口。 |

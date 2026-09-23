@@ -12,8 +12,8 @@ Spring Boot 多模块统一身份服务（DDD 分层）+ React/Vite 管理端。
 - 不新增 Maven 模块；只能在现有 `hearth-domain`、`hearth-app`、`hearth-infrastructure`、`hearth-adapter`、`hearth-start` 五个模块内实现。
 - 跨进程的 MySQL、Redis、Flyway、Docker、OIDC、Nginx 集成测试只能在 staging 执行；本机只执行断网单元测试、mock/fake、静态检查和配置语法检查。
 - 私人身份和业务数据不得写入 `localStorage`、IndexedDB 或其他浏览器持久化存储；浏览器只保留 HttpOnly Session Cookie。
-- Hearth 不保存业务系统密码。身份主键必须是经过验证的 `issuer + subject`，不能用用户名或邮箱自动合并身份。
-- 生产与 staging 必须隔离 MySQL 数据目录、Redis namespace、Session Cookie、OIDC client、OIDC secret 和回调地址。
+- Hearth 只保存自己的本地登录凭据哈希，不接收业务系统密码。身份主键必须是经过验证的 `issuer + subject`，不能用用户名或邮箱自动合并身份。
+- 生产与 staging 必须隔离 MySQL 数据目录、Redis namespace、Session Cookie、OIDC client、签名密钥和回调地址。
 - Compose 服务名必须带 `hearth-` 前缀，禁止使用通用 `app`、`web` 等别名；完整 Compose 服务必须重建启动，不能只启动单个容器。
 - 任何用户可见、运行时、配置或部署变更，首次 staging 前必须先写入 `docs/releases/CHANGELOG.md` 的非空分类 `## Unreleased`。
 - 涉及模块边界、外部接口、OIDC、身份主键或长期约束的设计，必须先写 ADR（`docs/architecture/decisions/`），再写 spec 和代码。
@@ -30,5 +30,6 @@ bash scripts/run-local-quality.sh
 
 - 运行时变量统一使用 `HEARTH_`；包名与 Maven 坐标统一使用 `manfred.hearth`。
 - `domain` 不依赖框架、Web 或基础设施；`app` 定义端口和用例；`infrastructure` 实现 MySQL/Redis 端口；`adapter` 处理 OIDC、Session API 和 Web；`start` 负责启动、迁移和打包。
+- `infrastructure` 中标注 `@Repository` 的 JDBC 实现不得声明为 `final`；Spring 的异常转换器需要对它们创建代理。
 - React 组件与样式必须自隔离；环境样式放在实际承载组件且所有使用页面都会加载的样式文件中。
 - 变更发现的新流程错误必须沉淀到项目文档并补充可重复自动检查，不能依赖会话记忆。

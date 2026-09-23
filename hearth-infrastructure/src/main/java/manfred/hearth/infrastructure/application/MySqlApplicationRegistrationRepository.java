@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public final class MySqlApplicationRegistrationRepository implements ApplicationRegistrationRepository {
+public class MySqlApplicationRegistrationRepository implements ApplicationRegistrationRepository {
 
     private final JdbcTemplate jdbcTemplate;
 

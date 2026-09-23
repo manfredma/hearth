@@ -36,7 +36,7 @@ export default function App() {
       </aside>
       {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="关闭菜单" />}
       <main className="hearth-main">
-        <header className="topbar"><button className="icon-button menu-trigger" onClick={() => setMobileOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><div className="breadcrumb"><span>hearth</span><span className="slash">/</span><b>总览</b></div><div className="topbar-actions"><button className="help-link">帮助文档 <ExternalLink size={14} /></button>{identity ? <button className="profile-chip"><div className="avatar small">{identity.displayName.slice(0, 1)}</div><span>{identity.displayName}</span><ChevronDown size={15} /></button> : <a className="button button-dark" href="/oauth2/authorization/hearth">{loading ? '检查登录' : '登录'}</a>}</div></header>
+        <header className="topbar"><button className="icon-button menu-trigger" onClick={() => setMobileOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><div className="breadcrumb"><span>hearth</span><span className="slash">/</span><b>总览</b></div><div className="topbar-actions"><button className="help-link">帮助文档 <ExternalLink size={14} /></button>{identity ? <button className="profile-chip"><div className="avatar small">{identity.displayName.slice(0, 1)}</div><span>{identity.displayName}</span><ChevronDown size={15} /></button> : <a className="button button-dark" href="/login">{loading ? '检查登录' : '登录'}</a>}</div></header>
         <div className="content-wrap" id="overview">
           <section className="hero-row"><div><div className="eyebrow"><span className="eyebrow-dot" />统一身份中心</div><h1>你好，{loading ? '正在确认你的身份' : identity?.displayName || '欢迎回到 hearth'}</h1><p className="hero-copy">从这里进入你使用的每一个应用。一次登录，保持专注。</p></div><div className="hero-symbol"><Fingerprint size={38} strokeWidth={1.3} /><span>your<br />identity<br />is yours</span></div></section>
           <section className="stats-grid" aria-label="身份概览"><div className="stat-card"><span>已连接应用</span><strong>04</strong><small>均使用 Hearth 统一认证</small></div><div className="stat-card"><span>当前会话</span><strong>{identity ? '安全' : '访客'}</strong><small>{identity ? '服务端会话已建立' : '登录后可访问应用'}</small></div><div className="stat-card accent"><span>身份提供方</span><strong>OIDC</strong><small>Provider-neutral by design</small></div></section>
@@ -49,11 +49,79 @@ export default function App() {
   );
 }
 
+export function LoginPage({ navigate = redirectTo } = {}) {
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [csrfToken, setCsrfToken] = useState(null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/csrf', { headers: { Accept: 'application/json' } })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('csrf unavailable')))
+      .then((payload) => setCsrfToken(payload.token))
+      .catch(() => setError('当前登录服务暂不可用，请稍后再试'));
+  }, []);
+
+  const returnTo = safeReturnTo(new URLSearchParams(window.location.search).get('continue'));
+
+  async function submit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-XSRF-TOKEN': csrfToken || '' },
+        body: JSON.stringify({ login, password }),
+      });
+      if (!response.ok) {
+        setError('登录失败，请检查账号或密码');
+        return;
+      }
+      const payload = await response.json();
+      navigate(safeReturnTo(payload.redirectTo || returnTo));
+    } catch {
+      setError('当前登录服务暂不可用，请稍后再试');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="login-shell">
+      <section className="login-card" aria-labelledby="login-title">
+        <div className="login-brand"><div className="brand-mark"><span>h</span></div><span>hearth</span></div>
+        <div className="eyebrow"><span className="eyebrow-dot" />统一身份中心</div>
+        <h1 id="login-title">回到 hearth</h1>
+        <p className="login-copy">一次登录，连接你的工作与生活。</p>
+        <form onSubmit={submit} noValidate>
+          <label htmlFor="login-account">账号</label>
+          <input id="login-account" value={login} onChange={(event) => setLogin(event.target.value)} autoComplete="username" required />
+          <label htmlFor="login-password">密码</label>
+          <input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
+          {error && <p className="login-error" role="alert">{error}</p>}
+          <button className="button button-dark login-submit" type="submit" disabled={submitting}>{submitting ? '正在登录…' : '登录'}</button>
+        </form>
+        <p className="login-footnote">你的密码只提交给 Hearth，登录状态保存在服务端会话中。</p>
+      </section>
+    </main>
+  );
+}
+
+function safeReturnTo(value) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+}
+
+export function redirectTo(path, locationObject = window.location) {
+  locationObject.assign(path);
+}
+
 function ApplicationCard({ app }) { return <a className="app-card" href={`#app-${app.key}`}><div className={`app-icon ${app.tone}`}>{app.name.slice(0, 1).toLowerCase()}</div><div className="app-copy"><div className="app-title"><h3>{app.name}</h3><span className="status-dot" /></div><p>{app.description}</p><small>{app.status}</small></div><ArrowUpRight className="card-arrow" size={18} /></a>; }
 
 /* c8 ignore start */
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(<App />);
+  createRoot(rootElement).render(window.location.pathname === '/login' ? <LoginPage /> : <App />);
 }
 /* c8 ignore stop */

@@ -19,6 +19,9 @@ class MigrationScriptsTest {
             assertThat(sql).contains("CREATE TABLE application");
             assertThat(sql).contains("CREATE TABLE application_access");
             assertThat(sql).contains("CREATE TABLE audit_event");
+            assertThat(sql).contains("issuer_identity_hash BINARY(32)");
+            assertThat(sql).contains("subject_identity_hash BINARY(32)");
+            assertThat(sql).contains("redirect_uri_hash BINARY(32)");
             assertThat(sql).doesNotContain("password_hash");
         }
     }

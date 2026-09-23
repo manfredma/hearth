@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,7 +17,7 @@ import manfred.hearth.domain.identity.IdentityAccount;
 import manfred.hearth.domain.identity.IdentitySubject;
 
 @Repository
-public final class MySqlIdentityDirectory implements IdentityDirectoryPort {
+public class MySqlIdentityDirectory implements IdentityDirectoryPort {
 
     private static final String UPSERT_SQL = """
             INSERT INTO user_identity (id, issuer, subject, display_name, email, created_at, updated_at)
@@ -27,6 +28,11 @@ public final class MySqlIdentityDirectory implements IdentityDirectoryPort {
             SELECT id, display_name, email
             FROM user_identity
             WHERE issuer = ? AND subject = ?
+            """;
+    private static final String FIND_BY_ID_SQL = """
+            SELECT id, issuer, subject, display_name, email
+            FROM user_identity
+            WHERE id = ?
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -46,6 +52,12 @@ public final class MySqlIdentityDirectory implements IdentityDirectoryPort {
         jdbcTemplate.update(UPSERT_SQL, id.toString(), subject.issuer(), subject.subject(), profile.displayName(),
                 profile.email(), now, now);
         return jdbcTemplate.queryForObject(FIND_SQL, this::mapAccount, subject.issuer(), subject.subject());
+    }
+
+    @Override
+    public Optional<IdentityAccount> findById(UUID id) {
+        Objects.requireNonNull(id, "id");
+        return jdbcTemplate.query(FIND_BY_ID_SQL, this::mapAccount, id.toString()).stream().findFirst();
     }
 
     private IdentityAccount mapAccount(ResultSet resultSet, int rowNumber) throws SQLException {

@@ -28,6 +28,9 @@ server:
 
 hearth:
   environment: ${HEARTH_ENVIRONMENT:local}
+  authentication:
+    failure-threshold: ${HEARTH_LOGIN_FAILURE_THRESHOLD:5}
+    lock-duration: ${HEARTH_LOGIN_LOCK_DURATION:15m}
   authorization-server:
     issuer: ${HEARTH_OIDC_ISSUER:https://localhost:8080}
     signing-key-location: ${HEARTH_SIGNING_KEY_LOCATION:env:HEARTH_SIGNING_KEY}
