@@ -28,6 +28,7 @@
 | [ADR-0007](0007-mysql-identity-lookup-indexes.md) | MySQL 身份键保留原文并使用哈希联合唯一索引 | Accepted | 2026-09-23 |
 | [ADR-0008](0008-application-user-provisioning-and-identity-mapping.md) | 业务应用按稳定 subject 建立本地用户映射 | Accepted | 2026-09-23 |
 | [ADR-0009](0009-central-sso-session-and-logout.md) | Hearth 管理统一 SSO Session、记住登录与统一退出 | Accepted | 2026-09-23 |
+| [ADR-0010](0010-business-applications-do-not-provide-login-route.md) | 业务应用不提供自有登录入口 | Accepted | 2026-09-23 |
 
 ## 维护边界
 
