@@ -26,7 +26,7 @@ export default function App() {
   return (
     <div className="hearth-shell">
       <aside className={`hearth-sidebar ${mobileOpen ? 'is-open' : ''}`}>
-        <div className="brand-lockup"><div className="brand-mark"><span>h</span></div><div><strong>hearth</strong><small>identity center</small></div><button className="icon-button sidebar-close" onClick={() => setMobileOpen(false)} aria-label="关闭菜单"><X size={18} /></button></div>
+        <div className="brand-lockup"><img className="brand-mark" src="/favicon.svg" alt="Hearth 标志" /><div><strong>hearth</strong><small>identity center</small></div><button className="icon-button sidebar-close" onClick={() => setMobileOpen(false)} aria-label="关闭菜单"><X size={18} /></button></div>
         <nav className="side-nav" aria-label="主导航">
           <a className="nav-item is-active" href="#overview"><Command size={18} /><span>总览</span></a>
           <a className="nav-item" href="#applications"><Boxes size={18} /><span>应用接入</span><span className="nav-count">4</span></a>
@@ -52,6 +52,7 @@ export default function App() {
 export function LoginPage({ navigate = redirectTo } = {}) {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [csrfToken, setCsrfToken] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -73,7 +74,7 @@ export function LoginPage({ navigate = redirectTo } = {}) {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken || '' },
-        body: JSON.stringify({ login, password }),
+        body: JSON.stringify({ login, password, rememberMe }),
       });
       if (!response.ok) {
         setError('登录失败，请检查账号或密码');
@@ -91,7 +92,7 @@ export function LoginPage({ navigate = redirectTo } = {}) {
   return (
     <main className="login-shell">
       <section className="login-card" aria-labelledby="login-title">
-        <div className="login-brand"><div className="brand-mark"><span>h</span></div><span>hearth</span></div>
+        <div className="login-brand"><img className="brand-mark" src="/favicon.svg" alt="Hearth 标志" /><span>hearth</span></div>
         <div className="eyebrow"><span className="eyebrow-dot" />统一身份中心</div>
         <h1 id="login-title">回到 hearth</h1>
         <p className="login-copy">一次登录，连接你的工作与生活。</p>
@@ -100,10 +101,14 @@ export function LoginPage({ navigate = redirectTo } = {}) {
           <input id="login-account" value={login} onChange={(event) => setLogin(event.target.value)} autoComplete="username" required />
           <label htmlFor="login-password">密码</label>
           <input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
+          <label className="remember-me-control" htmlFor="login-remember-me">
+            <input id="login-remember-me" type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+            <span>保持登录 30 天</span>
+          </label>
           {error && <p className="login-error" role="alert">{error}</p>}
           <button className="button button-dark login-submit" type="submit" disabled={submitting || !csrfToken}>{submitting ? '正在登录…' : '登录'}</button>
         </form>
-        <p className="login-footnote">你的密码只提交给 Hearth，登录状态保存在服务端会话中。</p>
+        <p className="login-footnote">你的密码只提交给 Hearth；选择保持登录后，Hearth 会在此浏览器保留 30 天登录凭据。</p>
       </section>
     </main>
   );

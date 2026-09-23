@@ -54,13 +54,46 @@ describe('Hearth application shell', () => {
   it('renders a server-session login form without browser storage', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) });
     const localStorageSetItem = vi.spyOn(Storage.prototype, 'setItem');
+    const sessionStorageSetItem = vi.spyOn(window.sessionStorage, 'setItem');
     render(<LoginPage />);
 
     expect(screen.getByRole('heading', { name: '回到 hearth' })).toBeTruthy();
     expect(screen.getByLabelText('账号')).toBeTruthy();
     expect(screen.getByLabelText('密码')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: '保持登录 30 天' }).checked).toBe(false);
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith('/api/csrf', { headers: { Accept: 'application/json' } }));
     expect(localStorageSetItem).not.toHaveBeenCalled();
+    expect(sessionStorageSetItem).not.toHaveBeenCalled();
+  });
+
+  it('sends the selected 30-day login preference with credentials', async () => {
+    const navigate = vi.fn();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ authenticated: true }) });
+    render(<LoginPage navigate={navigate} />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '登录' }).disabled).toBe(false));
+    fireEvent.change(screen.getByLabelText('账号'), { target: { value: 'admin' } });
+    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: '保持登录 30 天' }));
+    fireEvent.click(screen.getByRole('button', { name: '登录' }));
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(globalThis.fetch.mock.calls[1][1].body)).toEqual({ login: 'admin', password: 'secret', rememberMe: true });
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('uses the same brand mark on the login page and sidebar', async () => {
+    render(<App />);
+    expect(await screen.findByText(/欢迎回到 hearth/)).toBeTruthy();
+    const sidebarMark = screen.getByAltText('Hearth 标志');
+    expect(sidebarMark.getAttribute('src')).toBe('/favicon.svg');
+
+    render(<LoginPage />);
+    const marks = screen.getAllByAltText('Hearth 标志');
+    expect(marks).toHaveLength(2);
+    expect(marks[1].getAttribute('src')).toBe(sidebarMark.getAttribute('src'));
   });
 
   it('does not allow login submission before the CSRF token is ready', async () => {
@@ -100,6 +133,7 @@ describe('Hearth application shell', () => {
       method: 'POST',
       headers: expect.objectContaining({ 'X-CSRF-TOKEN': 'csrf-token' }),
     }));
+    expect(JSON.parse(globalThis.fetch.mock.lastCall[1].body).rememberMe).toBe(false);
   });
 
   it('uses the requested return target when no saved authorization request exists', async () => {
