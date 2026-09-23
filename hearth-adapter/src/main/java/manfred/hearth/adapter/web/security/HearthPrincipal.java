@@ -1,9 +1,13 @@
 package manfred.hearth.adapter.web.security;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
-public record HearthPrincipal(UUID userId, String username, String displayName, String email) {
+public record HearthPrincipal(UUID userId, String username, String displayName, String email)
+        implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public HearthPrincipal {
         Objects.requireNonNull(userId, "userId");

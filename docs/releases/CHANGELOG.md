@@ -23,6 +23,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 登录页在 CSRF token 准备完成前禁用提交，避免快速操作触发 403。
 - 显式启用 Redis-backed HTTP Session，并按环境使用隔离的 Redis namespace。
 - JSON 登录 API 使用跨请求稳定的非掩码 CSRF token handler，继续保留服务端 CSRF 校验。
+- Redis HTTP Session 中的 HearthPrincipal 支持 Java 序列化，修复登录成功后无法持久化会话的问题。
 
 ### Security
 

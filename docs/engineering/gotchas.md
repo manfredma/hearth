@@ -21,3 +21,4 @@
 - OIDC `issuer + sub` 是跨应用身份稳定键；不能用 email 代替 subject。
 - Hearth 管理认证、身份目录和应用访问；业务系统管理功能权限、资源权限和数据权限。
 - session 只保存服务端身份引用，浏览器通过 HttpOnly、Secure、SameSite Cookie 持有 session 标识。
+- 放入 Redis HTTP Session 的 Spring Security principal 必须实现稳定的 `Serializable` 合约，并用 Java 序列化往返测试覆盖；否则登录请求虽然认证成功，提交 session 时仍会失败。
