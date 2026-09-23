@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -44,7 +45,7 @@ class OidcIdentityMapperTest {
 
     private URL url(String value) {
         try {
-            return new URL(value);
+            return URI.create(value).toURL();
         } catch (MalformedURLException exception) {
             throw new IllegalArgumentException(exception);
         }

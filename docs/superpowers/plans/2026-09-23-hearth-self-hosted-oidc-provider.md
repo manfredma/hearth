@@ -6,7 +6,7 @@
 
 **Architecture:** Hearth 自己拥有用户、密码、Session、应用 Client、Token 和审计；Spring Authorization Server 只在 `hearth-adapter` 提供 OAuth/OIDC 协议端点。领域层和应用层不依赖 Spring Authorization Server 类型，MySQL 保存长期身份与授权数据，Redis 保存 Session、限流和短期状态。
 
-**Tech Stack:** Java 25, Maven Wrapper 3.9.11, Spring Boot 4.1, Spring Security 7, Spring Authorization Server, MySQL 8, Redis Session, React, Vite, Vitest.
+**Tech Stack:** Java 25, Maven Wrapper 3.9.11, Spring Boot 4.1, Spring Security 7.1 (Boot-managed Authorization Server starter), MySQL 8, Redis Session, React, Vite, Vitest.
 
 **Spec:** `docs/superpowers/specs/2026-09-23-hearth-self-hosted-oidc-provider-design.md`
 
@@ -53,7 +53,7 @@
 
 - [ ] **Step 3: Replace the client-only dependencies with the authorization-server dependency.**
 
-  Add the pinned Spring Authorization Server dependency; remove the unused external-provider client/resource-server path from the active configuration. Do not add a separate provider service or Maven module.
+  Add `spring-boot-starter-oauth2-authorization-server` (Spring Boot 4.1 manages Spring Security Authorization Server 7.1.0); remove the unused external-provider client/resource-server path from the active configuration. Do not add a separate provider service or Maven module.
 
 - [ ] **Step 4: Implement provider configuration and endpoint metadata.**
 

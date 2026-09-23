@@ -28,9 +28,8 @@ server:
 
 hearth:
   environment: ${HEARTH_ENVIRONMENT:local}
-  oidc:
-    enabled: ${HEARTH_OIDC_ENABLED:false}
-    issuer-uri: ${HEARTH_OIDC_ISSUER_URI:}
-    client-id: ${HEARTH_OIDC_CLIENT_ID:}
-    client-secret: ${HEARTH_OIDC_CLIENT_SECRET:}
-    post-logout-redirect-uri: ${HEARTH_OIDC_POST_LOGOUT_REDIRECT_URI:}
+  authorization-server:
+    issuer: ${HEARTH_OIDC_ISSUER:https://localhost:8080}
+    signing-key-location: ${HEARTH_SIGNING_KEY_LOCATION:env:HEARTH_SIGNING_KEY}
+    access-token-ttl: ${HEARTH_ACCESS_TOKEN_TTL:5m}
+    refresh-token-ttl: ${HEARTH_REFRESH_TOKEN_TTL:30d}
