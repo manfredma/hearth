@@ -21,6 +21,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 修正 Spring Security 7 Authorization Server endpoint matcher 绑定，并移除未使用的 Thymeleaf 模板依赖。
 - 修正登录页 CSRF 请求头名称，使服务端会话登录请求能够通过 Spring Security 校验。
 - 登录页在 CSRF token 准备完成前禁用提交，避免快速操作触发 403。
+- 显式启用 Redis-backed HTTP Session，并按环境使用隔离的 Redis namespace。
 
 ### Security
 
