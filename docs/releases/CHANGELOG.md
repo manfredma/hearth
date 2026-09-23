@@ -24,6 +24,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 显式启用 Redis-backed HTTP Session，并按环境使用隔离的 Redis namespace。
 - JSON 登录 API 使用跨请求稳定的非掩码 CSRF token handler，继续保留服务端 CSRF 校验。
 - SPA 登录使用非 HttpOnly 的 `XSRF-TOKEN` CSRF cookie，并继续通过 `X-CSRF-TOKEN` 请求头校验。
+- OIDC 未登录请求显式携带 `/login?continue=...`，登录后可稳定回到原始授权请求。
 - Redis HTTP Session 中的 HearthPrincipal 支持 Java 序列化，修复登录成功后无法持久化会话的问题。
 
 ### Security
