@@ -4,6 +4,7 @@ WORKDIR /frontend
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY index.html vite.config.mjs ./
+COPY public public
 COPY hearth-start/src/main/frontend hearth-start/src/main/frontend
 RUN npm run build
 
