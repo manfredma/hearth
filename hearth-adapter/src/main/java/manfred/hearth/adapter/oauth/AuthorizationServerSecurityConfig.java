@@ -52,7 +52,7 @@ public class AuthorizationServerSecurityConfig {
                 // id_token_hint and post_logout_redirect_uri itself, so the
                 // outer chain must let the protocol filter receive the request.
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(publicEndpoints()).permitAll()
+                        .requestMatchers(oidcLogoutEndpointMatcher()).permitAll()
                         .anyRequest().authenticated())
                 // OAuth's one-time state parameter protects the browser consent
                 // POST. Exclude the dedicated Authorization Server endpoints
@@ -71,6 +71,10 @@ public class AuthorizationServerSecurityConfig {
 
     static String[] publicEndpoints() {
         return new String[]{"/connect/logout"};
+    }
+
+    static RequestMatcher oidcLogoutEndpointMatcher() {
+        return request -> "/connect/logout".equals(request.getRequestURI());
     }
 
     /**

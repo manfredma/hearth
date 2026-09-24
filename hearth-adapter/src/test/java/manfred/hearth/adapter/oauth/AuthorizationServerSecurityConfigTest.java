@@ -3,6 +3,7 @@ package manfred.hearth.adapter.oauth;
 import java.lang.reflect.Method;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -35,5 +36,14 @@ class AuthorizationServerSecurityConfigTest {
     void exposesOidcLogoutToUnauthenticatedRelyingPartiesForProtocolValidation() {
         assertThat(AuthorizationServerSecurityConfig.publicEndpoints())
                 .containsExactly("/connect/logout");
+    }
+
+    @Test
+    void matchesOnlyTheOidcLogoutRequestPath() {
+        MockHttpServletRequest logout = new MockHttpServletRequest("GET", "/connect/logout");
+        MockHttpServletRequest other = new MockHttpServletRequest("GET", "/oauth2/authorize");
+
+        assertThat(AuthorizationServerSecurityConfig.oidcLogoutEndpointMatcher().matches(logout)).isTrue();
+        assertThat(AuthorizationServerSecurityConfig.oidcLogoutEndpointMatcher().matches(other)).isFalse();
     }
 }
