@@ -30,8 +30,7 @@ public class SecurityConfig {
         http
                 .csrf(SecurityConfig::configureCsrf)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico", "/api/health",
-                                "/api/login", "/api/csrf", "/login", "/.well-known/openid-configuration", "/oauth2/jwks")
+                        .requestMatchers(publicRequestMatchers())
                         .permitAll()
                         .requestMatchers("/oauth2/**", "/login/**", "/userinfo", "/connect/logout")
                         .permitAll()
@@ -44,6 +43,13 @@ public class SecurityConfig {
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
         http.rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices));
         return http.build();
+    }
+
+    static String[] publicRequestMatchers() {
+        return new String[]{
+                "/", "/index.html", "/assets/**", "/favicon.ico", "/favicon.svg", "/api/health",
+                "/api/login", "/api/csrf", "/login", "/.well-known/openid-configuration", "/oauth2/jwks"
+        };
     }
 
     static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {

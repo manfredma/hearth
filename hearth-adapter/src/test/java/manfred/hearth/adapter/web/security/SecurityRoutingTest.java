@@ -23,6 +23,11 @@ class SecurityRoutingTest {
     }
 
     @Test
+    void brandFaviconIsPublicSoItCannotReplaceAnOidcSavedRequest() {
+        assertThat(SecurityConfig.publicRequestMatchers()).contains("/favicon.svg");
+    }
+
+    @Test
     void apiCsrfConfigurationUsesAnUnmaskedTokenAcrossRequests() {
         CsrfConfigurer<HttpSecurity> csrf = mock(CsrfConfigurer.class);
         when(csrf.ignoringRequestMatchers(any(String[].class))).thenReturn(csrf);
