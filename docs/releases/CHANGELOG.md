@@ -20,6 +20,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
+- 修复 OAuth 授权确认在登录后返回 403 的问题：认证会话改用 Spring Security 可持久化的标准用户主体，兼容旧 HearthPrincipal 会话，并清理已写入旧主体的失效授权记录。
 - 收敛 OAuth 授权确认页的身份上下文展示：合并 Career 来源与当前账号信息，移除重复的 Hearth 身份块，并优化域名、权限说明和移动端布局。
 - 将授权确认原型接入真实 OAuth 流程：Career 授权请求使用 Hearth 中文 consent 页面，支持动态应用/账号信息、权限选择、同意与取消提交。
 - 修复授权确认页原生表单提交时 `client_id`、`state`、`user_code` 和 `scope` 参数丢失，确保同意与取消都能正确回到 OAuth 授权端点。

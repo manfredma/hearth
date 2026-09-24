@@ -14,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import manfred.hearth.adapter.web.security.HearthRememberMeServices;
+import manfred.hearth.adapter.web.security.LegacyHearthPrincipalMigrationFilter;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerSecurityConfig {
@@ -32,7 +33,8 @@ public class AuthorizationServerSecurityConfig {
             OAuth2AuthorizationConsentService authorizationConsentService,
             AuthorizationServerSettings authorizationServerSettings,
             RequestCache requestCache,
-            HearthRememberMeServices rememberMeServices) throws Exception {
+            HearthRememberMeServices rememberMeServices,
+            LegacyHearthPrincipalMigrationFilter legacyPrincipalMigrationFilter) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
         http
                 .securityMatcher(authorizationServer.getEndpointsMatcher())
@@ -48,6 +50,10 @@ public class AuthorizationServerSecurityConfig {
                 .requestCache(cache -> cache.requestCache(requestCache))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HearthLoginAuthenticationEntryPoint()));
+        // Migrate old Redis sessions before OAuth serializes Authentication
+        // into the JDBC authorization record.
+        http.addFilterAfter(legacyPrincipalMigrationFilter,
+                org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter.class);
         return http.build();
     }
 }

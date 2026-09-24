@@ -16,6 +16,7 @@ import manfred.hearth.domain.identity.IdentitySubject;
 import manfred.hearth.domain.identity.PasswordCredential;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 class HearthRememberMeUserDetailsServiceTest {
@@ -31,11 +32,9 @@ class HearthRememberMeUserDetailsServiceTest {
 
         UserDetails details = service.loadUserByUsername("admin");
 
-        assertThat(details).isInstanceOf(HearthRememberMeUserDetailsService.PasswordBackedHearthPrincipal.class);
+        assertThat(details).isInstanceOf(User.class);
         assertThat(details.getUsername()).isEqualTo("admin");
         assertThat(details.getPassword()).isEqualTo("password-hash");
-        assertThat(((HearthRememberMeUserDetailsService.PasswordBackedHearthPrincipal) details).principal().displayName())
-                .isEqualTo("管理员");
         assertThat(details.getAuthorities()).isEmpty();
     }
 

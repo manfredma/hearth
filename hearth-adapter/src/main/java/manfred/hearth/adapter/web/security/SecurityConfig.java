@@ -26,7 +26,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, HearthRememberMeServices rememberMeServices) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, HearthRememberMeServices rememberMeServices,
+                                    LegacyHearthPrincipalMigrationFilter legacyPrincipalMigrationFilter) throws Exception {
         http
                 .csrf(SecurityConfig::configureCsrf)
                 .authorizeHttpRequests(auth -> auth
@@ -42,6 +43,10 @@ public class SecurityConfig {
                         .logoutUrl("/api/session/logout")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
         http.rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices));
+        // The same migration is needed on ordinary requests so a legacy
+        // session cannot be persisted again before reaching an OAuth route.
+        http.addFilterAfter(legacyPrincipalMigrationFilter,
+                org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter.class);
         return http.build();
     }
 

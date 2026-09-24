@@ -19,6 +19,8 @@ import manfred.hearth.domain.identity.PasswordCredential;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -55,8 +57,25 @@ class LoginControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"admin\",\"password\":\"secret\"}"))
                 .andExpect(status().isOk())
-                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                        .andExpect(result -> assertThat(result.getResponse().getContentAsString())
                         .contains("\"authenticated\":true", "\"displayName\":\"管理员\""));
+    }
+
+    @Test
+    void storesAStandardSpringSecurityUserInTheSession() throws Exception {
+        credentials.credential = new PasswordCredential(USER_ID, "admin", encoder.encode("secret"), true, 0, null);
+
+        MvcResult result = mvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"admin\",\"password\":\"secret\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        SecurityContext context = (SecurityContext) result.getRequest().getSession()
+                .getAttribute("SPRING_SECURITY_CONTEXT");
+        assertThat(context.getAuthentication().getPrincipal()).isInstanceOf(User.class);
+        assertThat(context.getAuthentication().getPrincipal()).isNotInstanceOf(
+                manfred.hearth.adapter.web.security.HearthPrincipal.class);
     }
 
     @Test

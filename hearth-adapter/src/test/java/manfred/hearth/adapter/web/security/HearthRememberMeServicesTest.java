@@ -32,16 +32,15 @@ class HearthRememberMeServicesTest {
     }
 
     @Test
-    void restoresHearthPrincipalAfterShortSessionExpires() {
-        HearthRememberMeUserDetailsService.PasswordBackedHearthPrincipal remembered =
-                new HearthRememberMeUserDetailsService.PasswordBackedHearthPrincipal(
-                        java.util.UUID.randomUUID(), "admin", "管理员", "admin@example.com", "password-hash");
+    void restoresAStandardSpringSecurityUserAfterShortSessionExpires() {
+        org.springframework.security.core.userdetails.UserDetails remembered =
+                User.withUsername("admin").password("password-hash").authorities(List.of()).build();
         HearthRememberMeServices services = new HearthRememberMeServices("test-key", username -> remembered, false);
         MockHttpServletRequest loginRequest = new MockHttpServletRequest();
         MockHttpServletResponse loginResponse = new MockHttpServletResponse();
         services.onLoginSuccess(loginRequest, loginResponse,
                 UsernamePasswordAuthenticationToken.authenticated(
-                        new HearthPrincipal(remembered.userId(), remembered.username(), remembered.displayName(), remembered.email()),
+                        remembered,
                         null, java.util.List.of()));
 
         MockHttpServletRequest restoredRequest = new MockHttpServletRequest();
@@ -49,7 +48,7 @@ class HearthRememberMeServicesTest {
         Authentication restored = services.autoLogin(restoredRequest, new MockHttpServletResponse());
 
         assertThat(restored).isNotNull();
-        assertThat(restored.getPrincipal()).isInstanceOf(HearthPrincipal.class);
-        assertThat(((HearthPrincipal) restored.getPrincipal()).displayName()).isEqualTo("管理员");
+        assertThat(restored.getPrincipal()).isInstanceOf(User.class);
+        assertThat(((User) restored.getPrincipal()).getUsername()).isEqualTo("admin");
     }
 }

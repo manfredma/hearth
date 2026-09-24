@@ -7,10 +7,19 @@ import manfred.hearth.app.identity.IdentityDirectoryPort;
 import manfred.hearth.domain.identity.PasswordCredential;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-/** Loads the local password hash required to verify a signed Remember-Me cookie. */
+/**
+ * Loads the local password hash required to verify a signed Remember-Me cookie.
+ *
+ * <p>The returned object is deliberately Spring Security's {@link User}, not
+ * a Hearth-specific principal. Remember-Me authentication can become the
+ * current principal on any request and may later be persisted by the OAuth
+ * authorization service, so it must obey the same serialization contract as
+ * interactive login.</p>
+ */
 @Service
 public class HearthRememberMeUserDetailsService implements UserDetailsService {
 
@@ -31,57 +40,11 @@ public class HearthRememberMeUserDetailsService implements UserDetailsService {
         PasswordCredential credential = credentials.findByLogin(username)
                 .filter(value -> value.canAuthenticate(clock.instant()))
                 .orElseThrow(() -> new UsernameNotFoundException("Hearth account not found or unavailable"));
-        var account = identityDirectory.findById(credential.userId())
+        identityDirectory.findById(credential.userId())
                 .orElseThrow(() -> new UsernameNotFoundException("Hearth account not found"));
-        return new PasswordBackedHearthPrincipal(
-                account.id(), credential.login(), account.displayName(), account.email(), credential.passwordHash());
-    }
-
-    record PasswordBackedHearthPrincipal(
-            java.util.UUID userId,
-            String username,
-            String displayName,
-            String email,
-            String password
-    ) implements UserDetails {
-
-        @Override
-        public java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> getAuthorities() {
-            return java.util.List.of();
-        }
-
-        @Override
-        public String getPassword() {
-            return password;
-        }
-
-        @Override
-        public String getUsername() {
-            return username;
-        }
-
-        @Override
-        public boolean isAccountNonExpired() {
-            return true;
-        }
-
-        @Override
-        public boolean isAccountNonLocked() {
-            return true;
-        }
-
-        @Override
-        public boolean isCredentialsNonExpired() {
-            return true;
-        }
-
-        @Override
-        public boolean isEnabled() {
-            return true;
-        }
-
-        HearthPrincipal principal() {
-            return new HearthPrincipal(userId, username, displayName, email);
-        }
+        return User.withUsername(credential.login())
+                .password(credential.passwordHash())
+                .authorities(java.util.List.of())
+                .build();
     }
 }

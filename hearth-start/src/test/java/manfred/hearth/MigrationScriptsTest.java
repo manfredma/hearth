@@ -25,4 +25,17 @@ class MigrationScriptsTest {
             assertThat(sql).doesNotContain("password_hash");
         }
     }
+
+    @Test
+    void legacyOAuthAuthorizationMigrationRemovesOnlyRowsWithTheRejectedPrincipalType() throws IOException {
+        try (InputStream input = getClass().getResourceAsStream(
+                "/db/migration/V4__remove_legacy_oauth_authorizations.sql")) {
+            assertThat(input).as("legacy OAuth authorization migration").isNotNull();
+            String sql = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(sql).contains("DELETE FROM oauth2_authorization");
+            assertThat(sql).contains("CONVERT(attributes USING utf8mb4)");
+            assertThat(sql).contains("HearthPrincipal");
+            assertThat(sql).doesNotContain("oauth2_authorization_consent");
+        }
+    }
 }

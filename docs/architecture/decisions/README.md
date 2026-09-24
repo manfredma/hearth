@@ -30,6 +30,7 @@
 | [ADR-0009](0009-central-sso-session-and-logout.md) | Hearth 管理统一 SSO Session、记住登录与统一退出 | Accepted | 2026-09-23 |
 | [ADR-0010](0010-business-applications-do-not-provide-login-route.md) | 业务应用不提供自有登录入口 | Accepted | 2026-09-23 |
 | [ADR-0011](0011-persistent-login-credentials.md) | 使用签名 Cookie 实现 Hearth 30 天免登录 | Accepted | 2026-09-23 |
+| [ADR-0012](0012-framework-principal-for-oauth-persistence.md) | OAuth 持久化使用框架标准安全主体 | Accepted | 2026-09-24 |
 
 ## 维护边界
 

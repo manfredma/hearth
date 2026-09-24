@@ -1,11 +1,10 @@
 package manfred.hearth.adapter.web.login;
 
-import java.util.List;
 import java.net.URI;
+import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import manfred.hearth.adapter.web.security.HearthPrincipal;
 import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 import manfred.hearth.app.identity.IdentityDirectoryPort;
 import manfred.hearth.app.identity.PasswordLoginService;
@@ -14,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.RequestCache;
@@ -47,8 +48,16 @@ public class LoginController {
                 request.login(), request.password());
         var account = identityDirectory.findById(authenticated.userId())
                 .orElseThrow(PasswordLoginService.InvalidCredentialsException::new);
-        HearthPrincipal principal = new HearthPrincipal(
-                account.id(), authenticated.login(), account.displayName(), account.email());
+        // Spring Authorization Server persists the current Authentication in
+        // oauth2_authorization.attributes. Its Jackson allow-list supports the
+        // framework User type, while arbitrary application principals are
+        // rejected when the authorization request returns from the consent page.
+        // Keep the principal small; the profile is resolved from Hearth's
+        // server-side identity tables when a controller needs it.
+        UserDetails principal = User.withUsername(authenticated.login())
+                .password("")
+                .authorities(List.of())
+                .build();
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
