@@ -57,7 +57,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
       input.value = input.dataset.scope;
     });
     return undefined;
-  }, [preview, clientId, search]);
+  });
 
   function togglePermission(key) {
     setSelected((current) => ({ ...current, [key]: !current[key] }));
