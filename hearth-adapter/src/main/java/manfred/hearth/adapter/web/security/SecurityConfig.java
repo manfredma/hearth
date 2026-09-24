@@ -59,7 +59,13 @@ public class SecurityConfig {
         };
     }
 
-    static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
+    /**
+     * Applies the same cookie-backed CSRF contract to every Hearth filter
+     * chain. The OAuth authorization endpoints use a separate higher-priority
+     * chain, so keeping this configuration reusable prevents its consent POST
+     * from silently falling back to a different session-backed token.
+     */
+    public static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
         csrf.ignoringRequestMatchers("/api/health");
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setHeaderName("X-CSRF-TOKEN");

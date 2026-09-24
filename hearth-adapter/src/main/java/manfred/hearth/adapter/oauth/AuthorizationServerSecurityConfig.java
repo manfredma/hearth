@@ -10,11 +10,13 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 import manfred.hearth.adapter.web.security.LegacyHearthPrincipalMigrationFilter;
+import manfred.hearth.adapter.web.security.SecurityConfig;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerSecurityConfig {
@@ -46,6 +48,7 @@ public class AuthorizationServerSecurityConfig {
                         .authorizationEndpoint(endpoint -> endpoint.consentPage("/oauth2/consent"))
                         .oidc(Customizer.withDefaults()))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                .csrf(AuthorizationServerSecurityConfig::configureCsrf)
                 .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
                 .requestCache(cache -> cache.requestCache(requestCache))
                 .exceptionHandling(exceptions -> exceptions
@@ -55,5 +58,15 @@ public class AuthorizationServerSecurityConfig {
         http.addFilterAfter(legacyPrincipalMigrationFilter,
                 org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * Reuses the public web-chain CSRF policy for the higher-priority OAuth
+     * chain. Without this delegation, the consent form receives a cookie token
+     * from {@code /api/csrf} but the authorization endpoint expects a separate
+     * default session token and rejects every consent submission with 403.
+     */
+    static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
+        SecurityConfig.configureCsrf(csrf);
     }
 }
