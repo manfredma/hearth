@@ -12,6 +12,7 @@
 - 认证与会话：[认证说明](security/authentication.md)、[CSRF 与 Session](security/csrf-session-repository.md)
 - 应用访问与授权边界：[应用访问模型](security/application-access.md)、[权限边界](security/rbac.md)
 - 架构决策：[ADR 索引](architecture/decisions/README.md)
+- 产品后续事项：[MVP Backlog](backlog.md)
 - 构建与测试：[Maven 指南](agent-guides/maven.md)、[代码质量](agent-guides/code-quality.md)
 - Git、staging 与发布：[Git 工作流](engineering/git-workflow.md)、[统一发布流程](engineering/unified-release-pipeline.md)、[发布记录](releases/README.md)
 - 部署和环境隔离：只读 [部署手册](../deploy/README.md)
