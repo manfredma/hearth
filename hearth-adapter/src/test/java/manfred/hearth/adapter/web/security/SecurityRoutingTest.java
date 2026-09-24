@@ -36,6 +36,7 @@ class SecurityRoutingTest {
 
         SecurityConfig.configureCsrf(csrf);
 
+        verify(csrf).ignoringRequestMatchers("/connect/logout");
         verify(csrf).csrfTokenRequestHandler(isA(CsrfTokenRequestAttributeHandler.class));
         verify(csrf).csrfTokenRepository(isA(CookieCsrfTokenRepository.class));
     }

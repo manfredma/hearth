@@ -67,6 +67,10 @@ public class SecurityConfig {
      */
     static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
         csrf.ignoringRequestMatchers("/api/health");
+        // RP-Initiated Logout is a protocol GET handled by the OIDC endpoint
+        // filter. It does not submit the application CSRF token; the local
+        // POST session logout below remains CSRF-protected.
+        csrf.ignoringRequestMatchers("/connect/logout");
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setHeaderName("X-CSRF-TOKEN");
         csrf.csrfTokenRepository(repository);
