@@ -6,6 +6,9 @@ import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -32,11 +35,13 @@ class LegacyHearthPrincipalMigrationFilterTest {
         SecurityContextHolder.setContext(context);
         FilterChain chain = mock(FilterChain.class);
 
-        new LegacyHearthPrincipalMigrationFilter().doFilter(
+        new LegacyHearthPrincipalMigrationFilter(Clock.fixed(Instant.parse("2026-09-24T12:00:00Z"), ZoneOffset.UTC)).doFilter(
                 new MockHttpServletRequest(), new MockHttpServletResponse(), chain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal())
                 .isInstanceOf(User.class);
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
+                .anyMatch(org.springframework.security.core.authority.FactorGrantedAuthority.class::isInstance);
         verify(chain).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 }

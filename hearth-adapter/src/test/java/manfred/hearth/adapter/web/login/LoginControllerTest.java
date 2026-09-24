@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
@@ -39,15 +40,16 @@ class LoginControllerTest {
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final Instant NOW = Instant.parse("2026-09-23T04:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
     private final FakeCredentials credentials = new FakeCredentials();
     private final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
     private final HearthRememberMeServices rememberMeServices = new HearthRememberMeServices(
             "test-key", username -> org.springframework.security.core.userdetails.User.withUsername(username)
-                    .password(encoder.encode("secret")).authorities(List.of()).build(), false);
+                    .password(encoder.encode("secret")).authorities(List.of()).build(), CLOCK, false);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new LoginController(
             new PasswordLoginService(credentials, encoder, Clock.fixed(NOW, ZoneOffset.UTC), 3, Duration.ofMinutes(15)),
-            new FakeDirectory(), requestCache, rememberMeServices)).build();
+            new FakeDirectory(), requestCache, rememberMeServices, CLOCK)).build();
 
     @Test
     void returnsSessionIdentityAfterSuccessfulLogin() throws Exception {
@@ -76,6 +78,8 @@ class LoginControllerTest {
         assertThat(context.getAuthentication().getPrincipal()).isInstanceOf(User.class);
         assertThat(context.getAuthentication().getPrincipal()).isNotInstanceOf(
                 manfred.hearth.adapter.web.security.HearthPrincipal.class);
+        assertThat(context.getAuthentication().getAuthorities())
+                .anyMatch(FactorGrantedAuthority.class::isInstance);
     }
 
     @Test

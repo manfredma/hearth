@@ -20,6 +20,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
+- 修复 OAuth 授权码换 Token 时缺少 `auth_time` 导致 Career 回调失败并重复发起登录的问题：本地密码登录、Remember-Me 和旧会话迁移均携带带时间戳的 Spring Security 认证因子。
 - 修复 OAuth 授权确认在登录后返回 403 的问题：认证会话改用 Spring Security 可持久化的标准用户主体，兼容旧 HearthPrincipal 会话，并清理已写入旧主体的失效授权记录。
 - 收敛 OAuth 授权确认页的身份上下文展示：合并 Career 来源与当前账号信息，移除重复的 Hearth 身份块，并优化域名、权限说明和移动端布局。
 - 将授权确认原型接入真实 OAuth 流程：Career 授权请求使用 Hearth 中文 consent 页面，支持动态应用/账号信息、权限选择、同意与取消提交。

@@ -3,6 +3,7 @@ package manfred.hearth.adapter.web.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import java.time.Clock;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,9 +21,10 @@ public class SecurityConfig {
     @Bean
     HearthRememberMeServices rememberMeServices(
             UserDetailsService userDetailsService,
+            Clock clock,
             @Value("${hearth.authentication.remember-me-key}") String rememberMeKey,
             @Value("${hearth.authentication.remember-me-cookie-secure:false}") boolean secureCookie) {
-        return new HearthRememberMeServices(rememberMeKey, userDetailsService, secureCookie);
+        return new HearthRememberMeServices(rememberMeKey, userDetailsService, clock, secureCookie);
     }
 
     @Bean

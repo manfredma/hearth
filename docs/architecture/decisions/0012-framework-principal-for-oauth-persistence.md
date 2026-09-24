@@ -12,6 +12,8 @@ Spring Authorization Server 会把当前 `Authentication` 写入
 
 本地密码登录和 Remember-Me 恢复统一使用 Spring Security 的 `User` 作为安全主体，只在主体中保留登录名和必要的认证信息。显示名、邮箱和稳定用户 ID 通过 Hearth 的服务端身份目录按登录名解析。OIDC Token 的 `sub` 仍使用身份目录中的稳定用户 ID。
 
+认证主体同时携带 Spring Security `FactorGrantedAuthority` 及其签发时间。Authorization Server 使用该时间生成 OIDC `auth_time` Claim；没有认证因子时间的授权码换 Token 请求会失败。
+
 旧 Redis 会话在进入安全过滤链时转换为标准 `User`；数据库迁移删除已经写入旧主体的临时 OAuth 授权记录，但保留用户的 consent 授权记录。
 
 ## 结果

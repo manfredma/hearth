@@ -1,7 +1,7 @@
 package manfred.hearth.adapter.web.security;
 
 import java.io.IOException;
-import java.util.List;
+import java.time.Clock;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,11 @@ public class LegacyHearthPrincipalMigrationFilter extends OncePerRequestFilter {
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final SecurityContextHolderStrategy securityContextHolderStrategy =
             SecurityContextHolder.getContextHolderStrategy();
+    private final Clock clock;
+
+    public LegacyHearthPrincipalMigrationFilter(Clock clock) {
+        this.clock = clock;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -42,9 +48,10 @@ public class LegacyHearthPrincipalMigrationFilter extends OncePerRequestFilter {
             // Keep authorities from the existing authentication, but discard
             // the legacy profile fields. CurrentIdentityArgumentResolver will
             // read the authoritative profile from the identity directory.
+            UserDetails principal = User.withUsername(legacy.username()).password("")
+                    .authorities(HearthAuthenticationFactors.password(clock)).build();
             Authentication migrated = UsernamePasswordAuthenticationToken.authenticated(
-                    User.withUsername(legacy.username()).password("").authorities(List.of()).build(),
-                    null, authentication.getAuthorities());
+                    principal, null, principal.getAuthorities());
             context.setAuthentication(migrated);
             securityContextRepository.saveContext(context, request, response);
             securityContextHolderStrategy.setContext(context);

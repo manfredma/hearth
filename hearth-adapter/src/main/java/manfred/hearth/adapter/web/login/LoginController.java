@@ -1,11 +1,12 @@
 package manfred.hearth.adapter.web.login;
 
 import java.net.URI;
-import java.util.List;
+import java.time.Clock;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import manfred.hearth.adapter.web.security.HearthRememberMeServices;
+import manfred.hearth.adapter.web.security.HearthAuthenticationFactors;
 import manfred.hearth.app.identity.IdentityDirectoryPort;
 import manfred.hearth.app.identity.PasswordLoginService;
 import org.springframework.http.HttpStatus;
@@ -31,14 +32,16 @@ public class LoginController {
     private final IdentityDirectoryPort identityDirectory;
     private final RequestCache requestCache;
     private final HearthRememberMeServices rememberMeServices;
+    private final Clock clock;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     public LoginController(PasswordLoginService passwordLoginService, IdentityDirectoryPort identityDirectory,
-                           RequestCache requestCache, HearthRememberMeServices rememberMeServices) {
+                           RequestCache requestCache, HearthRememberMeServices rememberMeServices, Clock clock) {
         this.passwordLoginService = passwordLoginService;
         this.identityDirectory = identityDirectory;
         this.requestCache = requestCache;
         this.rememberMeServices = rememberMeServices;
+        this.clock = clock;
     }
 
     @PostMapping("/api/login")
@@ -56,10 +59,11 @@ public class LoginController {
         // server-side identity tables when a controller needs it.
         UserDetails principal = User.withUsername(authenticated.login())
                 .password("")
-                .authorities(List.of())
+                .authorities(HearthAuthenticationFactors.password(clock))
                 .build();
         SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities()));
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
         rememberMeServices.onInteractiveLogin(httpRequest, httpResponse, context.getAuthentication(),
                 Boolean.TRUE.equals(request.rememberMe()));
