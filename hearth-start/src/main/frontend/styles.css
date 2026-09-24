@@ -233,9 +233,9 @@
 .consent-shell--quiet .consent-account.consent-flat-surface { border-bottom: 0; }
 .consent-shell--quiet .permission-row + .permission-row { border-top: 0; }
 .consent-shell--quiet .permission-list { gap: 8px; }
-.consent-shell--quiet .consent-context-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; margin-top: 13px; }
-.consent-shell--quiet .consent-context-body .consent-connection-main { grid-template-columns: minmax(0, 1fr) auto; min-width: 0; margin: 0; }
-.consent-shell--quiet .consent-account-inline { display: flex; align-items: center; gap: 8px; min-width: 122px; }
+.consent-shell--quiet .consent-context-body { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 24px; margin-top: 13px; }
+.consent-shell--quiet .consent-context-body .consent-connection-main { display: contents; }
+.consent-shell--quiet .consent-account-inline { display: flex; align-items: center; justify-self: end; gap: 8px; min-width: 122px; }
 .consent-shell--quiet .consent-account-mark { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 10px; }
 .consent-shell--quiet .consent-account-inline .consent-account-copy { display: grid; gap: 2px; min-width: 0; }
 .consent-shell--quiet .consent-account-inline .consent-account-copy span { color: #8e8378; font-size: 10px; white-space: nowrap; }
@@ -246,6 +246,6 @@
   .consent-shell--quiet .consent-account.consent-flat-surface { margin-top: 0; padding: 13px 0; }
   .consent-shell--quiet .consent-permission-helper { margin-top: 5px; }
   .consent-shell--quiet .consent-context-body { display: block; margin-top: 12px; }
-  .consent-shell--quiet .consent-context-body .consent-connection-main { margin-bottom: 14px; }
+  .consent-shell--quiet .consent-context-body .consent-connection-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; margin-bottom: 14px; }
   .consent-shell--quiet .consent-account-inline { min-width: 0; }
 }

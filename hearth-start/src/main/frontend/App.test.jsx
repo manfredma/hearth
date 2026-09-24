@@ -216,6 +216,8 @@ describe('Hearth application shell', () => {
     expect(permissions.textContent).toContain('Career 只能访问你选择的信息，登录凭据不会共享；授权后可随时在 Hearth 中撤销。');
     const title = screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' });
     expect(title.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.submit(screen.getByRole('button', { name: /同意并继续/ }).closest('form'));
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
   });
 
   it('lets the user review permissions before continuing', () => {
@@ -228,5 +230,55 @@ describe('Hearth application shell', () => {
     expect(profile.checked).toBe(false);
     fireEvent.click(email);
     expect(screen.getByRole('button', { name: /同意并继续/ }).disabled).toBe(true);
+  });
+
+  it('renders the real OAuth consent request with dynamic client and session data', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ username: 'admin', displayName: '冯华杰' }),
+    });
+    render(<ConsentPreview preview={false} search="?client_id=career-staging&scope=openid%20profile%20email&state=oauth-state&user_code=device-code" />);
+
+    expect(screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('账号：admin')).toBeTruthy());
+    expect(screen.getByRole('button', { name: /同意并继续/ }).type).toBe('submit');
+    expect(screen.getByRole('button', { name: '取消' }).type).toBe('submit');
+    expect(screen.getByRole('checkbox', { name: /基本资料/ }).getAttribute('name')).toBe('scope');
+    expect(screen.getByRole('checkbox', { name: /邮箱地址/ }).getAttribute('name')).toBe('scope');
+    expect(screen.getByRole('checkbox', { name: /基本资料/ }).getAttribute('value')).toBe('profile');
+    expect(screen.getByRole('checkbox', { name: /邮箱地址/ }).getAttribute('value')).toBe('email');
+    expect(screen.getByDisplayValue('career-staging')).toBeTruthy();
+    expect(screen.getByDisplayValue('oauth-state')).toBeTruthy();
+    expect(screen.getByDisplayValue('device-code')).toBeTruthy();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith('/api/session', { headers: { Accept: 'application/json' } }));
+  });
+
+  it('keeps an unknown OAuth client safe and handles an unavailable session', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
+    render(<ConsentPreview preview={false} search="?client_id=toolbox" />);
+
+    expect(screen.getByRole('heading', { name: '允许 toolbox 使用你的 Hearth 账号？' })).toBeTruthy();
+    expect(screen.getByText('已接入 Hearth 的应用')).toBeTruthy();
+    expect(screen.getByDisplayValue('toolbox')).toBeTruthy();
+    expect(document.querySelector('input[name="state"]')?.value).toBe('');
+    await waitFor(() => expect(screen.getByText('账号：当前账号')).toBeTruthy());
+  });
+
+  it('reads the browser consent query and uses safe defaults for an incomplete session', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    window.history.replaceState({}, '', '/oauth2/consent?client_id=career-staging&scope=profile');
+    render(<ConsentPreview preview={false} />);
+
+    expect(screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('账号：当前账号')).toBeTruthy());
+  });
+
+  it('submits an OAuth denial without selected scopes when cancelling', () => {
+    const submit = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {});
+    render(<ConsentPreview preview={false} search="?client_id=career-staging&scope=profile&state=oauth-state" />);
+
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    expect(submit).toHaveBeenCalledTimes(1);
+    submit.mockRestore();
   });
 });

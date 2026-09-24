@@ -13,10 +13,11 @@ class SessionControllerTest {
     void exposesOnlyTheCurrentIdentitySummary() {
         UUID userId = UUID.randomUUID();
         SessionController.SessionResponse response = new SessionController()
-                .current(new CurrentIdentity(userId, "冯华杰"));
+                .current(new CurrentIdentity(userId, "admin", "冯华杰"));
 
         assertThat(response.authenticated()).isTrue();
         assertThat(response.userId()).isEqualTo(userId);
+        assertThat(response.username()).isEqualTo("admin");
         assertThat(response.displayName()).isEqualTo("冯华杰");
     }
 }

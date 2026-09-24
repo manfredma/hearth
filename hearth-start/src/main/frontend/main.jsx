@@ -128,6 +128,6 @@ function ApplicationCard({ app }) { return <a className="app-card" href={`#app-$
 /* c8 ignore start */
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(window.location.pathname === '/login' ? <LoginPage /> : window.location.pathname === '/consent-preview' ? <ConsentPreview /> : <App />);
+  createRoot(rootElement).render(window.location.pathname === '/login' ? <LoginPage /> : window.location.pathname === '/consent-preview' ? <ConsentPreview /> : window.location.pathname === '/oauth2/consent' ? <ConsentPreview preview={false} /> : <App />);
 }
 /* c8 ignore stop */

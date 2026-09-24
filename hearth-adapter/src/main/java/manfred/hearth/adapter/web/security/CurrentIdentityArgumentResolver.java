@@ -36,13 +36,13 @@ public class CurrentIdentityArgumentResolver implements HandlerMethodArgumentRes
             throw new IllegalStateException("Current identity requires an OIDC-authenticated principal");
         }
         if (authentication.getPrincipal() instanceof HearthPrincipal hearthPrincipal) {
-            return new CurrentIdentity(hearthPrincipal.userId(), hearthPrincipal.displayName());
+            return new CurrentIdentity(hearthPrincipal.userId(), hearthPrincipal.username(), hearthPrincipal.displayName());
         }
         if (!(authentication.getPrincipal() instanceof OidcUser oidcUser)) {
             throw new IllegalStateException("Current identity requires an authenticated Hearth principal");
         }
         OidcIdentityMapper.MappedIdentity mapped = identityMapper.map(oidcUser);
         IdentityAccount account = identityDirectory.findOrCreate(mapped.subject(), mapped.profile());
-        return new CurrentIdentity(account.id(), account.displayName());
+        return new CurrentIdentity(account.id(), account.subject().subject(), account.displayName());
     }
 }

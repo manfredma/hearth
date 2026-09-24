@@ -9,9 +9,9 @@ public class SessionController {
 
     @GetMapping("/api/session")
     public SessionResponse current(CurrentIdentity identity) {
-        return new SessionResponse(true, identity.userId(), identity.displayName());
+        return new SessionResponse(true, identity.userId(), identity.username(), identity.displayName());
     }
 
-    public record SessionResponse(boolean authenticated, java.util.UUID userId, String displayName) {
+    public record SessionResponse(boolean authenticated, java.util.UUID userId, String username, String displayName) {
     }
 }

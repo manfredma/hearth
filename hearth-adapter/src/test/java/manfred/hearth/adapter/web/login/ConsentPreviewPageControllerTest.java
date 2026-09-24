@@ -18,4 +18,11 @@ class ConsentPreviewPageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
     }
+
+    @Test
+    void forwardsTheRealOAuthConsentRouteToTheSpaShell() throws Exception {
+        mvc.perform(get("/oauth2/consent").queryParam("client_id", "career-staging"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
 }

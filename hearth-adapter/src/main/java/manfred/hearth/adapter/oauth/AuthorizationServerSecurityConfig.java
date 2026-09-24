@@ -41,6 +41,7 @@ public class AuthorizationServerSecurityConfig {
                         .authorizationService(authorizationService)
                         .authorizationConsentService(authorizationConsentService)
                         .authorizationServerSettings(authorizationServerSettings)
+                        .authorizationEndpoint(endpoint -> endpoint.consentPage("/oauth2/consent"))
                         .oidc(Customizer.withDefaults()))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
