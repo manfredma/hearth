@@ -28,6 +28,8 @@ Hearth 负责浏览器级统一 SSO Session、持久登录（例如“记住我 
 3. Hearth 清除统一登录 Session，并校验 `id_token_hint` 与 `post_logout_redirect_uri`。
 4. Hearth 将用户安全地返回业务应用登录页。
 
+应用登记必须分别保存 OAuth 授权回调地址和 RP-Initiated Logout 回跳地址。两者的用途和生命周期不同，不能默认把 `/login/oauth2/code/{registrationId}` 当作退出后的用户界面地址；退出请求中的 `post_logout_redirect_uri` 只有在该应用专门登记的退出回跳集合中时才允许使用。
+
 长期登录凭据必须由 Hearth 使用服务端 Session/安全 Cookie 保存；不得写入业务应用的 `localStorage`，也不得把 Hearth Session Cookie 共享给业务应用。敏感操作仍可要求重新认证。
 
 ## 后果

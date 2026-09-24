@@ -28,6 +28,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 修复授权确认页原生表单提交时 `client_id`、`state`、`user_code` 和 `scope` 参数丢失，确保同意与取消都能正确回到 OAuth 授权端点。
 - 修复旧 Hearth 会话缺少 OIDC `auth_time` 时 Career 登录循环、RP-Initiated Logout 被通用 CSRF 错误拦截的问题，并在 Hearth 首页账号菜单提供服务端退出入口。
 - 放行 OIDC RP-Initiated Logout 协议入口到端点自身校验，避免业务系统没有 Hearth Session 时被外层认证规则返回 403。
+- 修复 OAuth Client 将登录回调地址误用为退出回跳地址导致 Career RP-Initiated Logout 返回 403 的问题，分别保存并校验两类 URI。
 - 由 bytedepth 模板转换为独立的 Hearth 身份服务工程，模块、包名、运行时变量和服务名统一使用 Hearth 命名。
 - 基础设施 JDBC 仓储保持可代理，避免 Spring Repository 异常转换在启动阶段失败。
 - 修正 Spring Security 7 Authorization Server endpoint matcher 绑定，并移除未使用的 Thymeleaf 模板依赖。

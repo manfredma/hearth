@@ -5,12 +5,18 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public record ApplicationRegistration(ApplicationKey key, String displayName, Set<String> redirectUris) {
+public record ApplicationRegistration(ApplicationKey key, String displayName, Set<String> redirectUris,
+                                      Set<String> postLogoutRedirectUris) {
+
+    public ApplicationRegistration(ApplicationKey key, String displayName, Set<String> redirectUris) {
+        this(key, displayName, redirectUris, redirectUris);
+    }
 
     public ApplicationRegistration {
         Objects.requireNonNull(key, "key");
         displayName = requireDisplayName(displayName);
-        redirectUris = copyAndValidateRedirectUris(redirectUris);
+        redirectUris = copyAndValidateUris(redirectUris, "redirectUris");
+        postLogoutRedirectUris = copyAndValidateUris(postLogoutRedirectUris, "postLogoutRedirectUris");
     }
 
     private static String requireDisplayName(String value) {
@@ -21,10 +27,10 @@ public record ApplicationRegistration(ApplicationKey key, String displayName, Se
         return value;
     }
 
-    private static Set<String> copyAndValidateRedirectUris(Set<String> values) {
-        Objects.requireNonNull(values, "redirectUris");
+    private static Set<String> copyAndValidateUris(Set<String> values, String fieldName) {
+        Objects.requireNonNull(values, fieldName);
         if (values.isEmpty()) {
-            throw new IllegalArgumentException("redirectUris must not be empty");
+            throw new IllegalArgumentException(fieldName + " must not be empty");
         }
         Set<String> copy = new LinkedHashSet<>();
         for (String value : values) {

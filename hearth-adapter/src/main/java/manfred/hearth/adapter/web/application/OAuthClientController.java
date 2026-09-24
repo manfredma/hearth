@@ -70,7 +70,7 @@ public final class OAuthClientController {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .redirectUris(uris -> uris.addAll(application.redirectUris()))
-                .postLogoutRedirectUris(uris -> uris.addAll(application.redirectUris()))
+                .postLogoutRedirectUris(uris -> uris.addAll(application.postLogoutRedirectUris()))
                 .scopes(scopes -> scopes.addAll(request.scopes()))
                 .clientSettings(ClientSettings.builder()
                         .requireProofKey(true)
@@ -132,8 +132,16 @@ public final class OAuthClientController {
                 || !request.scopes().contains("openid")) {
             throw new IllegalArgumentException("only openid, profile and email scopes are supported");
         }
+        // Older registrations only supplied authorization callbacks. Keep that
+        // request shape compatible, while making new registrations explicit
+        // about the separate RP-Initiated Logout return destinations.
+        Set<String> postLogoutRedirectUris = request.postLogoutRedirectUris() == null
+                || request.postLogoutRedirectUris().isEmpty()
+                ? request.redirectUris()
+                : request.postLogoutRedirectUris();
         return new ApplicationRegistration(
-                new ApplicationKey(request.applicationKey()), request.displayName(), Set.copyOf(request.redirectUris()));
+                new ApplicationKey(request.applicationKey()), request.displayName(),
+                Set.copyOf(request.redirectUris()), Set.copyOf(postLogoutRedirectUris));
     }
 
     private String generateSecret() {
@@ -146,8 +154,21 @@ public final class OAuthClientController {
         return value == null || value.isBlank() ? List.of() : List.of(value.split(","));
     }
 
+    /**
+     * OAuth client registration input. Authorization callbacks and logout
+     * return destinations are deliberately separate protocol contracts.
+     */
     public record CreateClientRequest(String applicationKey, String displayName,
-                                      Set<String> redirectUris, Set<String> scopes) {
+                                      Set<String> redirectUris, Set<String> postLogoutRedirectUris,
+                                      Set<String> scopes) {
+        /**
+         * Compatibility constructor for existing callers that predate the
+         * explicit logout redirect field.
+         */
+        public CreateClientRequest(String applicationKey, String displayName,
+                                   Set<String> redirectUris, Set<String> scopes) {
+            this(applicationKey, displayName, redirectUris, redirectUris, scopes);
+        }
     }
 
     public record ClientCreatedResponse(String clientId, String clientSecret, String clientName) {

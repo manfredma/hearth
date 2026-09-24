@@ -59,6 +59,26 @@ class OAuthClientControllerTest {
     }
 
     @Test
+    void storesPostLogoutRedirectUrisSeparatelyFromAuthorizationRedirectUris() {
+        when(registeredClients.findByClientId("career-staging")).thenReturn(null);
+        when(passwordEncoder.encode(any(String.class))).thenReturn("encoded-secret");
+
+        controller.create(new OAuthClientController.CreateClientRequest(
+                "career-staging", "Career",
+                Set.of("https://staging-career.bytedepth.cn/login/oauth2/code/hearth"),
+                Set.of("https://staging-career.bytedepth.cn/"),
+                Set.of("openid", "profile", "email")));
+
+        ArgumentCaptor<RegisteredClient> captor = ArgumentCaptor.forClass(RegisteredClient.class);
+        verify(registeredClients).save(captor.capture());
+        RegisteredClient client = captor.getValue();
+        assertThat(client.getRedirectUris())
+                .containsExactly("https://staging-career.bytedepth.cn/login/oauth2/code/hearth");
+        assertThat(client.getPostLogoutRedirectUris())
+                .containsExactly("https://staging-career.bytedepth.cn/");
+    }
+
+    @Test
     void rejectsDuplicateClientAndUnsafeRedirectUri() {
         when(registeredClients.findByClientId("daylilt")).thenReturn(RegisteredClient.withId("existing")
                 .clientId("daylilt").clientName("Daylilt")

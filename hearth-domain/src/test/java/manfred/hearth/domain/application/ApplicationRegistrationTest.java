@@ -18,6 +18,22 @@ class ApplicationRegistrationTest {
 
         assertThat(registration.key().value()).isEqualTo("daylilt");
         assertThat(registration.redirectUris()).containsExactly("https://daylilt.example.com/login/oauth2/code/hearth");
+        assertThat(registration.postLogoutRedirectUris())
+                .containsExactly("https://daylilt.example.com/login/oauth2/code/hearth");
+    }
+
+    @Test
+    void keepsLogoutRedirectUrisSeparateFromAuthorizationCallbacks() {
+        ApplicationRegistration registration = new ApplicationRegistration(
+                new ApplicationKey("career-staging"),
+                "Career",
+                Set.of("https://staging-career.bytedepth.cn/login/oauth2/code/hearth"),
+                Set.of("https://staging-career.bytedepth.cn/"));
+
+        assertThat(registration.redirectUris())
+                .containsExactly("https://staging-career.bytedepth.cn/login/oauth2/code/hearth");
+        assertThat(registration.postLogoutRedirectUris())
+                .containsExactly("https://staging-career.bytedepth.cn/");
     }
 
     @Test
