@@ -94,6 +94,8 @@
   .consent-heading { margin: 27px 2px 20px; }
   .consent-heading h1 { font-size: 28px; }
   .consent-heading p { font-size: 11px; }
-  .consent-actions { flex-direction: row; }
-  .consent-cancel { min-width: 61px; }
+  .consent-actions { flex-direction: row; align-items: center; }
+  .consent-cancel, .consent-submit { width: auto; }
+  .consent-cancel { min-width: 61px; flex: 0 0 auto; }
+  .consent-submit { min-width: 0; flex: 1; }
 }
