@@ -249,6 +249,7 @@ describe('Hearth application shell', () => {
     expect(screen.getByDisplayValue('career-staging')).toBeTruthy();
     expect(screen.getByDisplayValue('oauth-state')).toBeTruthy();
     expect(screen.getByDisplayValue('device-code')).toBeTruthy();
+    expect([...document.querySelectorAll('input[name="scope"]')].map((input) => input.value)).toEqual(['profile', 'email']);
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith('/api/session', { headers: { Accept: 'application/json' } }));
   });
 

@@ -42,6 +42,23 @@ export default function ConsentPreview({ preview = true, search = '' }) {
     return undefined;
   }, [preview]);
 
+  useEffect(() => {
+    if (preview || !formRef.current) {
+      return undefined;
+    }
+    const form = formRef.current;
+    form.elements.namedItem('client_id').value = clientId;
+    form.elements.namedItem('state').value = query.get('state') || '';
+    const userCodeField = form.elements.namedItem('user_code');
+    if (userCodeField) {
+      userCodeField.value = query.get('user_code');
+    }
+    form.querySelectorAll('input[data-scope]').forEach((input) => {
+      input.value = input.dataset.scope;
+    });
+    return undefined;
+  }, [preview, clientId, search]);
+
   function togglePermission(key) {
     setSelected((current) => ({ ...current, [key]: !current[key] }));
   }
