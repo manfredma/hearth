@@ -187,15 +187,35 @@ describe('Hearth application shell', () => {
   it('renders the branded consent preview with source application and permissions', () => {
     render(<ConsentPreview />);
 
+    expect(document.querySelector('.consent-shell')?.classList.contains('consent-shell--quiet')).toBe(true);
     expect(screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' })).toBeTruthy();
     expect(screen.getByText('来自 Career')).toBeTruthy();
-    expect(screen.getByText('权限范围')).toBeTruthy();
     expect(screen.getByText('已验证来源')).toBeTruthy();
+    expect(screen.getByText('连接到')).toBeTruthy();
+    expect(screen.getByText('Career 可访问')).toBeTruthy();
     expect(screen.getByText('staging-career.bytedepth.cn')).toBeTruthy();
-    expect(screen.getByText('冯华杰')).toBeTruthy();
+    expect(screen.getByText('名称：冯华杰')).toBeTruthy();
     expect(screen.getByText('基本资料')).toBeTruthy();
     expect(screen.getByText('邮箱地址')).toBeTruthy();
     expect(screen.getByRole('button', { name: /同意并继续/ }).disabled).toBe(false);
+    expect(screen.queryByText('使用账号')).toBeNull();
+    expect(screen.getByText('staging-career.bytedepth.cn').parentElement?.classList.contains('consent-app-copy')).toBe(true);
+    expect(screen.getByRole('region', { name: '授权来源' }).classList.contains('consent-flat-surface')).toBe(true);
+    const source = screen.getByRole('region', { name: '授权来源' });
+    const account = screen.getByRole('region', { name: '当前账号' });
+    expect(account.classList.contains('consent-account-inline')).toBe(true);
+    expect(source.contains(account)).toBe(true);
+    expect(screen.getByAltText('Hearth 账号标志').getAttribute('src')).toBe('/favicon.svg');
+    expect(screen.getByText('账号：admin')).toBeTruthy();
+    expect(screen.getByText('名称：冯华杰')).toBeTruthy();
+    expect(screen.queryByText('你的身份中心')).toBeNull();
+    expect(account.querySelector('svg')).toBeNull();
+    expect(screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' }).classList.contains('consent-title-type')).toBe(true);
+    expect(screen.getByRole('heading', { name: 'Career 可访问' }).classList.contains('consent-title-type')).toBe(true);
+    const permissions = screen.getByRole('region', { name: 'Career 可访问' });
+    expect(permissions.textContent).toContain('Career 只能访问你选择的信息，登录凭据不会共享；授权后可随时在 Hearth 中撤销。');
+    const title = screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' });
+    expect(title.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('lets the user review permissions before continuing', () => {
@@ -203,8 +223,9 @@ describe('Hearth application shell', () => {
 
     const profile = screen.getByRole('checkbox', { name: /基本资料/ });
     const email = screen.getByRole('checkbox', { name: /邮箱地址/ });
+    expect(profile.closest('label')?.firstElementChild).toBe(profile);
     fireEvent.click(profile);
-    expect(screen.getByText('1/2 项')).toBeTruthy();
+    expect(profile.checked).toBe(false);
     fireEvent.click(email);
     expect(screen.getByRole('button', { name: /同意并继续/ }).disabled).toBe(true);
   });
