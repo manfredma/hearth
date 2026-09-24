@@ -231,6 +231,16 @@ describe('Hearth application shell', () => {
     expect(screen.getByRole('button', { name: /同意并继续/ }).disabled).toBe(true);
   });
 
+  it('loads a CSRF token and includes it in the real OAuth consent form', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ username: 'admin', displayName: '冯华杰' }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'consent-csrf-token' }) });
+    render(<ConsentPreview preview={false} search="?client_id=career-staging&scope=profile&state=oauth-state" />);
+
+    await waitFor(() => expect(document.querySelector('input[name="_csrf"]')?.value).toBe('consent-csrf-token'));
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/csrf', { headers: { Accept: 'application/json' } });
+  });
+
   it('renders the real OAuth consent request with dynamic client and session data', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -277,10 +287,12 @@ describe('Hearth application shell', () => {
     await waitFor(() => expect(screen.getByText('账号：当前账号')).toBeTruthy());
   });
 
-  it('submits an OAuth denial without selected scopes when cancelling', () => {
+  it('submits an OAuth denial without selected scopes when cancelling', async () => {
     const submit = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {});
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) });
     render(<ConsentPreview preview={false} search="?client_id=career-staging&scope=profile&state=oauth-state" />);
 
+    await waitFor(() => expect(screen.getByRole('button', { name: '取消' }).disabled).toBe(false));
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
     expect(submit).toHaveBeenCalledTimes(1);
     expect(document.querySelector('input[name="client_id"]')?.value).toBe('career-staging');
