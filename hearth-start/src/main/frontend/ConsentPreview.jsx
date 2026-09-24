@@ -147,9 +147,9 @@ export default function ConsentPreview({ preview = true, search = '' }) {
 
         <form ref={formRef} className="consent-form" method="post" action="/oauth2/authorize" onSubmit={preview ? undefined : handleSubmit}>
           {!preview && <>
-            <input type="hidden" name="client_id" defaultValue={clientId} />
-            <input type="hidden" name="state" defaultValue={query.get('state') || ''} />
-            {query.get('user_code') && <input type="hidden" name="user_code" defaultValue={query.get('user_code')} />}
+            <input type="hidden" name="client_id" value={clientId} readOnly />
+            <input type="hidden" name="state" value={query.get('state') || ''} readOnly />
+            {query.get('user_code') && <input type="hidden" name="user_code" value={query.get('user_code')} readOnly />}
           </>}
           <section className="consent-permissions" aria-labelledby="permissions-title">
             <div className="consent-section-heading">
@@ -159,7 +159,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
             <div className="permission-list">
               {displayedPermissions.map(({ key, icon: Icon, title, description }) => (
                 <label className={`permission-row${selected[key] ? ' is-selected' : ''}`} key={key} htmlFor={`permission-${key}`}>
-                  <input id={`permission-${key}`} name={preview ? undefined : 'scope'} data-scope={key} defaultValue={key} type="checkbox" checked={selected[key]} onChange={() => togglePermission(key)} />
+                  <input id={`permission-${key}`} name={preview ? undefined : 'scope'} data-scope={key} value={key} type="checkbox" checked={selected[key]} onChange={() => togglePermission(key)} />
                   <span className="permission-icon"><Icon size={18} /></span>
                   <span className="permission-copy"><strong>{title}</strong><small>{description}</small></span>
                 </label>
