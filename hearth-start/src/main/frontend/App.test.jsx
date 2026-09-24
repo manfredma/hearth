@@ -187,7 +187,10 @@ describe('Hearth application shell', () => {
   it('renders the branded consent preview with source application and permissions', () => {
     render(<ConsentPreview />);
 
-    expect(screen.getByRole('heading', { name: 'Career 想连接你的 Hearth 账号' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' })).toBeTruthy();
+    expect(screen.getByText('来自 Career')).toBeTruthy();
+    expect(screen.getByText('权限范围')).toBeTruthy();
+    expect(screen.getByText('已验证来源')).toBeTruthy();
     expect(screen.getByText('staging-career.bytedepth.cn')).toBeTruthy();
     expect(screen.getByText('冯华杰')).toBeTruthy();
     expect(screen.getByText('基本资料')).toBeTruthy();
