@@ -14,9 +14,9 @@ import org.springframework.security.config.annotation.web.configurers.CsrfConfig
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 import manfred.hearth.adapter.web.security.LegacyHearthPrincipalMigrationFilter;
-import manfred.hearth.adapter.web.security.SecurityConfig;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerSecurityConfig {
@@ -48,7 +48,10 @@ public class AuthorizationServerSecurityConfig {
                         .authorizationEndpoint(endpoint -> endpoint.consentPage("/oauth2/consent"))
                         .oidc(Customizer.withDefaults()))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                .csrf(AuthorizationServerSecurityConfig::configureCsrf)
+                // OAuth's one-time state parameter protects the browser consent
+                // POST. Exclude the dedicated Authorization Server endpoints
+                // from the generic web CSRF filter as the framework requires.
+                .csrf(csrf -> configureCsrf(csrf, authorizationServer.getEndpointsMatcher()))
                 .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
                 .requestCache(cache -> cache.requestCache(requestCache))
                 .exceptionHandling(exceptions -> exceptions
@@ -61,12 +64,11 @@ public class AuthorizationServerSecurityConfig {
     }
 
     /**
-     * Reuses the public web-chain CSRF policy for the higher-priority OAuth
-     * chain. Without this delegation, the consent form receives a cookie token
-     * from {@code /api/csrf} but the authorization endpoint expects a separate
-     * default session token and rejects every consent submission with 403.
+     * OAuth Authorization Server carries the consent CSRF protection in its
+     * one-time {@code state} parameter. Applying the generic web repository as
+     * well would make the custom consent form satisfy two token contracts.
      */
-    static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
-        SecurityConfig.configureCsrf(csrf);
+    static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf, RequestMatcher endpointsMatcher) {
+        csrf.ignoringRequestMatchers(endpointsMatcher);
     }
 }

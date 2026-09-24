@@ -65,7 +65,7 @@ public class SecurityConfig {
      * chain, so keeping this configuration reusable prevents its consent POST
      * from silently falling back to a different session-backed token.
      */
-    public static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
+    static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
         csrf.ignoringRequestMatchers("/api/health");
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setHeaderName("X-CSRF-TOKEN");

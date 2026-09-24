@@ -29,7 +29,6 @@ export default function ConsentPreview({ preview = true, search = '' }) {
   const displayedPermissions = visiblePermissions.length > 0 ? visiblePermissions : scopeDefinitions;
   const [selected, setSelected] = useState(() => Object.fromEntries(displayedPermissions.map(({ key }) => [key, true])));
   const [identity, setIdentity] = useState(preview ? previewIdentity : null);
-  const [csrfToken, setCsrfToken] = useState(preview ? null : '');
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -40,20 +39,6 @@ export default function ConsentPreview({ preview = true, search = '' }) {
       .then((response) => response.ok ? response.json() : Promise.reject(new Error('session unavailable')))
       .then((session) => setIdentity({ username: session.username || '当前账号', displayName: session.displayName || '当前账号' }))
       .catch(() => setIdentity({ username: '当前账号', displayName: '当前账号' }));
-    return undefined;
-  }, [preview]);
-
-  useEffect(() => {
-    if (preview) {
-      return undefined;
-    }
-    // The OAuth authorization endpoint is a state-changing POST. The form is
-    // rendered by React rather than Thymeleaf, so it must explicitly load the
-    // server-issued token and submit it as the standard `_csrf` parameter.
-    fetch('/api/csrf', { headers: { Accept: 'application/json' } })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('csrf unavailable')))
-      .then((payload) => setCsrfToken(payload.token || ''))
-      .catch(() => setCsrfToken(''));
     return undefined;
   }, [preview]);
 
@@ -164,7 +149,6 @@ export default function ConsentPreview({ preview = true, search = '' }) {
           {!preview && <>
             <input type="hidden" name="client_id" value={clientId} readOnly />
             <input type="hidden" name="state" value={query.get('state') || ''} readOnly />
-            <input type="hidden" name="_csrf" value={csrfToken} readOnly />
             {query.get('user_code') && <input type="hidden" name="user_code" value={query.get('user_code')} readOnly />}
           </>}
           <section className="consent-permissions" aria-labelledby="permissions-title">
@@ -184,8 +168,8 @@ export default function ConsentPreview({ preview = true, search = '' }) {
           </section>
 
           <div className="consent-actions">
-            <button className="consent-cancel" type={preview ? 'button' : 'submit'} disabled={!preview && !csrfToken} onClick={cancelConsent}>取消</button>
-            <button className="consent-submit" type={preview ? 'button' : 'submit'} disabled={selectedCount === 0 || (!preview && !csrfToken)}>同意并继续 <ChevronRight size={17} /></button>
+            <button className="consent-cancel" type={preview ? 'button' : 'submit'} onClick={cancelConsent}>取消</button>
+            <button className="consent-submit" type={preview ? 'button' : 'submit'} disabled={selectedCount === 0}>同意并继续 <ChevronRight size={17} /></button>
           </div>
         </form>
 
