@@ -25,6 +25,7 @@ class SecurityRoutingTest {
     @Test
     void brandFaviconIsPublicSoItCannotReplaceAnOidcSavedRequest() {
         assertThat(SecurityConfig.publicRequestMatchers()).contains("/favicon.svg");
+        assertThat(SecurityConfig.publicRequestMatchers()).contains("/consent-preview");
     }
 
     @Test

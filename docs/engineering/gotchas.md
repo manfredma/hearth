@@ -24,3 +24,4 @@
 - 放入 Redis HTTP Session 的 Spring Security principal 必须实现稳定的 `Serializable` 合约，并用 Java 序列化往返测试覆盖；否则登录请求虽然认证成功，提交 session 时仍会失败。
 - 跨站点 OIDC 回跳后的 SPA 登录不能只依赖 session 中的 CSRF token；统一使用非 HttpOnly 的 `XSRF-TOKEN` cookie，并让 `X-CSRF-TOKEN` 请求头与之匹配。
 - OIDC 登录入口必须显式保留原始相对授权 URL；不能只依赖 session saved request，否则 session fixation/回跳过程可能让登录后落到 Hearth 首页。
+- 未登录可访问的 SPA 原型入口必须同时加入前端路由和 `SecurityConfig.publicRequestMatchers()`，并用安全路由单元测试锁定白名单；否则页面会被统一认证规则返回 403。
