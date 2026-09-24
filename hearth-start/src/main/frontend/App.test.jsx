@@ -216,7 +216,6 @@ describe('Hearth application shell', () => {
     expect(permissions.textContent).toContain('Career 只能访问你选择的信息，登录凭据不会共享；授权后可随时在 Hearth 中撤销。');
     const title = screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' });
     expect(title.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    fireEvent.submit(screen.getByRole('button', { name: /同意并继续/ }).closest('form'));
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
   });
 
@@ -254,6 +253,7 @@ describe('Hearth application shell', () => {
   });
 
   it('keeps an unknown OAuth client safe and handles an unavailable session', async () => {
+    const submit = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {});
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
     render(<ConsentPreview preview={false} search="?client_id=toolbox" />);
 
@@ -261,7 +261,10 @@ describe('Hearth application shell', () => {
     expect(screen.getByText('已接入 Hearth 的应用')).toBeTruthy();
     expect(screen.getByDisplayValue('toolbox')).toBeTruthy();
     expect(document.querySelector('input[name="state"]')?.value).toBe('');
+    fireEvent.submit(screen.getByRole('button', { name: /同意并继续/ }).closest('form'));
+    expect(submit).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.getByText('账号：当前账号')).toBeTruthy());
+    submit.mockRestore();
   });
 
   it('reads the browser consent query and uses safe defaults for an incomplete session', async () => {
@@ -279,6 +282,26 @@ describe('Hearth application shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
     expect(submit).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('input[name="client_id"]')?.value).toBe('career-staging');
+    expect(document.querySelector('input[name="state"]')?.value).toBe('oauth-state');
+    expect(screen.getByRole('checkbox', { name: /基本资料/ }).checked).toBe(false);
+    submit.mockRestore();
+  });
+
+  it('submits the selected OAuth scopes and preserves the request context', () => {
+    const submit = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {});
+    render(<ConsentPreview preview={false} search="?client_id=career-staging&scope=openid%20profile%20email&state=oauth-state&user_code=device-code" />);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /邮箱地址/ }));
+    fireEvent.submit(screen.getByRole('button', { name: /同意并继续/ }).closest('form'));
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('input[name="client_id"]')?.value).toBe('career-staging');
+    expect(document.querySelector('input[name="state"]')?.value).toBe('oauth-state');
+    expect(document.querySelector('input[name="user_code"]')?.value).toBe('device-code');
+    expect([...document.querySelectorAll('input[name="scope"]')].map((input) => [input.value, input.checked])).toEqual([
+      ['profile', true],
+      ['email', false],
+    ]);
     submit.mockRestore();
   });
 });

@@ -22,6 +22,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 - 收敛 OAuth 授权确认页的身份上下文展示：合并 Career 来源与当前账号信息，移除重复的 Hearth 身份块，并优化域名、权限说明和移动端布局。
 - 将授权确认原型接入真实 OAuth 流程：Career 授权请求使用 Hearth 中文 consent 页面，支持动态应用/账号信息、权限选择、同意与取消提交。
+- 修复授权确认页原生表单提交时 `client_id`、`state`、`user_code` 和 `scope` 参数丢失，确保同意与取消都能正确回到 OAuth 授权端点。
 - 由 bytedepth 模板转换为独立的 Hearth 身份服务工程，模块、包名、运行时变量和服务名统一使用 Hearth 命名。
 - 基础设施 JDBC 仓储保持可代理，避免 Spring Repository 异常转换在启动阶段失败。
 - 修正 Spring Security 7 Authorization Server endpoint matcher 绑定，并移除未使用的 Thymeleaf 模板依赖。

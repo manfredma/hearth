@@ -46,13 +46,37 @@ export default function ConsentPreview({ preview = true, search = '' }) {
     setSelected((current) => ({ ...current, [key]: !current[key] }));
   }
 
+  function submitOAuthForm(form) {
+    const clientField = form.elements.namedItem('client_id');
+    const stateField = form.elements.namedItem('state');
+    const userCodeField = form.elements.namedItem('user_code');
+    clientField.value = clientId;
+    stateField.value = query.get('state') || '';
+    if (userCodeField) {
+      userCodeField.value = query.get('user_code');
+    }
+    form.querySelectorAll('input[data-scope]').forEach((input) => {
+      input.value = input.dataset.scope;
+    });
+    HTMLFormElement.prototype.submit.call(form);
+  }
+
   function cancelConsent(event) {
     if (preview) {
       return;
     }
     event.preventDefault();
-    formRef.current?.reset();
-    formRef.current?.submit();
+    formRef.current?.querySelectorAll('input[name="scope"]').forEach((input) => {
+      input.checked = false;
+    });
+    if (formRef.current) {
+      submitOAuthForm(formRef.current);
+    }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    submitOAuthForm(event.currentTarget);
   }
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
@@ -104,11 +128,11 @@ export default function ConsentPreview({ preview = true, search = '' }) {
           </div>
         </section>
 
-        <form ref={formRef} className="consent-form" method="post" action="/oauth2/authorize" onSubmit={preview ? (event) => event.preventDefault() : undefined}>
+        <form ref={formRef} className="consent-form" method="post" action="/oauth2/authorize" onSubmit={preview ? undefined : handleSubmit}>
           {!preview && <>
-            <input type="hidden" name="client_id" value={clientId} />
-            <input type="hidden" name="state" value={query.get('state') || ''} />
-            {query.get('user_code') && <input type="hidden" name="user_code" value={query.get('user_code')} />}
+            <input type="hidden" name="client_id" defaultValue={clientId} />
+            <input type="hidden" name="state" defaultValue={query.get('state') || ''} />
+            {query.get('user_code') && <input type="hidden" name="user_code" defaultValue={query.get('user_code')} />}
           </>}
           <section className="consent-permissions" aria-labelledby="permissions-title">
             <div className="consent-section-heading">
@@ -118,7 +142,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
             <div className="permission-list">
               {displayedPermissions.map(({ key, icon: Icon, title, description }) => (
                 <label className={`permission-row${selected[key] ? ' is-selected' : ''}`} key={key} htmlFor={`permission-${key}`}>
-                  <input id={`permission-${key}`} name={preview ? undefined : 'scope'} value={key} type="checkbox" checked={selected[key]} onChange={() => togglePermission(key)} />
+                  <input id={`permission-${key}`} name={preview ? undefined : 'scope'} data-scope={key} defaultValue={key} type="checkbox" checked={selected[key]} onChange={() => togglePermission(key)} />
                   <span className="permission-icon"><Icon size={18} /></span>
                   <span className="permission-copy"><strong>{title}</strong><small>{description}</small></span>
                 </label>
