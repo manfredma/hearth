@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 import App from './App.jsx';
+import ConsentPreview from './ConsentPreview.jsx';
 import { LoginPage, redirectTo } from './main.jsx';
 
 describe('Hearth application shell', () => {
@@ -181,5 +182,27 @@ describe('Hearth application shell', () => {
     const assign = vi.fn();
     redirectTo('/target', { assign });
     expect(assign).toHaveBeenCalledWith('/target');
+  });
+
+  it('renders the branded consent preview with source application and permissions', () => {
+    render(<ConsentPreview />);
+
+    expect(screen.getByRole('heading', { name: 'Career 想连接你的 Hearth 账号' })).toBeTruthy();
+    expect(screen.getByText('staging-career.bytedepth.cn')).toBeTruthy();
+    expect(screen.getByText('冯华杰')).toBeTruthy();
+    expect(screen.getByText('基本资料')).toBeTruthy();
+    expect(screen.getByText('邮箱地址')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /同意并继续/ }).disabled).toBe(false);
+  });
+
+  it('lets the user review permissions before continuing', () => {
+    render(<ConsentPreview />);
+
+    const profile = screen.getByRole('checkbox', { name: /基本资料/ });
+    const email = screen.getByRole('checkbox', { name: /邮箱地址/ });
+    fireEvent.click(profile);
+    expect(screen.getByText('1/2 项')).toBeTruthy();
+    fireEvent.click(email);
+    expect(screen.getByRole('button', { name: /同意并继续/ }).disabled).toBe(true);
   });
 });

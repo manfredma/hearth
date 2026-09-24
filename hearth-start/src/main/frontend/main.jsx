@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, Boxes, ChevronDown, Command, ExternalLink, Fingerprint, Menu, ShieldCheck, Sparkles, X } from 'lucide-react';
+import ConsentPreview from './ConsentPreview.jsx';
 import './styles.css';
 
 const applications = [
@@ -127,6 +128,6 @@ function ApplicationCard({ app }) { return <a className="app-card" href={`#app-$
 /* c8 ignore start */
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(window.location.pathname === '/login' ? <LoginPage /> : <App />);
+  createRoot(rootElement).render(window.location.pathname === '/login' ? <LoginPage /> : window.location.pathname === '/consent-preview' ? <ConsentPreview /> : <App />);
 }
 /* c8 ignore stop */
