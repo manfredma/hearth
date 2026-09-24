@@ -15,6 +15,7 @@ fi
 
 rm "$fixture_dir/deploy/illegal.yml"
 printf '%s\n' 'services:' '  hearth-app:' > "$fixture_dir/deploy/legal.yml"
+printf '%s\n' 'source_app_domain: staging-career.bytedepth.cn' >> "$fixture_dir/deploy/legal.yml"
 
 if ! HEARTH_CHECK_ROOT="$fixture_dir" "$script_dir/check-hearth-naming.sh" >/dev/null; then
   printf 'Expected the legal fixture to pass the naming guard.\n' >&2
