@@ -70,5 +70,10 @@ public class AuthorizationServerSecurityConfig {
      */
     static void configureCsrf(CsrfConfigurer<HttpSecurity> csrf, RequestMatcher endpointsMatcher) {
         csrf.ignoringRequestMatchers(endpointsMatcher);
+        // RP-Initiated Logout is a browser GET endpoint. Its protocol
+        // parameters are validated by the OIDC logout filter; it does not
+        // carry Hearth's form CSRF token. The application POST logout route
+        // remains protected by the other filter chain.
+        csrf.ignoringRequestMatchers("/connect/logout");
     }
 }

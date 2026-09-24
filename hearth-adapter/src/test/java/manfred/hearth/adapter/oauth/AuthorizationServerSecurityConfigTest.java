@@ -19,6 +19,7 @@ class AuthorizationServerSecurityConfigTest {
         CsrfConfigurer<HttpSecurity> csrf = mock(CsrfConfigurer.class);
         RequestMatcher endpoints = mock(RequestMatcher.class);
         when(csrf.ignoringRequestMatchers(endpoints)).thenReturn(csrf);
+        when(csrf.ignoringRequestMatchers("/connect/logout")).thenReturn(csrf);
         Method csrfConfiguration = AuthorizationServerSecurityConfig.class
                 .getDeclaredMethod("configureCsrf", CsrfConfigurer.class, RequestMatcher.class);
 
@@ -27,5 +28,6 @@ class AuthorizationServerSecurityConfigTest {
         assertThat(csrfConfiguration.getReturnType()).isEqualTo(void.class);
         csrfConfiguration.invoke(null, csrf, endpoints);
         verify(csrf).ignoringRequestMatchers(endpoints);
+        verify(csrf).ignoringRequestMatchers("/connect/logout");
     }
 }

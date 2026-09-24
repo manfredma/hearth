@@ -44,4 +44,24 @@ class LegacyHearthPrincipalMigrationFilterTest {
                 .anyMatch(org.springframework.security.core.authority.FactorGrantedAuthority.class::isInstance);
         verify(chain).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    void addsAnAuthenticationFactorToFrameworkUsersRestoredFromAnOlderSession() throws Exception {
+        UserDetailsWithoutFactors restored = new UserDetailsWithoutFactors("admin");
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(restored, null, List.of()));
+        SecurityContextHolder.setContext(context);
+
+        new LegacyHearthPrincipalMigrationFilter(Clock.fixed(Instant.parse("2026-09-24T12:00:00Z"), ZoneOffset.UTC)).doFilter(
+                new MockHttpServletRequest(), new MockHttpServletResponse(), mock(FilterChain.class));
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
+                .anyMatch(org.springframework.security.core.authority.FactorGrantedAuthority.class::isInstance);
+    }
+
+    private static final class UserDetailsWithoutFactors extends User {
+        private UserDetailsWithoutFactors(String username) {
+            super(username, "", List.of());
+        }
+    }
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUpRight, Boxes, ChevronDown, Command, ExternalLink, Fingerprint, Menu, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { ArrowUpRight, Boxes, ChevronDown, Command, ExternalLink, Fingerprint, LogOut, Menu, ShieldCheck, Sparkles, X } from 'lucide-react';
 import ConsentPreview from './ConsentPreview.jsx';
 import './styles.css';
 
@@ -15,6 +15,8 @@ export default function App() {
   const [identity, setIdentity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
 
   useEffect(() => {
     fetch('/api/session', { headers: { Accept: 'application/json' } })
@@ -23,6 +25,28 @@ export default function App() {
       .catch(() => setIdentity(null))
       .finally(() => setLoading(false));
   }, []);
+
+  async function logout() {
+    setLogoutError('');
+    try {
+      const csrfResponse = await fetch('/api/csrf', { headers: { Accept: 'application/json' } });
+      if (!csrfResponse.ok) {
+        throw new Error('csrf unavailable');
+      }
+      const { token } = await csrfResponse.json();
+      const response = await fetch('/api/session/logout', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token || '' },
+      });
+      if (!response.ok) {
+        throw new Error('logout failed');
+      }
+      setIdentity(null);
+      setAccountMenuOpen(false);
+    } catch {
+      setLogoutError('退出登录失败，请稍后重试');
+    }
+  }
 
   return (
     <div className="hearth-shell">
@@ -37,7 +61,7 @@ export default function App() {
       </aside>
       {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="关闭菜单" />}
       <main className="hearth-main">
-        <header className="topbar"><button className="icon-button menu-trigger" onClick={() => setMobileOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><div className="breadcrumb"><span>hearth</span><span className="slash">/</span><b>总览</b></div><div className="topbar-actions"><button className="help-link">帮助文档 <ExternalLink size={14} /></button>{identity ? <button className="profile-chip"><div className="avatar small">{identity.displayName.slice(0, 1)}</div><span>{identity.displayName}</span><ChevronDown size={15} /></button> : <a className="button button-dark" href="/login">{loading ? '检查登录' : '登录'}</a>}</div></header>
+        <header className="topbar"><button className="icon-button menu-trigger" onClick={() => setMobileOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><div className="breadcrumb"><span>hearth</span><span className="slash">/</span><b>总览</b></div><div className="topbar-actions"><button className="help-link">帮助文档 <ExternalLink size={14} /></button>{identity ? <div className="account-menu"><button className="profile-chip" aria-label="账户菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><div className="avatar small">{identity.displayName.slice(0, 1)}</div><span>{identity.displayName}</span><ChevronDown size={15} /></button>{accountMenuOpen && <div className="account-popover" role="menu"><div className="account-summary"><b>{identity.displayName}</b><small>{identity.username}</small></div><button className="account-menu-item" role="menuitem" onClick={logout}><LogOut size={15} /><span>退出登录</span></button>{logoutError && <p className="logout-error" role="alert">{logoutError}</p>}</div>}</div> : <a className="button button-dark" href="/login">{loading ? '检查登录' : '登录'}</a>}</div></header>
         <div className="content-wrap" id="overview">
           <section className="hero-row"><div><div className="eyebrow"><span className="eyebrow-dot" />统一身份中心</div><h1>你好，{loading ? '正在确认你的身份' : identity?.displayName || '欢迎回到 hearth'}</h1><p className="hero-copy">从这里进入你使用的每一个应用。一次登录，保持专注。</p></div><div className="hero-symbol"><Fingerprint size={38} strokeWidth={1.3} /><span>your<br />identity<br />is yours</span></div></section>
           <section className="stats-grid" aria-label="身份概览"><div className="stat-card"><span>已连接应用</span><strong>04</strong><small>均使用 Hearth 统一认证</small></div><div className="stat-card"><span>当前会话</span><strong>{identity ? '安全' : '访客'}</strong><small>{identity ? '服务端会话已建立' : '登录后可访问应用'}</small></div><div className="stat-card accent"><span>身份提供方</span><strong>OIDC</strong><small>Provider-neutral by design</small></div></section>

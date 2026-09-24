@@ -44,6 +44,63 @@ describe('Hearth application shell', () => {
     expect(screen.getByText('已登录')).toBeTruthy();
   });
 
+  it('offers a server-side logout action from the signed-in account menu', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ userId: 'user-1', username: 'fenghuajie', displayName: '冯华杰' }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true });
+    render(<App />);
+
+    await screen.findByText(/你好，冯华杰/);
+    fireEvent.click(screen.getByRole('button', { name: /账户菜单/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '退出登录' }));
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(3));
+    expect(globalThis.fetch.mock.calls[2]).toEqual(['/api/session/logout', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ 'X-CSRF-TOKEN': 'csrf-token' }),
+    })]);
+    expect(await screen.findByRole('link', { name: '登录' })).toBeTruthy();
+  });
+
+  it('reports a CSRF failure without pretending that logout succeeded', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ username: 'admin', displayName: '管理员' }),
+      })
+      .mockResolvedValueOnce({ ok: false });
+    render(<App />);
+
+    await screen.findByText(/你好，管理员/);
+    fireEvent.click(screen.getByRole('button', { name: /账户菜单/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '退出登录' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain('退出登录失败');
+    expect(screen.getAllByText('管理员').length).toBeGreaterThan(0);
+  });
+
+  it('reports a server logout failure and keeps the account visible', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ username: 'admin', displayName: '管理员' }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+      .mockResolvedValueOnce({ ok: false });
+    render(<App />);
+
+    await screen.findByText(/你好，管理员/);
+    fireEvent.click(screen.getByRole('button', { name: /账户菜单/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '退出登录' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain('退出登录失败');
+    expect(screen.getAllByText('管理员').length).toBeGreaterThan(0);
+  });
+
   it('falls back to the guest state when the session request fails', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('offline'));
     render(<App />);
