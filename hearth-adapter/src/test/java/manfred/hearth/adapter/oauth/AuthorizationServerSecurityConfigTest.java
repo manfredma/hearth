@@ -30,4 +30,10 @@ class AuthorizationServerSecurityConfigTest {
         verify(csrf).ignoringRequestMatchers(endpoints);
         verify(csrf).ignoringRequestMatchers("/connect/logout");
     }
+
+    @Test
+    void exposesOidcLogoutToUnauthenticatedRelyingPartiesForProtocolValidation() {
+        assertThat(AuthorizationServerSecurityConfig.publicEndpoints())
+                .containsExactly("/connect/logout");
+    }
 }

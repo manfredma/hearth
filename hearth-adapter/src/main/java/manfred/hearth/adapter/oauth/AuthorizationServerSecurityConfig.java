@@ -47,7 +47,13 @@ public class AuthorizationServerSecurityConfig {
                         .authorizationServerSettings(authorizationServerSettings)
                         .authorizationEndpoint(endpoint -> endpoint.consentPage("/oauth2/consent"))
                         .oidc(Customizer.withDefaults()))
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                // RP-Initiated Logout starts from the relying party and may not
+                // carry a Hearth browser session. The endpoint validates the
+                // id_token_hint and post_logout_redirect_uri itself, so the
+                // outer chain must let the protocol filter receive the request.
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(publicEndpoints()).permitAll()
+                        .anyRequest().authenticated())
                 // OAuth's one-time state parameter protects the browser consent
                 // POST. Exclude the dedicated Authorization Server endpoints
                 // from the generic web CSRF filter as the framework requires.
@@ -61,6 +67,10 @@ public class AuthorizationServerSecurityConfig {
         http.addFilterAfter(legacyPrincipalMigrationFilter,
                 org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter.class);
         return http.build();
+    }
+
+    static String[] publicEndpoints() {
+        return new String[]{"/connect/logout"};
     }
 
     /**
