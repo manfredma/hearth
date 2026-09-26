@@ -31,8 +31,8 @@ grep -Fq 'apache-maven-3.9.11' "$SOURCE_ROOT/.mvn/wrapper/maven-wrapper.properti
 }
 sudo -n -u ubuntu -- test -r "$SOURCE_ROOT/pom.xml" \
   && sudo -n -u ubuntu -- test -w "$SOURCE_ROOT" \
-  && sudo -n -u ubuntu -- test -w "$MAVEN_REPOSITORY" || {
-  printf 'ubuntu cannot read the Hearth checkout or write the shared Maven repository.\n' >&2
+  && sudo -n -u ubuntu -- test -r "$MAVEN_REPOSITORY" || {
+  printf 'ubuntu cannot read the Hearth checkout or shared Maven repository.\n' >&2
   exit 1
 }
 available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
@@ -43,6 +43,13 @@ available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
 }
 source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
 source "$SOURCE_ROOT/deploy/lib/check-warning-log.sh"
+restore_project_target_ownership() {
+  local target_dir
+  while IFS= read -r -d '' target_dir; do
+    chown -R ubuntu:ubuntu "$target_dir"
+  done < <(find "$SOURCE_ROOT" -type d -name target -prune -print0)
+}
+trap restore_project_target_ownership EXIT
 commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || { printf 'Hearth source SHA is invalid for Maven bootstrap.\n' >&2; exit 1; }
 run_id="$(date -u +%Y%m%dt%H%M%S)_$(openssl rand -hex 4)"
@@ -56,7 +63,7 @@ run_maven_phase() {
   local phase="$1" unit="hearth-staging-maven-$run_id-$1.service"
   local -a statuses
   set +e
-  systemd-run --expand-environment=no --uid=ubuntu --gid=ubuntu \
+  systemd-run --expand-environment=no \
     --unit="$unit" --collect --quiet --wait --pipe \
     --property=MemoryMax=384M --property=MemorySwapMax=0 \
     /usr/bin/bash -c '
@@ -65,6 +72,8 @@ run_maven_phase() {
       java_home="$2"
       maven_repository="$3"
       phase="$4"
+      umask 022
+      export HOME=/home/ubuntu MAVEN_USER_HOME=/home/ubuntu/.m2
       cd "$source_root"
       export JAVA_HOME="$java_home" MAVEN_OPTS=-Xmx192m
       case "$phase" in

@@ -35,6 +35,7 @@
 - Shell 中已经单引号包围的 `awk` 程序不要再把双引号写成 `\"`；反斜杠会被传入 awk 并造成语法错误。manifest 解析应有契约测试，避免静默退化成每次重装依赖。
 - 目标机 systemd 的 `systemd-run --pipe` 与 `--scope` 不兼容；需要接 stdin/stdout 时改用唯一名称的 transient service unit（`--unit --collect --wait --pipe`），并保留其 cgroup 内存限制。systemd-run 默认还会扩展 transient service ExecStart 中的 `$`/`%` 表达式；执行 Bash 脚本字符串时必须加 `--expand-environment=no`，否则脚本内参数展开可能被清空。
 - staging integration 使用离线、只读的唯一共享 Maven 仓库；新增 profile/test 插件依赖必须在部署阶段先通过 Wrapper 的 `dependency:go-offline`（启用 staging-integration profile）预热，并持全局排他锁，不能给项目新建第二份缓存或让集成 runner 在线下载。
+- 共享 Maven 仓库可能含有其他 bootstrap 遗留的 `root:root` 子目录；不能假设 `ubuntu` 对整个缓存可写，也不能递归 chown 多项目共用的仓库。预热必须持全局排他锁，由 root 在 `umask 022` 下补齐共享 artifacts，`HOME`/Maven Wrapper 用户缓存仍指向 ubuntu；退出时只把当前 Hearth checkout 下的 `target` 目录恢复为 `ubuntu:ubuntu`。
 - Failsafe 会动态选择 JUnit Platform provider，Maven dependency `go-offline` 不保证发现它；staging profile 应在 Failsafe plugin dependencies 中显式声明与插件同版本的 `surefire-junit-platform`，才能可靠预热给离线集成运行。
 - 多服务 staging 机的 Maven 依赖预热不得先做完整编译/PMD；用 `dependency:go-offline`、MemAvailable 门槛和受限 transient service，避免预热任务挤压同机服务。
 - Linux 的 `flock -x` 排他锁必须使用可写文件描述符；全局锁文件由 root 管理时，用 append-only 打开（`>>`）即可取得排他锁且不会截断锁文件，`<` 只读句柄只用于共享锁。
