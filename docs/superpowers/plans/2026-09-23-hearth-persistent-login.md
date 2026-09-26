@@ -1,6 +1,6 @@
 # Hearth 30 天免登录 Implementation Plan
 
-> 状态：历史实施计划。Remember-Me 代码和单元测试已存在；下方未勾选项保留原始计划记录，不代表当前待办或 staging evidence。当前发布步骤以 [`deploy/README.md`](../../deploy/README.md) 为准。
+> 状态：历史实施计划。Remember-Me 代码和单元测试已存在；下方未勾选项保留原始计划记录，不代表当前待办或 staging evidence。当前发布步骤以 [`deploy/README.md`](../../../deploy/README.md) 为准。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task with checkpoints.
 

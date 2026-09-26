@@ -1,6 +1,6 @@
 # Hearth Self-Hosted OIDC Provider Implementation Plan
 
-> 状态：历史实施计划。OIDC Provider 的 MVP 代码已实现；本文保留设计过程，未勾选步骤不代表当前待办。原 Compose/124 staging 流程已由 2026-09-26 native 部署计划取代，当前部署步骤只看 [`deploy/README.md`](../../deploy/README.md)。
+> 状态：历史实施计划。OIDC Provider 的 MVP 代码已实现；本文保留设计过程，未勾选步骤不代表当前待办。原 Compose/124 staging 流程已由 2026-09-26 native 部署计划取代，当前部署步骤只看 [`deploy/README.md`](../../../deploy/README.md)。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
