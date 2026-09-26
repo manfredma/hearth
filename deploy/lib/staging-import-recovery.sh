@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 
 hearth_staging_import_state() {
-  [[ $# -eq 4 && "$1" =~ ^[01]$ && "$2" =~ ^[01]$ \
-    && "$3" =~ ^[01]$ && "$4" =~ ^[01]$ ]] || return 2
+  [[ ( $# -eq 4 || $# -eq 5 ) && "$1" =~ ^[01]$ && "$2" =~ ^[01]$ \
+    && "$3" =~ ^[01]$ && "$4" =~ ^[01]$ \
+    && "${5:-0}" =~ ^[01]$ ]] || return 2
   if [[ "$2" == 1 ]]; then
     printf 'imported\n'
   elif [[ "$4" == 1 ]]; then
     printf 'recovery-finalize-marker\n'
+  elif [[ "$3" == 1 && "${5:-0}" == 1 ]]; then
+    printf 'recovery-resume\n'
   elif [[ "$3" == 1 ]]; then
     printf 'recovery-interrupted\n'
   elif [[ "$1" == 1 ]]; then
@@ -14,6 +17,11 @@ hearth_staging_import_state() {
   else
     printf 'fresh\n'
   fi
+}
+
+hearth_quote_mysql_identifier() {
+  [[ $# -eq 1 && "$1" =~ ^[a-z][a-z0-9_]{0,63}$ ]] || return 2
+  printf '`%s`' "$1"
 }
 
 hearth_rewrite_staging_dump_schema() {

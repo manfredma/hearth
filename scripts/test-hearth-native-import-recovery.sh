@@ -13,6 +13,12 @@ expected_dump=$'CREATE DATABASE /*!32312 IF NOT EXISTS*/ `hearth_recovery_test` 
 [[ "$(hearth_staging_import_state 1 0 1 0)" == recovery-interrupted ]]
 [[ "$(hearth_staging_import_state 1 0 1 1)" == recovery-finalize-marker ]]
 [[ "$(hearth_staging_import_state 1 1 1 1)" == imported ]]
+[[ "$(hearth_staging_import_state 1 0 1 0 1)" == recovery-resume ]]
+[[ "$(hearth_quote_mysql_identifier hearth_recovery_test)" == '`hearth_recovery_test`' ]]
+if hearth_quote_mysql_identifier 'hearth` DROP DATABASE hearth' >/dev/null 2>&1; then
+  printf 'Recovery accepted an unsafe MySQL identifier.\n' >&2
+  exit 1
+fi
 
 rename_sql="$(hearth_build_staging_recovery_rename_sql hearth_partial_run_1 hearth_recovery_run_1 $'application\n' $'application\nidentity_credential')"
 [[ "$rename_sql" == 'RENAME TABLE `hearth`.`application` TO `hearth_partial_run_1`.`application`, `hearth_recovery_run_1`.`application` TO `hearth`.`application`, `hearth_recovery_run_1`.`identity_credential` TO `hearth`.`identity_credential`;' ]]

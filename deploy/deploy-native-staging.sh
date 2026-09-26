@@ -11,6 +11,11 @@ readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o Stric
 [[ -r "$SSH_KEY" && -r "$KNOWN_HOSTS" ]] || { printf 'SSH key and known_hosts required.\n' >&2; exit 1; }
 readonly HEARTH_COMMIT_ID="$(git rev-parse --verify "$REF^{commit}")"
 commit="$HEARTH_COMMIT_ID"
+adopt_schema="${HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA:-}"
+[[ -z "$adopt_schema" || "$adopt_schema" =~ ^hearth_recovery_[0-9]{8}_[0-9]{6}_[a-f0-9]{8}$ ]] || {
+  printf 'Unsafe HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA value.\n' >&2
+  exit 2
+}
 build_root="$(mktemp -d)"
 trap 'rm -rf "$build_root"' EXIT
 git archive "$commit" | tar -x -C "$build_root"
@@ -53,7 +58,7 @@ HEARTH_STAGING_SOURCE_HOST="${HEARTH_STAGING_SOURCE_HOST:-124.221.143.25}" HEART
   "$build_root/deploy/sync-staging-certificate-to-native.sh"
 ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" 'sudo -n install -d -o ubuntu -g ubuntu -m 0700 /var/lib/hearth-staging'
 ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" 'sudo -n touch /var/lib/hearth-staging/deployment-test.lock && sudo -n chown ubuntu:ubuntu /var/lib/hearth-staging/deployment-test.lock && sudo -n chmod 0600 /var/lib/hearth-staging/deployment-test.lock'
-ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "sudo -n env HEARTH_COMMIT='$commit' HEARTH_JAR_SHA='$jar_sha' HEARTH_JAR='$remote_jar' HEARTH_SOURCE='$remote_src' HEARTH_DOMAIN='$DOMAIN' flock -x /var/lib/hearth-staging/deployment-test.lock bash -s" <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "sudo -n env HEARTH_COMMIT='$commit' HEARTH_JAR_SHA='$jar_sha' HEARTH_JAR='$remote_jar' HEARTH_SOURCE='$remote_src' HEARTH_DOMAIN='$DOMAIN' HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA='$adopt_schema' flock -x /var/lib/hearth-staging/deployment-test.lock bash -s" <<'REMOTE'
 set -Eeuo pipefail
 c="$HEARTH_COMMIT"
 s="/opt/hearth-native/source/$c"
@@ -75,6 +80,9 @@ cd "$s"
 export HEARTH_STAGING_DEPLOYMENT_LOCK_HELD=1
 if [[ -e /var/lib/hearth-native-staging-migration/import-started \
   && ! -e /var/lib/hearth-native-staging-migration/imported ]]; then
+  if [[ -n "$HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA" ]]; then
+    ./deploy/recover-staging-import.sh adopt "$HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA"
+  fi
   ./deploy/migrate-staging-docker-to-native.sh recover
 fi
 ./deploy/migrate-staging-docker-to-native.sh prepare

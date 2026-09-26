@@ -21,6 +21,8 @@ Hearth 是统一身份服务，staging 与 production 分别运行于 129、175�
 
 staging 原 Hearth MySQL 数据源位于 124（`124.221.143.25`），仅迁移 `hearth` logical database。迁移脚本会在需要时短暂启动旧 MySQL 容器进行一致性 dump，然后恢复其原运行状态；不会迁移 Redis Session、停止其他项目或删除旧 Docker 数据目录。导入若出现不确定状态会 fail-closed，不能自动清库重试。
 
+部分导入恢复保留原始 dump 和目标 schema 中的部分表；完整 dump 先导入唯一 `hearth_recovery_*` schema，只有管道状态、日志、表集、启用管理员、Flyway 及对象类型校验全部通过后才允许原子交换。旧版中断且没有 `recovery-ready` 标记时，默认拒绝续跑；仅在已独立确认某个恢复 schema 对应的完整成功导入后，才显式设置 `HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA=hearth_recovery_<run-id>`。部署脚本会再次核对 schema 唯一性、数据不变量和日志后写入 ready marker，然后执行同一套续跑校验。该选项不能用于跳过校验或清理任何 schema。
+
 staging TLS 源证书由 124 的 Let’s Encrypt 管理。部署前运行 `deploy/sync-staging-certificate-to-native.sh`；它会校验精确 SAN、有效期和证书/私钥匹配，写入 129 的版本化 `/etc/hearth/staging-tls/releases/`，再在部署/test-slot 共用锁内原子切换 ubuntu 所有的 `current` symlink，避免逐文件更新形成混合证书对。若仍发现旧式真实 current 目录且 Hearth 公网 route 已安装，脚本会 fail-closed。124 续期证书后，必须重新运行此同步脚本，再 reload 129 的共享 Nginx。证书同步不会代理或改变其他域名。
 
 production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.bytedepth.cn` 签发独立证书；account 副本、renewal 配置、private key 和 challenge root 全部归 `ubuntu`，存放在 `/data/hearth-native-production/letsencrypt`。签发时只临时加载 Hearth HTTP-01 challenge server，申请后删除并 reload；production Hearth route 保留专属 challenge location。`hearth-production-cert-renew.timer` 每日两次检查续期，续期 hook 先 `nginx -t` 再 graceful reload production shared Nginx，不停止其他项目。
