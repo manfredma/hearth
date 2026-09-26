@@ -22,6 +22,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 对 transient systemd service 显式关闭 ExecStart 环境变量扩展，使 runner 自己的 Bash 参数展开与 stdin 凭据解析正常工作。
 - staging integration 在 512 MiB transient cgroup 中解绑已由本机/CI 完成的 PMD 生命周期执行、使用显式可解析且受限的 forked javac，并收紧 Failsafe fork heap，避免 Maven 与测试 JVM合计触发 OOM。
 - 修正 staging integration 的 curl CSRF header 语法及 E2E Chromium runtime manifest 值解析，避免 smoke test 403 和误报 runtime mismatch。
+- staging Maven 预热新增依赖输入指纹复用；仅在 Maven 输入变化或既有离线验证不成立时才运行受内存门槛保护的预热。
 
 ## 0.1.0 - 2026-09-26
 

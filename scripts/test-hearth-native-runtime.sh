@@ -52,6 +52,11 @@ grep -Fq -- '--unit="hearth-staging-e2e-' "$ROOT/deploy/run-staging-e2e-tests.sh
 grep -Fq -- '--expand-environment=no' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'NODE_OPTIONS=--max-old-space-size=256' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'hearth_maven_runtime_manifest_matches' "$ROOT/deploy/bootstrap-staging-maven-runtime.sh"
+grep -Fq 'hearth_maven_previous_cache_reusable' "$ROOT/deploy/bootstrap-staging-maven-runtime.sh"
+cache_reuse_line="$(grep -n 'hearth_maven_runtime_manifest_matches' "$ROOT/deploy/bootstrap-staging-maven-runtime.sh" | head -n 1 | cut -d: -f1)"
+memory_gate_line="$(grep -n 'Refusing Maven cache warm-up' "$ROOT/deploy/bootstrap-staging-maven-runtime.sh" | head -n 1 | cut -d: -f1)"
+[[ "$cache_reuse_line" =~ ^[0-9]+$ && "$memory_gate_line" =~ ^[0-9]+$ && "$cache_reuse_line" -lt "$memory_gate_line" ]]
 grep -Fq 'groupadd --system hearth' "$ROOT/deploy/bootstrap-native-env.sh"
 grep -Fq 'groupadd --system hearth' "$ROOT/deploy/migrate-staging-docker-source.sh"
 grep -Fq 'on-profile: staging-native' "$ROOT/hearth-start/src/main/resources/application-staging-native.yml"
