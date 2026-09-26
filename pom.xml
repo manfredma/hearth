@@ -240,6 +240,15 @@
                             <skipTests>true</skipTests>
                         </configuration>
                     </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <!-- Do not retain javac's memory in Maven before the Failsafe fork starts. -->
+                            <fork>true</fork>
+                            <maxmem>128m</maxmem>
+                        </configuration>
+                    </plugin>
                     <!-- Local/CI quality gates run PMD. Unbind its lifecycle execution so
                          the plugin class realm is never loaded in the constrained test cgroup. -->
                     <plugin>
