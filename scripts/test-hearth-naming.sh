@@ -20,9 +20,17 @@ printf '%s\n' 'oidc_issuer: https://hearth.bytedepth.cn' >> "$fixture_dir/deploy
 printf '%s\n' 'shared_redis_config: /data/bytedepth-native-staging/redis/redis.conf' >> "$fixture_dir/deploy/legal.yml"
 printf '%s\n' 'shared_mysql_admin: /etc/bytedepth/staging-native-mysql-admin.cnf' >> "$fixture_dir/deploy/legal.yml"
 printf '%s\n' 'e2e_keychain_service: bytedepth-staging-e2e' >> "$fixture_dir/deploy/legal.yml"
+printf '%s\n' 'bytedepth.cn' 'career.bytedepth.cn' 'daylilt.bytedepth.cn' 'toolbox.bytedepth.cn' >> "$fixture_dir/deploy/legal.yml"
+printf '%s\n' 'bytedepth-production-green-app.service' >> "$fixture_dir/deploy/legal.yml"
 
 if ! HEARTH_CHECK_ROOT="$fixture_dir" "$script_dir/check-hearth-naming.sh" >/dev/null; then
   printf 'Expected the legal fixture to pass the naming guard.\n' >&2
+  exit 1
+fi
+
+printf '%s\n' 'bytedepth-app bytedepth.cn' > "$fixture_dir/deploy/mixed-illegal.yml"
+if HEARTH_CHECK_ROOT="$fixture_dir" "$script_dir/check-hearth-naming.sh" >/dev/null 2>&1; then
+  printf 'Expected an unrelated bytedepth identifier next to an allowed host to fail the naming guard.\n' >&2
   exit 1
 fi
 

@@ -4,9 +4,18 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
-### Changed
+### Added
 
-- 当前 v0.1.0 候选已冻结；后续变更需作为新版本候选处理。
+- staging 集成 runner 执行真实 Maven Failsafe 测试，验证 run-scoped MySQL 快照迁移与 Redis 隔离读写；没有 completed Failsafe 测试时拒绝生成 evidence。
+
+### Fixed
+
+- 生产发布强制校验 integration/E2E 两份 passed evidence 与 Tag 完整 SHA 一致，并校验 Tag 与 POM 版本一致且未曾发布。
+- 生产版本切换使用独占锁、systemd 完整重启和失败回滚；部署后核对其他项目服务、公开路由、监听端口与 Hearth WARNING。
+- staging TLS 证书按完整版本目录校验后原子切换 current 指针；同步、部署和 test-slot 共用锁，避免证书/私钥混合及并发覆盖。
+- staging dump 使用唯一临时文件，并在共享锁内重新核对状态后原子落盘；不再覆盖缺少完成标记的 dump。
+- E2E 在凭据检查前先作废旧 evidence；E2E/Maven 进程树使用内存与 swap 上限；集成 Maven 离线只读复用共享 Maven 仓库；edge 运行目录归 `ubuntu:hearth`。
+- Hearth 命名门禁精确登记生产共享服务名与公开 host，并回归验证合法共享主机标识不会放行夹带的非法项目名。
 
 ## 0.1.0 - 2026-09-26
 

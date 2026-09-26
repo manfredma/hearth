@@ -21,7 +21,7 @@ Hearth 是统一身份服务，staging 与 production 分别运行于 129、175�
 
 staging 原 Hearth MySQL 数据源位于 124（`124.221.143.25`），仅迁移 `hearth` logical database。迁移脚本会在需要时短暂启动旧 MySQL 容器进行一致性 dump，然后恢复其原运行状态；不会迁移 Redis Session、停止其他项目或删除旧 Docker 数据目录。导入若出现不确定状态会 fail-closed，不能自动清库重试。
 
-staging TLS 源证书由 124 的 Let’s Encrypt 管理。部署前运行 `deploy/sync-staging-certificate-to-native.sh`；它会校验精确 SAN、有效期和证书/私钥匹配，只写入 129 的 `/etc/hearth/staging-tls/`，文件和目录归 `ubuntu`。124 续期证书后，必须重新运行此同步脚本，再 reload 129 的共享 Nginx。证书同步不会代理或改变其他域名。
+staging TLS 源证书由 124 的 Let’s Encrypt 管理。部署前运行 `deploy/sync-staging-certificate-to-native.sh`；它会校验精确 SAN、有效期和证书/私钥匹配，写入 129 的版本化 `/etc/hearth/staging-tls/releases/`，再在部署/test-slot 共用锁内原子切换 ubuntu 所有的 `current` symlink，避免逐文件更新形成混合证书对。若仍发现旧式真实 current 目录且 Hearth 公网 route 已安装，脚本会 fail-closed。124 续期证书后，必须重新运行此同步脚本，再 reload 129 的共享 Nginx。证书同步不会代理或改变其他域名。
 
 production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.bytedepth.cn` 签发独立证书；account 副本、renewal 配置、private key 和 challenge root 全部归 `ubuntu`，存放在 `/data/hearth-native-production/letsencrypt`。签发时只临时加载 Hearth HTTP-01 challenge server，申请后删除并 reload；production Hearth route 保留专属 challenge location。`hearth-production-cert-renew.timer` 每日两次检查续期，续期 hook 先 `nginx -t` 再 graceful reload production shared Nginx，不停止其他项目。
 
@@ -29,11 +29,11 @@ production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.b
 
 ## Staging 集成/E2E 资源隔离
 
-每次 integration/E2E run 生成带唯一 run-id 的 MySQL logical database/user，并从 staging Hearth DB 做一致性快照；测试写入不会落到 staging 主库。集成测试使用 Redis DB 12，E2E 使用 Redis DB 13，并分别带 `hearth:staging:test:<suite>:<run-id>:` namespace。Redis DB 14/15 保留给 ByteDepth 的集成/E2E，不能分配给 Hearth。
+每次 integration/E2E run 生成带唯一 run-id 的 MySQL logical database/user，并从 staging Hearth DB 做一致性快照；测试写入不会落到 staging 主库。Maven Failsafe 的 `NativeInfrastructureIT` 验证快照中的 Flyway 迁移与永久管理员、MySQL 临时表读写，以及 Redis 隔离 DB/namespace 的真实 set/get/delete。集成 runner 离线只读复用宿主机唯一共享 Maven 仓库 `/opt/shared-maven/repository`，持有 `/opt/shared-maven/repository.lock` 共享锁；不在 Hearth 下创建独立 artifact cache。集成测试使用 Redis DB 12，E2E 使用 Redis DB 13，并分别带 `hearth:staging:test:<suite>:<run-id>:` namespace。Redis DB 14/15 保留给 ByteDepth 的集成/E2E，不能分配给 Hearth。
 
 测试 app 使用 `staging-test` Spring profile 和独立 systemd test-slot。test-slot 与 staging app 声明冲突，测试期间 edge 和共享 Nginx 保持不变；测试结束后脚本停止 test-slot、仅清理该 run 的 Redis namespace/MySQL 库和用户、恢复 staging app，并验证服务健康。存在不确定状态时保留 manifest 与资源，不自动删除。
 
-共享 129 主机曾发生全局 OOM：内核日志明确记录被杀进程是 `release-platform` 的 `npm ci`（RSS 约 1.07 GiB）；当时 Hearth 源 MySQL 仅约 200 MB，native logical DB 尚未导入，不能据此把 OOM 归因于 Hearth dump。为避免复发，Hearth staging npm runtime 仅在 `MemAvailable` 至少 512 MiB 时安装，并将 Node heap 限为 384 MiB、网络 socket 限为 1；测试 app 的 systemd 上限为 384 MiB，test-slot / Playwright 启动前再次检查剩余内存。检查失败时保持现有项目服务不变，不通过停止其他项目释放资源，也不盲目重跑。
+共享 129 主机曾发生全局 OOM：内核日志明确记录被杀进程是 `release-platform` 的 `npm ci`（RSS 约 1.07 GiB）；当时 Hearth 源 MySQL 仅约 200 MB，native logical DB 尚未导入，不能据此把 OOM 归因于 Hearth dump。为避免复发，Hearth staging npm runtime 仅在 `MemAvailable` 至少 512 MiB 时安装，并将 Node heap 限为 384 MiB、网络 socket 限为 1；测试 app 的 systemd 上限为 384 MiB。Maven integration 与 Playwright/Chromium 子进程分别放入 `MemoryMax=512M`、`MemorySwapMax=0` 的 scope，Node E2E heap 限为 256 MiB；启动前仍需通过 test-slot 内存门槛。检查失败时保持现有项目服务不变，不通过停止其他项目释放资源，也不盲目重跑。
 
 在 129 上依次执行：
 
@@ -42,7 +42,7 @@ sudo -n /opt/hearth-native/source/current/deploy/run-staging-integration-tests.s
 sudo -n /opt/hearth-native/source/current/deploy/run-staging-e2e-tests.sh
 ```
 
-两个 runner 共用 `/var/lib/hearth-staging/deployment-test.lock`，开始时作废自己的旧 evidence；会检查 test-slot 和恢复后 staging app 的本轮 systemd journal，只有部署 SHA 稳定、测试全绿、无 WARNING 且清理/恢复成功才写入 commit-bound `result=passed` evidence。集成/E2E 必须在 staging 执行，本机结果不是验收证据。
+两个 runner、staging 部署、MySQL source dump finalization 和 TLS current 更新共用 `/var/lib/hearth-staging/deployment-test.lock`，开始测试时先作废旧 evidence（E2E 即使缺少凭据也不能留下旧 passed 记录）。Integration runner 必须看到本轮 Failsafe summary 至少一个 completed test 且 errors/failures 为零，再运行 HTTPS/OIDC smoke；E2E runner 执行浏览器登录、CSRF、consent、token/userinfo、logout 与 Career callback 用例。两者会检查 test-slot 和恢复后 staging app 的本轮 systemd journal，只有部署 SHA 稳定、测试全绿、无 WARNING 且清理/恢复成功才写入 commit-bound `result=passed` evidence。集成/E2E 必须在 staging 执行，本机结果不是验收证据。
 
 ### E2E 管理员凭据
 
@@ -85,6 +85,6 @@ Runner 将凭据通过管道交给以 `ubuntu` 身份运行的 Playwright 进程
 
 4. 在 129 运行全部 integration/E2E runner；检查两个 evidence 的完整 SHA 与 staging `/version` 一致，并检查服务日志无 WARNING。随后由项目所有者在 staging 验收。
 5. 验收通过后 fast-forward 合并同一候选 SHA 到 `main`；不得在验收与合并之间追加提交。
-6. 生产只接收已合并 `main` 历史上的新 annotated SemVer tag。执行 `deploy/deploy-native-production-remote.sh vX.Y.Z`；脚本必须校验 tag、候选 JAR SHA、175 的 Hearth TLS/Nginx、完整 systemd 重启、`/version`、health、OIDC discovery 和其他项目服务。
+6. 生产只接收已合并 `main` 历史上的新 annotated SemVer tag。执行 `deploy/deploy-native-production-remote.sh vX.Y.Z`；脚本校验 Tag 与 POM 版本相同、未出现在生产 release history、两份 staging passed evidence 绑定 Tag 完整 SHA，并在 175 的独占部署锁内完成部署。切换后必须做 systemd restart、`/version`、health、OIDC discovery、TLS/Nginx 检查，以及其他项目服务状态、HTTPS 路由、监听端口和 Hearth journal WARNING 核对。失败时恢复旧 route/current symlink 与服务状态；初次部署失败则停止 Hearth units 并移除 Hearth route，不影响其他项目。
 
 生产没有旧 Hearth Docker 流量需要切换。生产初始化失败时保持 Hearth route 无流量，不停止、覆盖或迁移其他项目服务。

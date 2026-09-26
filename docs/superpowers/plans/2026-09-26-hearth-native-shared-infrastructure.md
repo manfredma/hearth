@@ -34,12 +34,17 @@
 
 - [x] 新增 bootstrap-native-mysql.sh，创建 logical database/user 和 native env。
 - [ ] 新增 124→129 的 Hearth 限定 database dump/import；dump 已校验并在 129 待导入，native DB 导入尚未执行。
+- [x] 遇到缺少 dump-complete marker 的已有 dump 时分类为 uncertain 并保留，不自动删除或重做。
+- [x] staging dump 与 TLS current 更新使用唯一临时输入并在 deployment-test lock 内提交，不能并发覆盖或观察半成品。
 - [x] 新增 run-scoped integration/E2E MySQL database/user、Redis DB/namespace 和 test root。
 
 ### Task 4: Staging integration/E2E
 
 - [x] 将现有跨进程测试接入 `staging-test` profile 和 129 native Hearth test-slot。
+- [x] 增加真实 Maven Failsafe `NativeInfrastructureIT`，验证 MySQL 快照/Flyway/管理员和隔离 Redis 读写；runner 必须核对本轮非零 Failsafe summary 才允许写 evidence。
 - [x] 新增管理员登录、CSRF、OAuth consent、OIDC token/userinfo、RP logout 和 Career callback redirect E2E。
+- [x] 为 Maven integration 与 Playwright/Chromium 子进程设置 512 MiB `MemoryMax`、零 swap cgroup 限制，E2E Node heap 限为 256 MiB。
+- [x] Maven Failsafe 离线只读使用 `/opt/shared-maven/repository`，并持有全局共享仓库读锁。
 - [x] 测试 runner 在结束时清理 run-scoped 资源、恢复 staging app 并校验服务日志；实机 evidence 尚未生成。
 - [ ] 在 129 执行 integration 与 E2E 并检查两份 SHA-bound `result=passed` evidence。
 
@@ -52,6 +57,8 @@
 ### Task 6: Production bootstrap and release
 
 - [ ] 创建新的 annotated SemVer Tag；Tag 必须与 staging 验收候选 SHA 一致。
+- [x] 生产入口校验 annotated Tag SHA 对应 staging integration/E2E 两份 passed evidence、Tag/POM 版本一致，并拒绝 production history 中已部署版本。
+- [x] 生产切换使用独占部署锁、systemd restart 与失败恢复；检查其他项目 units/routes/listeners 和 Hearth WARNING。
 - [x] 实现 175 production env、MySQL logical database/user、Redis DB 6/namespace、systemd、ACME TLS 自动续期和永久管理员 bootstrap。
 - [ ] 部署 native JAR，验证 public `/version`、OIDC discovery、登录、TLS、ownership 和其他项目服务。
 - [ ] 生产失败时保持 Hearth 无流量，不停止或修改 ByteDepth、Career、Daylilt、Toolbox。

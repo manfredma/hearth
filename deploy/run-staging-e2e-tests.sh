@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
-[[ -n "${HEARTH_STAGING_E2E_USERNAME:-}" && -n "${HEARTH_STAGING_E2E_PASSWORD:-}" ]] || { printf 'E2E administrator credentials must be explicitly injected; no account is created.\n' >&2; exit 1; }
-[[ "$HEARTH_STAGING_E2E_USERNAME" != *$'\n'* && "$HEARTH_STAGING_E2E_PASSWORD" != *$'\n'* ]] || { printf 'E2E administrator credentials must be single-line values.\n' >&2; exit 1; }
 readonly SOURCE_ROOT=/opt/hearth-native/source/current
 readonly STATE_ROOT=/var/lib/hearth-staging
 readonly HISTORY="$STATE_ROOT/deploy-history"
@@ -13,13 +11,16 @@ readonly DOMAIN=staging-hearth.bytedepth.cn
 readonly CHROME=/opt/shared-e2e/chrome-linux64/chrome
 readonly RUNTIME_MANIFEST="$STATE_ROOT/e2e-runtime.manifest"
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
-install -d -o ubuntu -g ubuntu -m 0700 "$STATE_ROOT"
+install -d -o ubuntu -g ubuntu -m 0700 "$STATE_ROOT" "$STATE_ROOT/test-history"
 touch "$LOCK"
 chown ubuntu:ubuntu "$LOCK"
 chmod 0600 "$LOCK"
 exec 9>>"$LOCK"
 flock -x 9
-rm -f -- "$EVIDENCE"
+source "$SOURCE_ROOT/deploy/lib/invalidate-staging-evidence.sh"
+hearth_invalidate_staging_evidence "$EVIDENCE"
+[[ -n "${HEARTH_STAGING_E2E_USERNAME:-}" && -n "${HEARTH_STAGING_E2E_PASSWORD:-}" ]] || { printf 'E2E administrator credentials must be explicitly injected; no account is created.\n' >&2; exit 1; }
+[[ "$HEARTH_STAGING_E2E_USERNAME" != *$'\n'* && "$HEARTH_STAGING_E2E_PASSWORD" != *$'\n'* ]] || { printf 'E2E administrator credentials must be single-line values.\n' >&2; exit 1; }
 commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
 deployed="$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")"
 [[ "$commit" == "$deployed" && "$commit" =~ ^[0-9a-f]{40}$ ]] || { printf 'Hearth E2E SHA is not deployed.\n' >&2; exit 1; }
@@ -54,7 +55,10 @@ available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
 cd "$SOURCE_ROOT"
 set +e
 printf '%s\n%s\n' "$HEARTH_STAGING_E2E_USERNAME" "$HEARTH_STAGING_E2E_PASSWORD" | \
-  sudo -n -u ubuntu -- bash -c '
+  systemd-run --scope --quiet --wait --pipe \
+    --unit="hearth-staging-e2e-$run_id.scope" \
+    --property=MemoryMax=512M --property=MemorySwapMax=0 \
+    /usr/bin/bash -c '
     set -Eeuo pipefail
     IFS= read -r admin_username
     IFS= read -r admin_password
@@ -63,7 +67,7 @@ printf '%s\n%s\n' "$HEARTH_STAGING_E2E_USERNAME" "$HEARTH_STAGING_E2E_PASSWORD" 
     export HEARTH_E2E_ADMIN_PASSWORD="$admin_password"
     unset admin_username admin_password
     cd /opt/hearth-native/source/current
-    exec env E2E_BASE_URL="$1" \
+    exec sudo -n -u ubuntu -- env NODE_OPTIONS=--max-old-space-size=256 E2E_BASE_URL="$1" \
       HEARTH_EXPECTED_COMMIT="$2" \
       HEARTH_E2E_EXPECTED_ISSUER="$1" \
       HEARTH_E2E_HOST_RESOLVER_RULES="MAP $4 127.0.0.1" \

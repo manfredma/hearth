@@ -36,6 +36,13 @@ for relative_file in "${files[@]}"; do
   absolute_file="$project_root/$relative_file"
   if matches=$(rg -n -i 'bytedepth|BYTEDEPTH' "$absolute_file" 2>/dev/null); then
     filtered_matches=$(printf '%s\n' "$matches" | while IFS= read -r line; do
+      line_content="$(printf '%s\n' "${line#*:}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+      case "$line_content" in
+        bytedepth.cn|career.bytedepth.cn|daylilt.bytedepth.cn|toolbox.bytedepth.cn|\
+        bytedepth-production-green-app.service|bytedepth-production-green-edge.service|\
+        bytedepth-production-green-meilisearch.service|bytedepth-production-green-mysql.service|\
+        bytedepth-production-green-redis.service|bytedepth-production-green-public-nginx.service) continue ;;
+      esac
       case "$line" in
         *'staging-hearth.bytedepth.cn'*|*'staging-career.bytedepth.cn'*|*'hearth.bytedepth.cn'*|\
         *'/data/bytedepth-native-staging/'*|*'/data/bytedepth-native-production/'*|\

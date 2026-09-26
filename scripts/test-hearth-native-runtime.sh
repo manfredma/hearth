@@ -33,6 +33,9 @@ grep -Fq '/opt/hearth-native/e2e-runtime' "$ROOT/deploy/bootstrap-staging-runtim
 grep -Fq 'lockfile_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq 'package_json_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq 'MemAvailable' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'NODE_OPTIONS=--max-old-space-size=256' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'groupadd --system hearth' "$ROOT/deploy/bootstrap-native-env.sh"
 grep -Fq 'groupadd --system hearth' "$ROOT/deploy/migrate-staging-docker-source.sh"
 grep -Fq 'on-profile: staging-native' "$ROOT/hearth-start/src/main/resources/application-staging-native.yml"
@@ -45,6 +48,8 @@ done
 grep -Fq 'listen 127.0.0.1:$edge_port' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'MemoryMax=' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
 grep -Fq 'install -d -o ubuntu -g ubuntu' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'chown -R ubuntu:hearth "$ROOT_DIR/edge"' "$ROOT/deploy/install-native-runtime.sh"
+! grep -Fq 'chown -R hearth:hearth "$ROOT_DIR/edge"' "$ROOT/deploy/install-native-runtime.sh"
 if rg -n 'listen 80|listen 443' "$ROOT/deploy/systemd" >/dev/null; then
   printf 'Native Hearth units must not bind public ports.\n' >&2
   exit 1

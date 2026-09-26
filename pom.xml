@@ -260,10 +260,10 @@
                                 Failsafe must load application classes from target/classes instead.
                             -->
                             <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-                            <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>
+                            <argLine>-Xmx256m ${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${maven.repo.local}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <systemPropertyVariables>
                                 <hearth.it.redis.password>${env.HEARTH_IT_REDIS_PASSWORD}</hearth.it.redis.password>
                             </systemPropertyVariables>
@@ -276,6 +276,13 @@
                                 </goals>
                             </execution>
                         </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>

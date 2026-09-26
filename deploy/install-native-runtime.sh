@@ -39,7 +39,7 @@ command -v nginx >/dev/null || { printf 'Nginx is required.\n' >&2; exit 1; }
 install -d -o ubuntu -g ubuntu -m 0755 "$NATIVE_ROOT" "$NATIVE_ROOT/releases" "$NATIVE_ROOT/source" "$ROOT_DIR" "$ROOT_DIR/data" "$ROOT_DIR/edge" "$ROOT_DIR/edge/client_body_temp" "$ROOT_DIR/edge/proxy_temp"
 chown ubuntu:hearth "$ROOT_DIR/data"
 chmod 0770 "$ROOT_DIR/data"
-chown -R hearth:hearth "$ROOT_DIR/edge"
+chown -R ubuntu:hearth "$ROOT_DIR/edge"
 chmod -R g+rwX "$ROOT_DIR/edge"
 install -d -o ubuntu -g hearth -m 0750 "$ENV_DIR"
 chown ubuntu:hearth "$ENV_FILE"
