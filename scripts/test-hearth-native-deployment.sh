@@ -26,6 +26,8 @@ grep -Fq './deploy/bootstrap-native-env.sh production' "$ROOT/deploy/deploy-nati
 grep -Fq './deploy/bootstrap-native-mysql.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
 grep -Fq './deploy/bootstrap-native-mysql.sh production' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq 'HEARTH_COMMIT_ID' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq 'REMOTE_UPLOAD_DIR=/var/tmp/hearth-native-staging-uploads' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq "install -d -o ubuntu -g ubuntu -m 0700 '\$REMOTE_UPLOAD_DIR'" "$ROOT/deploy/deploy-native-staging.sh"
 grep -Fq 'HEARTH_COMMIT_ID' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq 'hearth.build.commit-id' "$ROOT/deploy/deploy-native-staging.sh"
 grep -Fq 'hearth.build.commit-id' "$ROOT/deploy/deploy-native-production-remote.sh"

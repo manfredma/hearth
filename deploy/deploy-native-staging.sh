@@ -6,6 +6,7 @@ readonly HOST="${HEARTH_STAGING_HOST:-129.211.6.82}"
 readonly SSH_KEY="${HEARTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
 readonly KNOWN_HOSTS="${HEARTH_SSH_KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
 readonly DOMAIN=staging-hearth.bytedepth.cn
+readonly REMOTE_UPLOAD_DIR=/var/tmp/hearth-native-staging-uploads
 readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS" -o ConnectTimeout=30)
 [[ -r "$SSH_KEY" && -r "$KNOWN_HOSTS" ]] || { printf 'SSH key and known_hosts required.\n' >&2; exit 1; }
 readonly HEARTH_COMMIT_ID="$(git rev-parse --verify "$REF^{commit}")"
@@ -41,8 +42,9 @@ jar_file="$build_root/hearth-start/target/hearth-start.jar"
 jar_sha="$(shasum -a 256 "$jar_file" | awk '{print $1}')"
 archive="$build_root/source.tar"
 git archive "$commit" > "$archive"
-remote_jar="/tmp/hearth-staging-$commit.jar"
-remote_src="/tmp/hearth-staging-$commit.tar"
+remote_jar="$REMOTE_UPLOAD_DIR/hearth-staging-$commit.jar"
+remote_src="$REMOTE_UPLOAD_DIR/hearth-staging-$commit.tar"
+ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "sudo -n install -d -o ubuntu -g ubuntu -m 0700 '$REMOTE_UPLOAD_DIR'"
 scp "${SSH_OPTS[@]}" "$jar_file" "ubuntu@$HOST:$remote_jar"
 scp "${SSH_OPTS[@]}" "$archive" "ubuntu@$HOST:$remote_src"
 HEARTH_STAGING_HOST="$HOST" HEARTH_SSH_KEY="$SSH_KEY" HEARTH_SSH_KNOWN_HOSTS="$KNOWN_HOSTS" "$build_root/deploy/migrate-staging-docker-source.sh"

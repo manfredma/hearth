@@ -6,8 +6,9 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
-- `v0.1.0` staging candidate 已冻结；验收通过后，不在验收与合并之间追加代码或文档提交。
+- `v0.1.0` staging candidate 已冻结；部署使用该候选的完整 SHA，验收通过后不在验收与合并之间追加代码或文档提交。
 - staging Docker→native 数据迁移可恢复已开始但未完成的 Hearth 导入：保留原始 dump，将数据先导入唯一临时 schema，校验后原子备份部分表并切换完整表集。
+- staging 发布制品上传使用工程专属 `/var/tmp/hearth-native-staging-uploads`，避免大型 JAR 与其他服务竞争共享 tmpfs。
 
 ### Fixed
 
