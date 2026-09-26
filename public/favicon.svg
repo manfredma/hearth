@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Hearth</title>
+  <rect width="64" height="64" rx="18" fill="#a9573b"/>
+  <path d="M0 43c13-2 22 5 25 21H18C8 64 0 56 0 46z" fill="#fbead8" opacity=".22"/>
+  <text x="31" y="47" text-anchor="middle" fill="#fbead8" font-family="Georgia, 'Times New Roman', serif" font-size="49" font-style="italic">h</text>
+</svg>

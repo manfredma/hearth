@@ -3,15 +3,16 @@ import globals from 'globals';
 
 export default [
     {
-        ignores: ['node_modules/**', 'bytedepth-*/target/**']
+        ignores: ['node_modules/**', 'hearth-*/target/**']
     },
     js.configs.recommended,
     {
-        files: ['bytedepth-start/src/main/resources/static/js/**/*.js'],
+        files: ['hearth-start/src/main/frontend/**/*.{js,jsx}', 'hearth-start/src/main/resources/static/js/**/*.js'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'script',
-            globals: {...globals.browser, Vditor: 'readonly'}
+            parserOptions: { ecmaFeatures: { jsx: true } },
+            globals: {...globals.browser}
         },
         rules: {
             'no-var': 'error',
@@ -22,6 +23,15 @@ export default [
             curly: 'error',
             'no-eval': 'error'
         }
+    },
+    {
+        files: ['hearth-start/src/main/frontend/**/*.{js,jsx}'],
+        languageOptions: {
+            sourceType: 'module',
+            parserOptions: { ecmaVersion: 'latest', ecmaFeatures: { jsx: true } },
+            globals: { describe: 'readonly', beforeEach: 'readonly', it: 'readonly', expect: 'readonly' },
+        },
+        rules: { 'no-unused-vars': ['error', { varsIgnorePattern: '^React$' }] },
     },
     {
         files: ['**/src/test/js/**/*.test.js', 'tests/**/*.js'],

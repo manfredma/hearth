@@ -1,0 +1,48 @@
+spring:
+  config:
+    import: optional:classpath:hearth-build.properties
+  application:
+    name: hearth
+  datasource:
+    url: ${HEARTH_DATASOURCE_URL:jdbc:mysql://localhost:3306/hearth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${HEARTH_DATASOURCE_USERNAME:hearth}
+    password: ${HEARTH_DATASOURCE_PASSWORD:}
+  session:
+    store-type: ${HEARTH_SESSION_STORE_TYPE:redis}
+    timeout: ${HEARTH_SESSION_TIMEOUT:60m}
+    redis:
+      namespace: ${HEARTH_SESSION_REDIS_NAMESPACE:hearth:session:v1}
+  data:
+    redis:
+      host: ${HEARTH_REDIS_HOST:localhost}
+      port: ${HEARTH_REDIS_PORT:6379}
+      database: ${HEARTH_REDIS_DATABASE:0}
+      password: ${HEARTH_REDIS_PASSWORD:}
+
+server:
+  port: ${HEARTH_APP_PORT:8080}
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        name: ${HEARTH_SESSION_COOKIE_NAME:HEARTH_SESSION}
+        http-only: true
+        secure: ${HEARTH_SESSION_COOKIE_SECURE:false}
+        same-site: ${HEARTH_SESSION_COOKIE_SAME_SITE:lax}
+
+hearth:
+  build:
+    version: ${HEARTH_VERSION:unknown}
+    commit-id: ${HEARTH_COMMIT_ID:unknown}
+    built-at: ${HEARTH_BUILT_AT:unknown}
+  environment: ${HEARTH_ENVIRONMENT:local}
+  authentication:
+    failure-threshold: ${HEARTH_LOGIN_FAILURE_THRESHOLD:5}
+    lock-duration: ${HEARTH_LOGIN_LOCK_DURATION:15m}
+    remember-me-key: ${HEARTH_REMEMBER_ME_KEY:hearth-local-remember-me-key}
+    remember-me-cookie-secure: ${HEARTH_REMEMBER_ME_COOKIE_SECURE:false}
+  authorization-server:
+    issuer: ${HEARTH_OIDC_ISSUER:https://localhost:8080}
+    signing-key-location: ${HEARTH_SIGNING_KEY_LOCATION:env:HEARTH_SIGNING_KEY}
+    access-token-ttl: ${HEARTH_ACCESS_TOKEN_TTL:5m}
+    refresh-token-ttl: ${HEARTH_REFRESH_TOKEN_TTL:30d}

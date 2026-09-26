@@ -1,176 +1,142 @@
 #!/usr/bin/env bash
-# staging 部署：接受 origin 上的命名候选分支或 Tag。
-# 在 124 上执行。与生产 deploy-production.sh 的区别：
-# - 接受任意命名分支或 Tag（不限 SemVer Tag，不限 main），用于预发验收尚未合并 main 的功能分支
-# - 不做重复部署校验（staging 可重复部署同一 ref）
-# - 不做 POM-Tag 一致性校验
-# - 安全限制：只接受 origin 上已命名的分支或 Tag，拒绝裸 SHA
-#   （bootstrap-ops-deploy.sh 由 root 执行并构建带主机挂载的容器，
-#    命名 ref 经 deploy key 推送，可追溯；裸 SHA 不可追溯，禁止）
-# 用法：./deploy/deploy-staging.sh <候选分支或Tag>   # 本机编排，远程 sudo 执行
 set -Eeuo pipefail
 
-if [[ $# -lt 1 || -z "${1:-}" ]]; then
+if [[ $# -ne 1 || -z "${1:-}" ]]; then
     printf 'Usage: %s <candidate-branch-or-tag>\n' "$0" >&2
     exit 2
 fi
 
+readonly REF="$1"
+if [[ ! "$REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+    printf 'Refusing unsafe candidate ref.\n' >&2
+    exit 2
+fi
+
 if [[ "${EUID}" -ne 0 ]]; then
-    STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-124.221.143.25}"
-    SSH_KEY="${BYTEDEPTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
-    exec ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
-        "ubuntu@$STAGING_HOST" \
-        "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh $1"
+    readonly STAGING_HOST="${HEARTH_STAGING_HOST:-124.221.143.25}"
+    readonly SSH_KEY="${HEARTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
+    readonly SSH_KNOWN_HOSTS="${HEARTH_SSH_KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
+    if [[ ! -r "$SSH_KEY" ]]; then
+        printf 'HEARTH_SSH_KEY is missing or unreadable: %s\n' "$SSH_KEY" >&2
+        exit 1
+    fi
+    if [[ ! -r "$SSH_KNOWN_HOSTS" ]]; then
+        printf 'HEARTH_SSH_KNOWN_HOSTS is missing or unreadable: %s\n' "$SSH_KNOWN_HOSTS" >&2
+        exit 1
+    fi
+    exec ssh -i "$SSH_KEY" -o BatchMode=yes \
+        -o UserKnownHostsFile="$SSH_KNOWN_HOSTS" -o StrictHostKeyChecking=yes \
+        "ubuntu@$STAGING_HOST" "sudo /opt/hearth/deploy/deploy-staging.sh '$REF'"
 fi
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
-readonly STATE_DIR=/var/lib/bytedepth-staging
-readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
-readonly HISTORY_FILE="$STATE_DIR/deploy-history"
-readonly TIMING_DIR="$STATE_DIR/timing"
-readonly EXPECTED_STAGING_DOMAIN=staging-bytedepth.bytedepth.cn
-readonly EXPECTED_STAGING_SITE_URL=https://bytedepth.cn
+readonly REPOSITORY_URL="${HEARTH_REPOSITORY_URL:-git@github.com:manfredma/hearth.git}"
+readonly STAGING_DOMAIN="staging-hearth.bytedepth.cn"
+readonly COMPOSE_PROJECT="hearth-staging"
+readonly ENV_FILE="$SOURCE_ROOT/deploy/.env"
+readonly LOG_FILE="/var/log/hearth-staging-deploy.log"
+readonly MAVEN_CACHE_DIR="${HEARTH_MAVEN_CACHE_DIR:-/opt/shared-maven/repository}"
+readonly MAVEN_CACHE_LOCK="${HEARTH_MAVEN_CACHE_LOCK:-/opt/shared-maven/repository.lock}"
+readonly MAVEN_IMAGE="${HEARTH_MAVEN_IMAGE:-maven:3.9.11-eclipse-temurin-25}"
+readonly COMPOSE=(docker compose --project-name "$COMPOSE_PROJECT" --env-file "$ENV_FILE" \
+    -f "$SOURCE_ROOT/deploy/docker-compose.single-host.yml" \
+    -f "$SOURCE_ROOT/deploy/docker-compose.staging.yml")
 
-# A deployment changes both the checkout and the running app.  Keep that
-# transition indivisible with respect to staging test runners, otherwise a
-# runner can test one revision and write evidence for another.
-if [[ "${1:-}" != '--lock-held' ]]; then
-    install -d -o root -g root -m 0700 "$STATE_DIR"
-    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+if [[ ! -d "$SOURCE_ROOT/.git" ]]; then
+    printf 'Refusing: source root is not a Git checkout: %s\n' "$SOURCE_ROOT" >&2
+    exit 1
 fi
-shift
-
-readonly REF="$1"
-
-git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
-
-invalidate_test_evidence() {
-    rm -f "$STATE_DIR/test-history/staging-integration" \
-        "$STATE_DIR/test-history/staging-e2e"
-}
-
-require_staging_host_configuration() {
-    local configured_domain configured_site_url certificate_dir certificate_san_names
-
-    configured_domain="$(awk -F= '$1 == "BYTEDEPTH_DOMAIN" {value = substr($0, index($0, "=") + 1)} END {print value}' .env 2>/dev/null || true)"
-    if [[ "$configured_domain" != "$EXPECTED_STAGING_DOMAIN" ]]; then
-        printf 'Refusing: staging BYTEDEPTH_DOMAIN must be %s, got %s\n' \
-            "$EXPECTED_STAGING_DOMAIN" "${configured_domain:-unset}" >&2
-        exit 1
-    fi
-
-    configured_site_url="$(awk -F= '$1 == "BYTEDEPTH_SITE_URL" {value = substr($0, index($0, "=") + 1)} END {print value}' .env 2>/dev/null || true)"
-    if [[ -n "$configured_site_url" && "$configured_site_url" != "$EXPECTED_STAGING_SITE_URL" ]]; then
-        printf 'Refusing: staging BYTEDEPTH_SITE_URL must remain %s, got %s\n' \
-            "$EXPECTED_STAGING_SITE_URL" "$configured_site_url" >&2
-        exit 1
-    fi
-
-    certificate_dir="/etc/letsencrypt/live/$EXPECTED_STAGING_DOMAIN"
-    if [[ ! -r "$certificate_dir/fullchain.pem" || ! -r "$certificate_dir/privkey.pem" ]]; then
-        printf 'Refusing: staging TLS certificate is missing for %s\n' "$EXPECTED_STAGING_DOMAIN" >&2
-        exit 1
-    fi
-    certificate_san_names="$(openssl x509 -in "$certificate_dir/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
-    if ! printf '%s\n' "$certificate_san_names" \
-        | tr ',' '\n' \
-        | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
-        | grep -Fx "DNS:$EXPECTED_STAGING_DOMAIN" >/dev/null; then
-        printf 'Refusing: staging TLS certificate does not cover %s\n' "$EXPECTED_STAGING_DOMAIN" >&2
-        exit 1
-    fi
-}
-
-bound_build_cache() {
-    # A staging node has a finite system disk. Keep recent layers for build
-    # speed, but never let accumulated BuildKit cache exhaust the node.
-    docker builder prune --all --force --max-used-space 5GB
-}
+if [[ ! -r "$ENV_FILE" ]]; then
+    printf 'Refusing: staging env file is missing: %s\n' "$ENV_FILE" >&2
+    exit 1
+fi
+if grep -Eq 'replace-with|inject-at-deploy-time|base64-pkcs8-rsa-private-key' "$ENV_FILE"; then
+    printf 'Refusing: staging env file still contains a placeholder.\n' >&2
+    exit 1
+fi
 
 cd "$SOURCE_ROOT"
-deployment_started_at="$(date -u +%s%3N)"
+git remote set-url origin "$REPOSITORY_URL"
+git fetch --force --no-recurse-submodules origin "$REF"
+readonly COMMIT="$(git rev-parse FETCH_HEAD^{commit})"
+# Keep the host checkout on a named deployment branch so Git does not emit a
+# detached-HEAD advice message during an otherwise successful rollout.
+git checkout --quiet -B hearth-staging-deploy "$COMMIT"
+export HEARTH_COMMIT_ID="$COMMIT"
+export HEARTH_BUILT_AT="$(date -u +%FT%TZ)"
 
-# 校验 origin
-if [[ "$(git_cmd remote get-url origin)" != "$GIT_REMOTE_URL" ]]; then
-    printf 'Refusing: origin must be %s\n' "$GIT_REMOTE_URL" >&2
+if ! docker network inspect bytedepth_default >/dev/null 2>&1; then
+    printf 'Refusing: shared bytedepth_default network is missing.\n' >&2
     exit 1
 fi
 
-# deploy key（复用 /etc/bytedepth-deploy.conf 中的 GitHub deploy key）
-CONFIG_FILE=/etc/bytedepth-deploy.conf
-deploy_mode="$(awk -F= '$1=="BYTEDEPTH_DEPLOY_MODE"{value=$2} END{print value}' "$CONFIG_FILE" 2>/dev/null || true)"
-if [[ "$deploy_mode" != "staging" ]]; then
-    printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging, got %s\n' "${deploy_mode:-unset}" >&2
-    exit 1
-fi
-require_staging_host_configuration
-deploy_ssh_key="$(awk -F= '$1=="BYTEDEPTH_DEPLOY_SSH_KEY"{print $2}' "$CONFIG_FILE" 2>/dev/null || true)"
-if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
-    printf 'Refusing: BYTEDEPTH_DEPLOY_SSH_KEY missing or unreadable\n' >&2
-    exit 1
-fi
-
-export GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
-
-# fetch ref，解析为完整 commit SHA
-source_fetch_started_at="$(date -u +%s%3N)"
-git_cmd fetch --force --no-recurse-submodules origin "$REF" main
-COMMIT="$(git_cmd rev-parse FETCH_HEAD^{commit})"
-export BYTEDEPTH_COMMIT_ID="$COMMIT"
-export BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
-
-# 安全限制：只接受 origin 上已命名的分支或 Tag，拒绝裸 SHA。
-# 原因：bootstrap-ops-deploy.sh 由 root 执行并构建带主机挂载的容器。
-# 命名 ref（分支/Tag）经 deploy key 推送、可追溯；裸 SHA 不可追溯，禁止以 root 构建+挂载。
-# ls-remote 对命名分支/Tag 返回 SHA，对裸 SHA 返回空。
-if [[ -z "$(git_cmd ls-remote --heads --tags origin "$REF" 2>/dev/null)" ]]; then
-    printf 'Refusing: %s is not a named branch or tag on origin\n' "$REF" >&2
-    printf 'staging 只接受 origin 上已命名的分支或 Tag，拒绝裸 SHA\n' >&2
-    exit 1
-fi
-
-source <(git show "$COMMIT:deploy/lib/timing.sh")
-readonly TIMING_FILE="$TIMING_DIR/$COMMIT"
-initialize_timing_file "$TIMING_FILE" "$COMMIT"
-record_timing_phase "$TIMING_FILE" source_fetch passed "$source_fetch_started_at" "$(timing_now_epoch_ms)"
-
-if ! record_timed_phase "$TIMING_FILE" source_checkout git_cmd checkout --detach "$COMMIT"; then
-    record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
-    exit 1
-fi
-
-bash scripts/check-staging-changelog-change.sh --target "$COMMIT" --base origin/main
-bash scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate
-
-# Any prior result describes the previously deployed application, never this
-# deployment.  Do this only after candidate readiness passes, while holding
-# the same lock as both test runners.
-invalidate_test_evidence
-
-source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
-run_runtime_preflight() {
-    # Keep dependency inputs and the deployed checkout in sync before rollout;
-    # test runners must never discover a missing manifest after deployment.
-    ./deploy/bootstrap-staging-runtime.sh --lock-held --ensure
-    require_staging_runtime_prerequisites
+prepare_maven_cache() {
+    install -d -o root -g root -m 0755 "$MAVEN_CACHE_DIR"
+    (
+        flock -x 8
+        local maven_log
+        maven_log="$(mktemp)"
+        trap 'rm -f "$maven_log"' RETURN
+        set +e
+        docker run --rm --network host \
+            -v "$SOURCE_ROOT:/workspace" \
+            -v "$MAVEN_CACHE_DIR:/root/.m2/repository" \
+            -w /workspace "$MAVEN_IMAGE" \
+            ./mvnw -B clean install -DskipTests -Dsort.skip=true 2>&1 | tee "$maven_log"
+        local maven_status="${PIPESTATUS[0]}"
+        set -e
+        if [[ "$maven_status" -ne 0 ]]; then
+            printf 'Maven dependency prewarm failed; see %s\n' "$LOG_FILE" >&2
+            return "$maven_status"
+        fi
+        if ! warning_policy_check_file "$maven_log"; then
+            printf 'Maven dependency prewarm emitted an unallowlisted warning.\n' >&2
+            return 1
+        fi
+    ) 8>"$MAVEN_CACHE_LOCK" >>"$LOG_FILE" 2>&1
 }
-if ! record_timed_phase "$TIMING_FILE" runtime_preflight run_runtime_preflight; then
-    record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+
+install -d -m 0700 "$(dirname "$LOG_FILE")"
+source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
+if ! prepare_maven_cache; then
+    printf 'Hearth staging Maven cache preparation failed; see %s\n' "$LOG_FILE" >&2
     exit 1
 fi
 
-run_rollout() {
-    ./deploy/bootstrap-ops-deploy.sh
-    bound_build_cache
-}
-if ! record_timed_phase "$TIMING_FILE" docker_build_and_rollout run_rollout; then
-    record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+set +e
+"${COMPOSE[@]}" config --quiet >"$LOG_FILE" 2>&1
+config_status=$?
+set -e
+if [[ "$config_status" -ne 0 ]]; then
+    printf 'Compose configuration failed; see %s\n' "$LOG_FILE" >&2
+    exit "$config_status"
+fi
+
+set +e
+"${COMPOSE[@]}" up -d --build --force-recreate >>"$LOG_FILE" 2>&1
+rollout_status=$?
+set -e
+if [[ "$rollout_status" -ne 0 ]]; then
+    printf 'Hearth staging rollout failed; see %s\n' "$LOG_FILE" >&2
+    exit "$rollout_status"
+fi
+
+for attempt in {1..60}; do
+    if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:18083/api/health >/dev/null; then
+        break
+    fi
+    if [[ "$attempt" -eq 60 ]]; then
+        printf 'Hearth staging health check timed out; see %s\n' "$LOG_FILE" >&2
+        exit 1
+    fi
+    sleep 2
+done
+
+if ! curl --fail --silent --show-error --max-time 10 \
+    --resolve "$STAGING_DOMAIN:443:127.0.0.1" "https://$STAGING_DOMAIN/.well-known/openid-configuration" \
+    -o /dev/null; then
+    printf 'Hearth staging HTTPS discovery check failed; see %s\n' "$LOG_FILE" >&2
     exit 1
 fi
 
-install -d -m 0700 "$STATE_DIR"
-printf 'ref=%s\ncommit=%s\ndeployed_at=%s\n---\n' \
-    "$REF" "$COMMIT" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"
-record_timing_phase "$TIMING_FILE" deployment_total passed "$deployment_started_at" "$(timing_now_epoch_ms)"
-printf 'Deployed %s (%s)\n' "$REF" "$COMMIT"
+printf 'Hearth staging deployed ref=%s commit=%s\n' "$REF" "$COMMIT"

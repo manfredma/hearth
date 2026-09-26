@@ -2,18 +2,18 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>manfred.bytedepth</groupId>
-    <artifactId>bytedepth</artifactId>
-    <version>2.24.3-SNAPSHOT</version>
+    <groupId>manfred.hearth</groupId>
+    <artifactId>hearth</artifactId>
+    <version>0.1.0</version>
     <packaging>pom</packaging>
-    <name>bytedepth</name>
+    <name>hearth</name>
 
     <modules>
-        <module>bytedepth-domain</module>
-        <module>bytedepth-app</module>
-        <module>bytedepth-infrastructure</module>
-        <module>bytedepth-adapter</module>
-        <module>bytedepth-start</module>
+        <module>hearth-domain</module>
+        <module>hearth-app</module>
+        <module>hearth-infrastructure</module>
+        <module>hearth-adapter</module>
+        <module>hearth-start</module>
     </modules>
 
     <properties>
@@ -22,32 +22,17 @@
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.boot.version>4.1.0</spring.boot.version>
-        <cola.version>4.3.2</cola.version>
-        <mybatis.plus.version>3.5.17</mybatis.plus.version>
         <sort.skip>true</sort.skip>
-        <testcontainers.version>1.21.4</testcontainers.version>
-        <owasp.html.sanitizer.version>20260313.1</owasp.html.sanitizer.version>
-        <commonmark.version>0.30.0</commonmark.version>
-        <bucket4j.version>8.19.0</bucket4j.version>
         <jacoco.version>0.8.15</jacoco.version>
         <mockito.version>5.23.0</mockito.version>
         <byte-buddy.version>1.18.10</byte-buddy.version>
         <archunit.version>1.5.0</archunit.version>
-        <coverage.data-file>${maven.multiModuleProjectDirectory}/bytedepth-start/target/jacoco-merged.exec</coverage.data-file>
+        <coverage.data-file>${maven.multiModuleProjectDirectory}/hearth-start/target/jacoco-merged.exec</coverage.data-file>
         <coverage.check.skip>true</coverage.check.skip>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <!-- Testcontainers BOM 放在 Spring Boot 之前，覆盖其中的旧版本。
-                 1.21.4 默认探测 Docker API 1.44，兼容 Docker Engine 29。-->
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -56,58 +41,23 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.alibaba.cola</groupId>
-                <artifactId>cola-component-dto</artifactId>
-                <version>${cola.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.alibaba.cola</groupId>
-                <artifactId>cola-component-exception</artifactId>
-                <version>${cola.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
-                <version>${mybatis.plus.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
-                <version>${mybatis.plus.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.commonmark</groupId>
-                <artifactId>commonmark</artifactId>
-                <version>${commonmark.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.commonmark</groupId>
-                <artifactId>commonmark-ext-gfm-tables</artifactId>
-                <version>${commonmark.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
-                <artifactId>owasp-java-html-sanitizer</artifactId>
-                <version>${owasp.html.sanitizer.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-domain</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-app</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-infrastructure</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-infrastructure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>manfred.bytedepth</groupId>
-                <artifactId>bytedepth-adapter</artifactId>
+                <groupId>manfred.hearth</groupId>
+                <artifactId>hearth-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
@@ -228,10 +178,10 @@
     </build>
 
     <scm>
-        <connection>scm:git:git@github.com:manfredma/bytedepth.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/manfredma/bytedepth.git</developerConnection>
-        <url>https://github.com/manfredma/bytedepth</url>
-        <tag>v1.5.0</tag>
+        <connection>scm:git:git@github.com:manfredma/hearth.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/manfredma/hearth.git</developerConnection>
+        <url>https://github.com/manfredma/hearth</url>
+    <tag>v0.1.0</tag>
     </scm>
 
     <profiles>
@@ -253,6 +203,12 @@
                                 <artifactId>byte-buddy-agent</artifactId>
                                 <version>${byte-buddy.version}</version>
                             </dependency>
+                            <!-- Pin the dynamically selected provider so the shared staging cache can be prewarmed offline. -->
+                            <dependency>
+                                <groupId>org.apache.maven.surefire</groupId>
+                                <artifactId>surefire-junit-platform</artifactId>
+                                <version>3.2.5</version>
+                            </dependency>
                         </dependencies>
                         <configuration>
                             <!--
@@ -260,12 +216,12 @@
                                 Failsafe must load application classes from target/classes instead.
                             -->
                             <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-                            <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>
+                            <argLine>-Xmx128m ${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${maven.repo.local}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <systemPropertyVariables>
-                                <bytedepth.it.redis.password>${env.BYTEDEPTH_IT_REDIS_PASSWORD}</bytedepth.it.redis.password>
+                                <hearth.it.redis.password>${env.HEARTH_IT_REDIS_PASSWORD}</hearth.it.redis.password>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
@@ -274,6 +230,35 @@
                                     <goal>integration-test</goal>
                                     <goal>verify</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <!-- Do not retain javac's memory in Maven before the Failsafe fork starts. -->
+                            <fork>true</fork>
+                            <maxmem>128m</maxmem>
+                            <executable>javac</executable>
+                        </configuration>
+                    </plugin>
+                    <!-- Local/CI quality gates run PMD. Unbind its lifecycle execution so
+                         the plugin class realm is never loaded in the constrained test cgroup. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-pmd-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>pmd-check</id>
+                                <phase>none</phase>
                             </execution>
                         </executions>
                     </plugin>

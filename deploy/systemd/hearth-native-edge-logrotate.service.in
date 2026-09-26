@@ -1,0 +1,13 @@
+[Unit]
+Description=Rotate Hearth __ENVIRONMENT__ native edge logs
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+ExecStart=/usr/sbin/logrotate --state __EDGE_ROOT__/logrotate.status __EDGE_ROOT__/logrotate.conf
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=__EDGE_ROOT__

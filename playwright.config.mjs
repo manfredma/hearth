@@ -1,7 +1,11 @@
 import {defineConfig, devices} from '@playwright/test';
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
-const chromiumLaunchOptions = chromiumExecutablePath ? {launchOptions: {executablePath: chromiumExecutablePath}} : {};
+const hostResolverRules = process.env.HEARTH_E2E_HOST_RESOLVER_RULES;
+const chromiumArgs = hostResolverRules ? ['--host-resolver-rules=' + hostResolverRules] : [];
+const chromiumLaunchOptions = chromiumExecutablePath || chromiumArgs.length
+    ? {launchOptions: {...(chromiumExecutablePath ? {executablePath: chromiumExecutablePath} : {}), args: chromiumArgs}}
+    : {};
 
 export default defineConfig({
     testDir: './tests/e2e',

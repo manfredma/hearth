@@ -1,109 +1,71 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-if [[ "${EUID}" -ne 0 ]]; then
-    printf 'Run with sudo: sudo ./deploy/bootstrap-staging-runtime.sh\n' >&2
-    exit 1
-fi
-
-readonly SOURCE_ROOT=/opt/bytedepth
-readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
-readonly STATE_DIR=/var/lib/bytedepth-staging
-readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
-readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
-source "$SOURCE_ROOT/deploy/lib/timing.sh"
-source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
-source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
-
+[[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
+readonly SOURCE_ROOT=/opt/hearth-native/source/current
+readonly STATE_ROOT=/var/lib/hearth-staging
+readonly RUNTIME_ROOT=/opt/hearth-native/e2e-runtime
+readonly CHROME=/opt/shared-e2e/chrome-linux64/chrome
+readonly LOCK="$STATE_ROOT/deployment-test.lock"
+readonly RUNTIME_MANIFEST="$STATE_ROOT/e2e-runtime.manifest"
+readonly NPM_LOG="$STATE_ROOT/npm-ci.log"
+readonly MINIMUM_AVAILABLE_KIB=524288
+[[ -x "$CHROME" ]] || { printf 'Shared Chromium is missing.\n' >&2; exit 1; }
+install -d -o ubuntu -g ubuntu -m 0700 "$STATE_ROOT"
+touch "$LOCK"
+chown ubuntu:ubuntu "$LOCK"
+chmod 0600 "$LOCK"
 if [[ "${1:-}" != --lock-held ]]; then
-    install -d -o root -g root -m 0700 "$STATE_DIR"
-    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+  exec flock -x "$LOCK" "$0" --lock-held
 fi
-shift
-
-case "${1:-}" in
-    '')
-        bootstrap_mode=refresh
-        ;;
-    --ensure)
-        bootstrap_mode=ensure
-        ;;
-    *)
-        printf 'Usage: sudo ./deploy/bootstrap-staging-runtime.sh [--ensure]\n' >&2
-        exit 1
-        ;;
-esac
-
-deploy_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value = $2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true)"
-if [[ "$deploy_mode" != staging ]]; then
-    printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging.\n' >&2
+[[ $# -eq 1 ]] || { printf 'Usage: %s [--lock-held]\n' "$0" >&2; exit 2; }
+[[ -f "$SOURCE_ROOT/package.json" && -f "$SOURCE_ROOT/package-lock.json" ]] || { printf 'Hearth staging Node lock inputs are missing.\n' >&2; exit 1; }
+readonly LOCK_SHA="$(sha256sum "$SOURCE_ROOT/package-lock.json" | awk '{print $1}')"
+readonly PACKAGE_JSON_SHA="$(sha256sum "$SOURCE_ROOT/package.json" | awk '{print $1}')"
+readonly CHROME_VERSION="$("$CHROME" --version)"
+readonly NODE_VERSION="$(sudo -n -u ubuntu -- node --version)"
+install -d -o ubuntu -g ubuntu -m 0755 "$RUNTIME_ROOT"
+install -o ubuntu -g ubuntu -m 0644 "$SOURCE_ROOT/package.json" "$RUNTIME_ROOT/package.json"
+install -o ubuntu -g ubuntu -m 0644 "$SOURCE_ROOT/package-lock.json" "$RUNTIME_ROOT/package-lock.json"
+if [[ -x "$RUNTIME_ROOT/node_modules/.bin/playwright" && -f "$RUNTIME_MANIFEST" ]] \
+  && [[ "$(awk -F= '$1 == "lockfile_sha256" {print $2}' "$RUNTIME_MANIFEST")" == "$LOCK_SHA" ]] \
+  && [[ "$(awk -F= '$1 == "package_json_sha256" {print $2}' "$RUNTIME_MANIFEST")" == "$PACKAGE_JSON_SHA" ]] \
+  && [[ "$(awk -F= '$1 == "chromium_version" {print substr($0,index($0,"=")+1); exit}' "$RUNTIME_MANIFEST")" == "$CHROME_VERSION" ]] \
+  && [[ "$(awk -F= '$1 == "node_version" {print $2}' "$RUNTIME_MANIFEST")" == "$NODE_VERSION" ]]; then
+  printf 'Reusing the Hearth staging E2E runtime for unchanged dependency inputs.\n'
+else
+  available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
+  [[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge "$MINIMUM_AVAILABLE_KIB" ]] || {
+    printf 'Refusing Hearth npm ci: require at least %s KiB MemAvailable, found %s KiB.\n' \
+      "$MINIMUM_AVAILABLE_KIB" "${available_kib:-unknown}" >&2
     exit 1
-fi
-
-commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
-if [[ "$bootstrap_mode" == ensure && -d "$SHARED_MAVEN_REPOSITORY" ]] \
-    && require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" >/dev/null 2>&1; then
-    printf 'Staging runtime already satisfies the current dependency inputs.\n'
-    exit 0
-fi
-timing_file="$STATE_DIR/runtime/timing/$commit"
-initialize_timing_file "$timing_file" "$commit"
-bootstrap_started_at="$(timing_now_epoch_ms)"
-
-prepare_maven() {
-    install -d -o root -g root -m 0755 "$SHARED_MAVEN_REPOSITORY"
-    (
-        flock -x 8
-        cd "$SOURCE_ROOT"
-        maven_log="$(mktemp)"
-        trap 'rm -f "$maven_log"' EXIT
-        set +e
-        (
-            set -Eeuo pipefail
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-                dependency:go-offline -Dsort.skip=true -DincludePlugins=true -DincludePluginDependencies=true -DskipTests
-            # Surefire/Failsafe select their JUnit runtime dynamically, outside the
-            # dependency graph visible to dependency:go-offline.  Resolve that exact
-            # runtime without running a test: the impossible selector and the two
-            # fail-if-no-match flags keep this a dependency probe rather than test execution.
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-                -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
-                -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
-                -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-                -o -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
-                -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
-                -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
-            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -o -Pstaging-integration verify -DskipTests -Dsort.skip=true
-        ) 2>&1 | tee "$maven_log"
-        maven_status="${PIPESTATUS[0]}"
-        set -e
-        if [[ "$maven_status" -ne 0 ]]; then
-            return "$maven_status"
-        fi
-        if ! warning_policy_check_file "$maven_log"; then
-            printf 'Refusing: Maven runtime preparation emitted an unallowlisted WARN or WARNING.\n' >&2
-            return 1
-        fi
-    ) 8>"$SHARED_MAVEN_LOCK"
-}
-
-prepare_node() {
-    cd "$SOURCE_ROOT"
-    npm ci --ignore-scripts --no-audit --no-fund
-}
-
-if ! record_timed_phase "$timing_file" maven_runtime_prepare prepare_maven; then
-    record_timing_phase "$timing_file" bootstrap_total failed "$(timing_now_epoch_ms)" "$(timing_now_epoch_ms)"
+  }
+  : > "$NPM_LOG"
+  chown ubuntu:ubuntu "$NPM_LOG"
+  chmod 0600 "$NPM_LOG"
+  set +e
+  sudo -n -u ubuntu -- bash -c 'cd /opt/hearth-native/e2e-runtime && NODE_OPTIONS=--max-old-space-size=384 npm ci --ignore-scripts --no-audit --no-fund --maxsockets=1' 2>&1 | tee "$NPM_LOG"
+  npm_status="${PIPESTATUS[0]}"
+  set -e
+  if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$NPM_LOG"; then
+    printf 'Hearth staging npm ci emitted WARNING; stopping.\n' >&2
     exit 1
+  fi
+  (( npm_status == 0 )) || exit "$npm_status"
+  manifest_tmp="$(mktemp "$STATE_ROOT/.e2e-runtime.XXXXXX")"
+  printf 'lockfile_sha256=%s\npackage_json_sha256=%s\nnode_version=%s\nchromium_version=%s\n' \
+    "$LOCK_SHA" "$PACKAGE_JSON_SHA" "$NODE_VERSION" "$CHROME_VERSION" > "$manifest_tmp"
+  chown ubuntu:ubuntu "$manifest_tmp"
+  chmod 0600 "$manifest_tmp"
+  mv -f "$manifest_tmp" "$RUNTIME_MANIFEST"
 fi
-if ! record_timed_phase "$timing_file" node_runtime_prepare prepare_node; then
-    record_timing_phase "$timing_file" bootstrap_total failed "$(timing_now_epoch_ms)" "$(timing_now_epoch_ms)"
-    exit 1
+[[ -x "$RUNTIME_ROOT/node_modules/.bin/playwright" ]] || { printf 'Hearth Playwright runtime is not executable.\n' >&2; exit 1; }
+if [[ -L "$SOURCE_ROOT/node_modules" ]]; then
+  [[ "$(readlink -f "$SOURCE_ROOT/node_modules")" == "$RUNTIME_ROOT/node_modules" ]] || { printf 'Hearth source node_modules points outside its project runtime.\n' >&2; exit 1; }
+elif [[ -e "$SOURCE_ROOT/node_modules" ]]; then
+  printf 'Hearth source has an unexpected non-runtime node_modules directory.\n' >&2
+  exit 1
+else
+  sudo -n -u ubuntu -- ln -s "$RUNTIME_ROOT/node_modules" "$SOURCE_ROOT/node_modules"
 fi
-write_runtime_manifest "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
-record_timing_phase "$timing_file" bootstrap_total passed "$bootstrap_started_at" "$(timing_now_epoch_ms)"
-printf 'Staging runtime bootstrap completed for %s.\n' "$commit"
+chown ubuntu:ubuntu "$SOURCE_ROOT/node_modules"
+printf 'Hearth staging runtime ready: %s\n' "$CHROME_VERSION"

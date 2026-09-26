@@ -1,71 +1,47 @@
-# 工程陷阱
+# Hearth 工程陷阱
 
-这里只记录仍会影响当前开发的、可复用的经验。操作细节以各主题唯一手册为准；知识库发生故障后的处理原则见 [知识库建设原则](../knowledge-base-principles.md)。
-
-## 流程错误必须推动规则演进
-
-**故障复盘不能止于修复当前报错。** 一旦发现流程、配置、测试或部署遗漏，必须把“现象 → 根因 → 明确规则 → 自动检查 → 发布前证据”一起提交。自动检查应优先覆盖正常路径，让正确顺序自动发生；只有合并冲突、外部服务不可用等不可预防的特殊情况，才允许以失败后人工处理作为流程分支。
-
-发布流程的具体例子是 Changelog：任何用户可见、运行时、部署或配置改动，在首次 staging 前必须有非空、分类明确的 `## Unreleased`；质量检查、staging 部署、合并和正式发布入口都必须自动校验。开发分支 push 还必须直接触发 GitHub quality，避免等到合并脚本才发现没有可等待的检查。权威实现见 [`check-release-readiness.sh`](../../scripts/check-release-readiness.sh)、[统一发布流程](unified-release-pipeline.md) 和 [发布管理](../releases/README.md)。
+这里记录已经固化为 Hearth 规则的常见问题。发现新的流程、配置、测试或部署错误时，必须同时补充文档规则和可重复的自动检查。
 
 ## 构建与测试
 
-- 所有 Maven 命令都显式使用 Java 25，并带 `-Dsort.skip=true`；完整命令见 [Maven 指南](../agent-guides/maven.md)。
-- 修改 Controller 构造器或应用接口时，同步修改 `@WebMvcTest` 的 mock；接口或返回类型变更要检查全部调用方。
-- 不以编译代替测试；生产 Java 改动还必须通过变更覆盖率门禁。
-- MyBatis 注解（如 `@Select`）中的 SQL 不经过 XML 实体解码；比较运算符必须直接写 `>=`、`<` 等原生 SQL，不能复制 XML mapper 中的 `&gt;=`、`&lt;` 写法，否则数据库会收到非法 SQL。
-- 访问日志归档状态按小时记录，但国家聚合表按自然日建唯一键；首次处理某小时也必须对日聚合执行 `ON DUPLICATE KEY UPDATE` 累加，不能因为该小时尚无归档状态就使用普通 `INSERT`。否则同一天的第二个归档小时会触发主键冲突并让定时任务持续失败。
-- 访问日志原表可能沿用 MySQL 的 `utf8mb4_0900_ai_ci`，归档国家统计表固定为 `utf8mb4_unicode_ci`；国家分布查询把原始明细与归档统计 `UNION ALL` 时，两个分支的国家字段和原始分组表达式必须显式 `COLLATE utf8mb4_unicode_ci`，否则 MySQL 会以 1271 失败，后台图表表现为没有数据。对应 SQL 契约测试必须锁定该归一化。
-- 使用 `@ConfigurationProperties` 的不可变 record 如果声明了重载构造器，必须在 canonical constructor 上显式标注 `@ConstructorBinding`；否则本地单测可能通过，但完整 Spring/Testcontainers 上下文会因找不到默认构造器启动失败。对应属性类应由配置契约脚本检查。
-- **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
-- **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
-- **集成测试容器必须有界**：同一 Failsafe fork 内的多个 `*IT` 类如果各自显式启动 MySQL Testcontainers，必须在 `@AfterAll` 中停止自己的容器；否则前一个容器会留到 JVM 退出，第二个容器启动时可能耗尽 2C2G staging 主机。`scripts/test-run-staging-integration-tests.sh` 固定检查当前 MySQL 集成测试的生命周期。
-- **后台图表与文章 Mermaid 不依赖外部 CDN**：ECharts 和 Mermaid 必须使用项目内固定版本的静态资源；外部 CDN 的连接重置会让分析页在发起数据请求前中断，或让文章页抛出 `mermaid is not defined`，进而污染无关的 E2E 用例。Mermaid 资源还必须使用 `defer` 并在 DOMContentLoaded 后初始化，避免 2MB 级脚本阻塞批注脚本完成初始化。资源路径、加载方式和模板保护由 `ThemeAssetsTest` 固定检查。
-- 批注桌面端 E2E 点击正文“评注”标签会触发生产代码的平滑滚动；测试在测量划线位置或调用 `window.scrollBy` 前，必须先用即时 `scrollIntoView({behavior: 'auto'})` 取消该动画，否则动画与测试滚动竞争会导致偶发的视口位置断言失败。
-- Maven Release Plugin 会留下 `release.properties` 和 `pom.xml.releaseBackup`。它们是本机事务状态而非项目文件；发布前必须工作区干净，发布成功、失败或中断后在确认不需 rollback 时执行 `release:clean`，并且永不提交这些文件。完整恢复规则见 [发布管理](../releases/README.md)。
+- Maven 必须使用 Wrapper、Java 25 和提交到仓库的 `.mvn/jvm.config`；不要依赖本机默认 `mvn`。
+- 新 worktree 在任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`。
+- `mvn clean install` 不代表所有质量插件都已执行；覆盖率、PMD 和完整测试必须运行 `verify` 或统一质量入口。
+- 单元测试不得连接独立 MySQL、Redis、Docker、Flyway 或浏览器；这些验证属于 staging 集成验收。
 
-## 部署
+## 部署与数据
 
-- `docker restart` 不会构建或替换镜像。发布必须走 `sudo ./deploy/bootstrap-ops-deploy.sh`，它会按完整 Compose 定义重建服务。
-- 生产为单机（175），staging 预发独立部署（124）。**staging 是测试环境**，用于验证尚未合并 `main` 的功能分支；发布流程：staging 部署候选 ref 验收 → 合并 `main` → 生产打 Tag 单机部署。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
-- staging 数据每周由生产覆盖（drop+重建），会清空 staging 的写测试数据。staging 回滚需重新灌入生产基线再部署，非无风险。
-- 不要修改已执行的 Flyway 迁移或手工修正 schema history；应通过新的迁移演进数据库。
-- 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。生产发布从本机使用 `deploy/deploy-production-remote.sh`；只有该 wrapper 连接到 175 后，才由远端 root 执行 `deploy-production.sh`。staging 主机执行 `deploy-staging.sh` 前，确认 root 的 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`（脚本以 sudo 运行，root 无用户级 ssh config 会卡在 22 端口超时）。
-- 运维脚本（部署、同步、发布）必须在非生产环境或 dry-run 模式先完整跑通，再用于生产。staging 的 `sync-prod-to-staging.sh` 首次运行暴露 7 个问题（SSH sudo 读不到用户级 config、目标端密码用错、MeiliSearch v1.7 API 响应格式与文档不符、import entrypoint 错、`--import-snapshot` 导入后不退出、rsync 对 root 目录无写权限、Redis 7 `appendonly yes` 启动忽略 RDB），每个都需临时修+重新部署。根因是未先验证就上生产。同步验收必须比较图片文件数；数据库中已有图片记录而 staging 图片卷不完整时，内容页会出现 `/images/*` 500，不能以首页 200 放行。
-- 涉及 sudo/cron 的脚本用显式绝对路径和显式参数，不依赖用户级 `~/.ssh/config`、`$HOME` 或 `$PATH`——sudo 后 HOME 变 `/root`，用户级配置读不到。
-- 对外部服务（MySQL/Redis/MeiliSearch）的 API 调用，先用 `curl`/`redis-cli` 手动确认实际响应格式再写进脚本，不凭文档假设。MeiliSearch v1.7 的 `/snapshots` 只支持 POST（创建），不支持 GET（列出下载）；snapshot 文件写磁盘而非 API 返回。
-- 长时间运行的 `docker run`（如 `--import-snapshot`）必须设 `timeout` 并验证产物（如 `data.ms` 是否创建）；`meilisearch --import-snapshot` 导入后会作为服务前台运行不退出，需 timeout 限时。
-- 临时容器（`docker run --rm`）要确认确实退出；残留容器占内存，在 1.9G 小机器上可能导致后续操作失败。
-- **SSH 断开后远程命令不会继续执行（除非脱离会话）**：`ssh user@host "cmd"` 这种前台形式，客户端断开（网络抖动、超时、关闭）时 sshd 向远程会话发 `SIGHUP`，前台脚本及其子进程（`docker build`、`compose up`）默认被终止；只有 `docker compose up -d` 已启动的 detached 容器不受会话影响会继续运行。长任务（部署、镜像构建）必须 `nohup ./deploy-staging.sh > /tmp/x.log 2>&1 &`（或 `setsid`/tmux）脱离会话、再本地轮询日志；不要用同步 SSH 阻塞等待长任务，连接抖动会中断构建且无日志留存。
-- **部署版本确认需 sudo 读 release-history**：`deploy-production.sh` 把 `version=vX.Y.Z` 写入 `/var/lib/bytedepth-deploy/release-history`，文件权限 root 0600（STATE_DIR 0700）。ubuntu 用户无 sudo 读不了，`grep` 无输出会误判「未部署」。确认部署版本必须 `sudo grep "version=vX.Y.Z" /var/lib/bytedepth-deploy/release-history`。
+- 当前 staging/production 是宿主机 native runtime，不要把历史 Compose 配置当作当前部署拓扑；确需使用的本地/迁移 Compose service 必须带 `hearth-` 前缀，避免共享 Docker 网络 DNS 别名冲突。
+- staging 和生产必须使用独立数据库目录、Redis namespace、Session Cookie 和 OIDC client；前端不得用 localStorage 保存私人身份或业务数据。
+- 已执行的 Flyway 迁移不可修改，schema 变化必须追加新迁移。
+- native 发布必须按 `deploy/README.md` 执行不可变 JAR 校验、systemd restart、版本检查和 Nginx reload；不能只替换文件或手工启动进程。
 
-## 跨工程网络别名冲突（critical）
+## 安全
 
-bytedepth 与 career 共用 `bytedepth_default` Docker 网络（career 加入 `external: bytedepth_default`）。**两个工程的 compose app service 都叫 `app`**，各自在网络注册 `app` 别名，导致 nginx `proxy_pass http://app:8080` 的 DNS 轮询解析到两个容器——**bytedepth.cn 间歇性返回 career 页面**（登录页变 career、登录后变 bytedepth，间歇出现）。
-
-修复：bytedepth app service 改名 `bytedepth-app`，career app service 改名 `career-app`，nginx upstream 用唯一 service 名。**规则：共用 Docker 网络的多个工程，service 名必须带工程前缀，不能用 `app`/`web` 等通用名**。`getent hosts <name>` 在 nginx 容器内验证是否唯一解析。
-
-staging 部署链路（`deploy-staging.sh` → `bootstrap-ops-deploy.sh` → `ctl.sh`）出过的事故与固化规则：
-
-- **部署 Socket 在所有模式安装**：`bytedepth-deploy.socket` 是远程触发部署的 systemd 通道（外部往 socket 发 `deploy-tag vX.Y.Z` → 以 root 部署）。生产用于远程触发 Tag 部署；staging 作为测试环境同样安装，以便验证该通道。`bootstrap-ops-deploy.sh` 无条件调用 `install-host-service.sh`，不按 mode 跳过。Socket 触发的 `bytedepth-deploy-socket` 只接受 SemVer Tag（正则校验），不接受任意 ref。
-- **deploy-staging.sh 的 mode 校验是护栏**：`deploy-staging.sh` 读取 `/etc/bytedepth-deploy.conf` 校验 `BYTEDEPTH_DEPLOY_MODE=staging`，确保只在 staging 机器上运行（防止误在生产机跑 staging 脚本）。但 `ctl.sh` 自己读 conf 选 compose 文件，不依赖 deploy-staging.sh 传递 mode 环境变量。
-- **测试脚本也要有安全边界**：`test-deploy-staging.sh` 会写 `/etc/bytedepth-deploy.conf`，必须默认拒绝宿主执行；`--container` 模式用 `/.dockerenv` 校验确实运行在容器内，非容器环境立即退出。
-- **不假设部署日志路径存在**：`/var/log/bytedepth-deploy.log` 不一定存在；部署脚本应让 stdout/stderr 可靠落盘，README 以实现为准，否则故障时难追溯。
-- **排障避免并发、频繁 SSH 重试**：2C2G 机器上 sshd 有 `MaxStartups` 节流，重复 SSH 探测会放大未认证连接积压导致失联。复用单连接、指数退避、限制并发。
-- **不展示 `docker compose config` 完整输出**：它会展开密钥。用脱敏检查命令或只查所需字段。
-- **「零 WARNING」自动化**：部署、测试、静态检查输出统一捕获并扫描；历史 Docker healthcheck 告警不能因「非本次引入」放行。
-- **2C2G 容量模型**：运行态（app + MySQL + Redis + MeiliSearch）勉强够，但「运行服务 + Docker Maven 构建」是另一种容量模型。构建峰值单独评估，限制 Maven heap、加受控 swap，或改 CI 构建镜像后部署。
-- **Docker BuildKit session healthcheck warning（平台层，非项目可修）**：Docker 29.x 构建期间 journalctl 会出现 `level=warning "healthcheck failed" error="only one connection allowed"`，这是 BuildKit gRPC session healthcheck 与 containerd 单连接限制的已知冲突。只在构建期出现，构建结束 session 关闭后不再出现；不影响部署结果与运行态容器健康。需等 Docker/BuildKit 上游修复，项目层不改。
-- **MySQL healthcheck 必须用 MYSQL_PWD 传密码**：`mysqladmin ping` 不带密码会报 `Access denied`（虽 exit=0 但 stderr 有告警）；直接命令行 `-p` 会触发 `Using a password on the command line can be insecure` warning。用 `MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqladmin ping --silent`：密码走环境变量不暴露在命令行，`--silent` 抑制成功输出。**前瞻**：`MYSQL_PWD` 在 MySQL 8.0.34 起标记弃用，当前 8.0.x 无运行期 warning；若未来 patch 加 deprecation warning（违反零 WARNING），改用 `--defaults-extra-file` 指向 root-only 临时密码文件，或 pin 具体 patch 版本（如 `mysql:8.0.36`）而非浮动的 `mysql:8.0`。
-
-## 安全与表单
-
-- 默认 CSRF 仓库存于 HTTP Session。Thymeleaf 表单会自动注入 `_csrf`；手工 POST 和测试必须显式携带有效 CSRF token。
-- CSRF 仓库选型与历史故障见 [CSRF 决策记录](../security/csrf-session-repository.md)。
-- 限流放宽验收：图片上传限流 `upload-ip`（`RateLimitFilter`，认证前执行 + Redis/Bucket4j 令牌桶，配置 `bytedepth.rate-limit.upload-ip`）。登录后连续 POST `/admin/images/upload` N 次（N>旧 capacity）统计 429。CSRF token 从 `/login` 与 `/admin/posts/new` 的 hidden field `name="_csrf"` 读，放 form body `_csrf`，**不加** `X-CSRF-TOKEN` header（加会 302→405）。无文件 POST 返回 **500**（controller 空文件异常），**不干扰** 429 统计（429 是限流层独有）；带文件 200 返回 `{"url":"/images/...","filename":"..."}`。旧 `upload-ip` 20/h 第 21 次起 429，放宽后 0 个 429 即生效。
-
-## Obsidian 同步
-
-- `--remote` 是全局参数，必须放在子命令前：`--remote sync`。
-- 导入后必须执行 `update-links`，避免 wiki 链接在首次上传时降级或错误关联。
-- 同步状态冲突、锚点和笔记格式以 [同步指南](../agent-guides/obsidian-sync.md) 及笔记库的 `TEMPLATE.md` 为准。
+- OIDC `issuer + sub` 是跨应用身份稳定键；不能用 email 代替 subject。
+- Hearth 管理认证、身份目录和应用访问；业务系统管理功能权限、资源权限和数据权限。
+- session 只保存服务端身份引用，浏览器通过 HttpOnly、Secure、SameSite Cookie 持有 session 标识。
+- 放入 Redis HTTP Session 的 Spring Security principal 必须实现稳定的 `Serializable` 合约，并用 Java 序列化往返测试覆盖；否则登录请求虽然认证成功，提交 session 时仍会失败。
+- 跨站点 OIDC 回跳后的 SPA 登录不能只依赖 session 中的 CSRF token；统一使用非 HttpOnly 的 `XSRF-TOKEN` cookie，并让 `X-CSRF-TOKEN` 请求头与之匹配。
+- OIDC 登录入口必须显式保留原始相对授权 URL；不能只依赖 session saved request，否则 session fixation/回跳过程可能让登录后落到 Hearth 首页。
+- 未登录可访问的 SPA 原型入口必须同时加入前端路由和 `SecurityConfig.publicRequestMatchers()`，并用安全路由单元测试锁定白名单；否则页面会被统一认证规则返回 403。
+- Hearth 命名门禁禁止复制 bytedepth 的运行时标识，但允许明确登记的业务应用 staging 域名作为 OAuth 来源应用展示数据；新增来源域名时必须同步更新门禁测试，不能放宽为任意 bytedepth 字符串。
+- Native 多服务主机的生产安全检查需要引用真实的共享 systemd unit 与公开域名；命名门禁只允许这些完整标识作为独立行，并有混入 `bytedepth-app` 的负向测试，不能因同一行出现合法域名就忽略整行。
+- 更新运行服务使用的 current symlink 时，不能用 `ln -sfn` 直接覆盖；先在同一目录以服务拥有者创建临时 symlink，再通过同文件系统原子 rename 替换，并在失败时恢复旧指针。
+- staging 宿主机不保证安装 ripgrep；部署/测试运行脚本必须用系统 `grep` 或共享 warning-log helper，不能依赖本机工具。另，ripgrep 的 `-E` 是字符编码选项，不是 grep 的扩展正则开关，`rg -Eqi` 会因 `unknown encoding: qi` 报错。日志缺失、不可读、`tee` 失败或测试进程失败都必须阻止 passed evidence。
+- 恢复 MySQL 部分导入时，必须先把 mysqldump 中的 `CREATE DATABASE` 与 `USE` 明确重写到唯一临时 schema，并用测试断言重写后的 SQL；动态 schema 标识符统一经安全引用函数生成，避免 Shell 双引号中的反引号触发命令替换。只有导入管道所有步骤成功后才能写 `recovery-ready` 检查点；从旧版中断状态 adoption 时，必须显式指定唯一临时 schema，并在落盘检查点前重新验证表集、管理员、Flyway、日志和对象类型。
+- 多服务主机的 `/tmp` 可能是接近满载的 tmpfs；大型部署上传应放入工程专属、由 `ubuntu` 持有的 `/var/tmp` 目录，避免与其他服务竞争共享 tmpfs。
+- 被部署脚本直接执行的 Shell 文件必须在 Git 中保留可执行位；迁移门禁要对每个直接调用的入口使用 `test -x`，避免部署到远端后才因 `Permission denied` 中断。
+- Shell 中已经单引号包围的 `awk` 程序不要再把双引号写成 `\"`；反斜杠会被传入 awk 并造成语法错误。manifest 解析应有契约测试，避免静默退化成每次重装依赖。
+- 目标机 systemd 的 `systemd-run --pipe` 与 `--scope` 不兼容；需要接 stdin/stdout 时改用唯一名称的 transient service unit（`--unit --collect --wait --pipe`），并保留其 cgroup 内存限制。systemd-run 默认还会扩展 transient service ExecStart 中的 `$`/`%` 表达式；执行 Bash 脚本字符串时必须加 `--expand-environment=no`，否则脚本内参数展开可能被清空。
+- staging integration 使用离线、只读的唯一共享 Maven 仓库；新增 profile/test 插件依赖必须在部署阶段先通过 Wrapper 的 `dependency:go-offline`（启用 staging-integration profile）预热，并持全局排他锁，不能给项目新建第二份缓存或让集成 runner 在线下载。
+- 共享 Maven 仓库可能含有其他 bootstrap 遗留的 `root:root` 子目录；不能假设 `ubuntu` 对整个缓存可写，也不能递归 chown 多项目共用的仓库。预热必须持全局排他锁，由 root 在 `umask 022` 下补齐共享 artifacts，`HOME`/Maven Wrapper 用户缓存仍指向 ubuntu；退出时只把当前 Hearth checkout 下的 `target` 目录恢复为 `ubuntu:ubuntu`。
+- Failsafe 会动态选择 JUnit Platform provider，Maven dependency `go-offline` 不保证发现它；staging profile 应在 Failsafe plugin dependencies 中显式声明与插件同版本的 `surefire-junit-platform`，才能可靠预热给离线集成运行。
+- 远端 curl 自定义 header 必须使用 `-H "Name: value"` 的冒号语法；用等号拼接 CSRF header 会使请求未携带预期 header，导致 403 并阻止 integration evidence 写入。
+- E2E runtime manifest 的值允许包含空格；解析 `key=value` 时用 `substr($0, index($0, "=")+1)` 保留原始值，不要清空 `$1` 后重建 `$0`，否则会引入前导空格并误判 runtime 不匹配。
+- Integration 与 E2E 必须共用 `hearth_test_slot_new_run_id` 生成器，保证 run-id 符合 test-slot 的 UTC 时间格式；不要手工拆分 `date` 格式参数，空格会被解释成额外操作数。
+- 多服务 staging 机的 Maven 依赖预热不得先做完整编译/PMD；用 `dependency:go-offline`、MemAvailable 门槛和受限 transient service，避免预热任务挤压同机服务。
+- staging 的宿主机 Maven 仓库是多项目共享且锁保护的。若 Maven 输入指纹（全部模块 POM 与 `.mvn` 配置）未变，且最近成功部署的离线 Failsafe 与无 WARNING 预热日志证明依赖闭包可用，应复用该缓存；不得将 manifest 绑定 checkout SHA，也不能因低内存重复预热相同依赖。
+- staging integration 的 512 MiB transient cgroup 同时容纳 Maven 主 JVM 与 Failsafe fork；仅配置 PMD `skip` 仍会加载插件，进程内 javac 的内存也会留在 Maven JVM。因本地/CI 门禁已运行 PMD，`staging-integration` profile 必须解绑 `pmd-check`（phase `none`），并使用显式 `executable=javac`、maxmem 128 MiB 的 forked javac；Failsafe fork heap 限在 128 MiB。显式 javac 可避免远端 Maven compiler autodetection 的 WARNING。
+- Linux 的 `flock -x` 排他锁必须使用可写文件描述符；全局锁文件由 root 管理时，用 append-only 打开（`>>`）即可取得排他锁且不会截断锁文件，`<` 只读句柄只用于共享锁。
+- 以项目服务账号运行的私有 Nginx edge 不能写共享 `/var/log/nginx/*.log`；access/error log 必须落到项目专属日志目录，文件由 `ubuntu:hearth` 预创建/持有、服务组只追加写入。轮转使用 Ubuntu 用户级 timer，禁止让 Ubuntu 可写的 logrotate 配置被 root 执行；copytruncate 可能在复制/截断窗口丢少量日志。运行时契约测试保护该约束；已有日志文件不能通过安装 `/dev/null` 截断重建。

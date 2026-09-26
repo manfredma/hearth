@@ -1,6 +1,6 @@
 # 架构决策记录（ADR）
 
-本目录记录 bytedepth 的架构决策，随 Git 历史和对应 PR 一起评审。
+本目录记录 Hearth 的架构决策，随 Git 历史和对应 PR 一起评审。项目沿用成熟的工程规范和知识库结构，但身份领域的决策以本目录为准。
 
 ## 编号与状态
 
@@ -16,19 +16,24 @@
 
 小改动可只在提交信息和 PR 描述中说明。
 
-## 索引
+## Hearth 决策索引
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| [ADR-0001](0001-published-post-driven-rss.md) | 由已发布文章状态动态生成 RSS | Proposed | 2026-09-08 |
-| [ADR-0002](0002-staging-integration-test-boundary.md) | 将跨进程测试固定为 staging 集成测试 | Accepted | 2026-09-10 |
-| [ADR-0003](0003-observable-isolated-delivery-pipeline.md) | 可观测且隔离的交付流水线 | Accepted | 2026-09-12 |
-| [ADR-0004](0004-shared-staging-chromium.md) | 共享 staging Chromium 运行时 | Accepted | 2026-09-13 |
-| [ADR-0005](0005-pinned-maven-runtime.md) | 固定跨环境 Maven 运行时 | Accepted | 2026-09-13 |
-| [ADR-0006](0006-unified-release-pipeline.md) | 统一三项目发布流水线 | Accepted | 2026-09-13 |
-| [ADR-0007](0007-release-readiness-metadata-gate.md) | 将发布变更记录前置为 staging 硬门禁 | Proposed | 2026-09-15 |
-| [ADR-0008](0008-production-entry-and-staging-preview-route.md) | 统一生产远程部署入口与 staging 预览路由 | Proposed | 2026-09-16 |
-| [ADR-0009](0009-tiered-view-log-retention.md) | 分层保留访问统计并由 Spring 定时归档 | Accepted | 2026-09-18 |
-| [ADR-0010](0010-post-content-version.md) | 将文章内容版本号存储在文章主表 | Accepted | 2026-09-20 |
-| [ADR-0011](0011-rendered-text-annotation-anchors.md) | 批注使用阅读页渲染文本作为锚点 | Accepted | 2026-09-21 |
-| [ADR-0012](0012-page-navigation-over-partial-replacement.md) | 文章级导航使用完整页面导航而非局部替换 | Proposed | 2026-09-22 |
+| [ADR-0001](0001-unified-identity-and-authorization-boundary.md) | 统一身份认证与业务授权边界 | Accepted | 2026-09-22 |
+| [ADR-0002](0002-oidc-oauth2-application-integration.md) | 使用 OIDC 与 OAuth 2.0 接入业务应用 | Accepted | 2026-09-22 |
+| [ADR-0003](0003-use-mature-identity-provider.md) | 认证协议核心采用成熟身份提供商 | Superseded | 2026-09-22 |
+| [ADR-0004](0004-isolated-identity-environments-and-stable-subject.md) | 隔离 staging 与生产身份环境并使用稳定 subject | Accepted | 2026-09-22 |
+| [ADR-0006](0006-self-hosted-oidc-provider.md) | Hearth 自建 OIDC Provider，使用协议框架作为内核 | Accepted | 2026-09-23 |
+| [ADR-0007](0007-mysql-identity-lookup-indexes.md) | MySQL 身份键保留原文并使用哈希联合唯一索引 | Accepted | 2026-09-23 |
+| [ADR-0008](0008-application-user-provisioning-and-identity-mapping.md) | 业务应用按稳定 subject 建立本地用户映射 | Accepted | 2026-09-23 |
+| [ADR-0009](0009-central-sso-session-and-logout.md) | Hearth 管理统一 SSO Session、记住登录与统一退出 | Accepted | 2026-09-23 |
+| [ADR-0010](0010-business-applications-do-not-provide-login-route.md) | 业务应用不提供自有登录入口 | Accepted | 2026-09-23 |
+| [ADR-0011](0011-persistent-login-credentials.md) | 使用签名 Cookie 实现 Hearth 30 天免登录 | Accepted | 2026-09-23 |
+| [ADR-0012](0012-framework-principal-for-oauth-persistence.md) | OAuth 持久化使用框架标准安全主体 | Accepted | 2026-09-24 |
+| [ADR-0013](0013-agent-validation-and-owner-acceptance-boundary.md) | Agent 技术验收与项目所有者最终验收的职责边界 | Accepted | 2026-09-24 |
+| [ADR-0014](0014-native-shared-host-deployment.md) | Hearth 复用共享宿主机 native 基础设施 | Accepted | 2026-09-26 |
+
+## 维护边界
+
+ADR 只记录 Hearth 的长期架构事实，不记录临时部署日志、个人记忆或业务应用内部权限规则。已经不适用于 Hearth 的模板内容应删除或重写，而不是继续作为隐含约束。
