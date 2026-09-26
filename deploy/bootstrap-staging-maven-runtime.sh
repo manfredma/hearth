@@ -9,6 +9,7 @@ readonly STATE_ROOT=/var/lib/hearth-staging
 readonly LOG_ROOT="$STATE_ROOT/maven-bootstrap"
 readonly MAVEN_REPOSITORY=/opt/shared-maven/repository
 readonly MAVEN_REPOSITORY_LOCK=/opt/shared-maven/repository.lock
+readonly MINIMUM_AVAILABLE_KIB=524288
 readonly JAVA_BIN="$(readlink -f "$(command -v java 2>/dev/null || true)" 2>/dev/null || true)"
 [[ -x "$JAVA_BIN" ]] || { printf 'Java 25 is required for staging Maven bootstrap.\n' >&2; exit 1; }
 "$JAVA_BIN" -version 2>&1 | grep -Eq 'version[[:space:]]"25([."]|$)' || {
@@ -34,6 +35,12 @@ sudo -n -u ubuntu -- test -r "$SOURCE_ROOT/pom.xml" \
   printf 'ubuntu cannot read the Hearth checkout or write the shared Maven repository.\n' >&2
   exit 1
 }
+available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
+[[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge "$MINIMUM_AVAILABLE_KIB" ]] || {
+  printf 'Refusing Maven cache warm-up: require %s KiB MemAvailable, found %s KiB.\n' \
+    "$MINIMUM_AVAILABLE_KIB" "${available_kib:-unknown}" >&2
+  exit 1
+}
 source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
 source "$SOURCE_ROOT/deploy/lib/check-warning-log.sh"
 commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
@@ -51,7 +58,7 @@ run_maven_phase() {
   set +e
   systemd-run --expand-environment=no --uid=ubuntu --gid=ubuntu \
     --unit="$unit" --collect --quiet --wait --pipe \
-    --property=MemoryMax=512M --property=MemorySwapMax=0 \
+    --property=MemoryMax=384M --property=MemorySwapMax=0 \
     /usr/bin/bash -c '
       set -Eeuo pipefail
       source_root="$1"
@@ -59,15 +66,12 @@ run_maven_phase() {
       maven_repository="$3"
       phase="$4"
       cd "$source_root"
-      export JAVA_HOME="$java_home" MAVEN_OPTS=-Xmx256m
+      export JAVA_HOME="$java_home" MAVEN_OPTS=-Xmx192m
       case "$phase" in
-        install)
+        go-offline)
           exec ./mvnw -B -DskipTests -Dsort.skip=true \
-            -Dmaven.repo.local="$maven_repository" clean install
-          ;;
-        verify)
-          exec ./mvnw -B -DskipTests -Dsort.skip=true \
-            -Dmaven.repo.local="$maven_repository" verify
+            -Pstaging-integration -pl hearth-start -am \
+            -Dmaven.repo.local="$maven_repository" dependency:go-offline
           ;;
         *) printf "Unsupported Maven bootstrap phase.\n" >&2; exit 2 ;;
       esac
@@ -79,6 +83,5 @@ run_maven_phase() {
   hearth_assert_log_has_no_warning "$log" || { printf 'Maven bootstrap emitted WARNING or its log could not be scanned.\n' >&2; return 1; }
 }
 
-run_maven_phase install
-run_maven_phase verify
+run_maven_phase go-offline
 printf 'Hearth staging shared Maven repository is prepared for %s.\n' "$commit"
