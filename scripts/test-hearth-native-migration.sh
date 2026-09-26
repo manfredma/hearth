@@ -3,8 +3,10 @@ set -Eeuo pipefail
 readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE="$ROOT/deploy/migrate-staging-docker-source.sh"
 readonly IMPORT="$ROOT/deploy/migrate-staging-docker-to-native.sh"
+readonly RECOVERY="$ROOT/deploy/recover-staging-import.sh"
 test -x "$SOURCE"
 test -x "$IMPORT"
+test -x "$RECOVERY"
 grep -Fq 'MYSQL_ROOT_PASSWORD' "$SOURCE"
 grep -Fq -- '--databases hearth' "$SOURCE"
 if grep -Fq 'source_password' "$SOURCE"; then

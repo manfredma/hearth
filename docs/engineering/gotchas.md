@@ -31,3 +31,4 @@
 - staging 宿主机不保证安装 ripgrep；部署/测试运行脚本必须用系统 `grep` 或共享 warning-log helper，不能依赖本机工具。另，ripgrep 的 `-E` 是字符编码选项，不是 grep 的扩展正则开关，`rg -Eqi` 会因 `unknown encoding: qi` 报错。日志缺失、不可读、`tee` 失败或测试进程失败都必须阻止 passed evidence。
 - 恢复 MySQL 部分导入时，必须先把 mysqldump 中的 `CREATE DATABASE` 与 `USE` 明确重写到唯一临时 schema，并用测试断言重写后的 SQL；Shell 双引号中反引号需要正确转义，否则命令替换可能让导入重新落到目标 schema。
 - 多服务主机的 `/tmp` 可能是接近满载的 tmpfs；大型部署上传应放入工程专属、由 `ubuntu` 持有的 `/var/tmp` 目录，避免与其他服务竞争共享 tmpfs。
+- 被部署脚本直接执行的 Shell 文件必须在 Git 中保留可执行位；迁移门禁要对每个直接调用的入口使用 `test -x`，避免部署到远端后才因 `Permission denied` 中断。
