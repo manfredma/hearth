@@ -9,10 +9,10 @@ User=hearth
 Group=hearth
 WorkingDirectory=/opt/hearth-native/current
 EnvironmentFile=/etc/hearth/staging-native.env
-ExecStart=__JAVA_BIN__ -XX:MaxRAMPercentage=65 -jar /opt/hearth-native/current/app.jar
+ExecStart=__JAVA_BIN__ -XX:MaxRAMPercentage=55 -jar /opt/hearth-native/current/app.jar
 Restart=on-failure
 RestartSec=5s
-MemoryMax=512M
+MemoryMax=384M
 NoNewPrivileges=true
 PrivateTmp=true
 ReadWritePaths=/data/hearth-native-staging/data

@@ -1,0 +1,33 @@
+spring:
+  config:
+    activate:
+      on-profile: production-native
+  datasource:
+    url: ${HEARTH_DATASOURCE_URL}
+    username: ${HEARTH_DATASOURCE_USERNAME}
+    password: ${HEARTH_DATASOURCE_PASSWORD}
+  session:
+    store-type: redis
+    redis:
+      namespace: ${HEARTH_SESSION_REDIS_NAMESPACE}
+  data:
+    redis:
+      host: ${HEARTH_REDIS_HOST}
+      port: ${HEARTH_REDIS_PORT}
+      database: ${HEARTH_REDIS_DATABASE}
+      password: ${HEARTH_REDIS_PASSWORD}
+server:
+  address: 127.0.0.1
+  port: ${HEARTH_APP_PORT}
+  servlet:
+    session:
+      cookie:
+        name: ${HEARTH_SESSION_COOKIE_NAME}
+        secure: ${HEARTH_SESSION_COOKIE_SECURE}
+hearth:
+  environment: production
+  authentication:
+    remember-me-key: ${HEARTH_REMEMBER_ME_KEY}
+    remember-me-cookie-secure: ${HEARTH_REMEMBER_ME_COOKIE_SECURE}
+  authorization-server:
+    issuer: ${HEARTH_OIDC_ISSUER}

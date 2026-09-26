@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+for name in deploy-native-staging.sh deploy-native-production-remote.sh; do
+  test -x "$ROOT/deploy/$name"
+done
+grep -Fq './deploy/bootstrap-native-env.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq './deploy/bootstrap-native-env.sh production' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq './deploy/bootstrap-native-mysql.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq './deploy/bootstrap-native-mysql.sh production' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'HEARTH_COMMIT_ID' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq 'HEARTH_COMMIT_ID' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'hearth.build.commit-id' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq 'hearth.build.commit-id' "$ROOT/deploy/deploy-native-production-remote.sh"
+test -x "$ROOT/deploy/sync-staging-certificate-to-native.sh"
+test -x "$ROOT/deploy/provision-production-certificate.sh"
+test -x "$ROOT/deploy/renew-production-certificate.sh"
+test -x "$ROOT/deploy/bootstrap-production-admin.sh"
+test -f "$ROOT/deploy/systemd/hearth-production-cert-renew.service.in"
+test -f "$ROOT/deploy/systemd/hearth-production-cert-renew.timer.in"
+grep -Fq 'provision-production-certificate.sh production' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'bootstrap-production-admin.sh' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq "SELECT password_hash FROM identity_credential WHERE login='admin' AND enabled=TRUE" "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'password_hash' "$ROOT/deploy/bootstrap-production-admin.sh"
+grep -Fq 'renewal-hooks/deploy' "$ROOT/deploy/provision-production-certificate.sh"
+grep -Fq 'install -o ubuntu -g ubuntu -m 0400' "$ROOT/deploy/provision-production-certificate.sh"
+grep -Fq 'systemctl enable --now hearth-production-cert-renew.timer' "$ROOT/deploy/provision-production-certificate.sh"
+grep -Fq 'User=ubuntu' "$ROOT/deploy/systemd/hearth-production-cert-renew.service.in"
+grep -Fq 'for renewal in /etc/letsencrypt/renewal/*.conf' "$ROOT/deploy/provision-production-certificate.sh"
+grep -Fq '/data/hearth-native-production/letsencrypt/live/hearth.bytedepth.cn/fullchain.pem' "$ROOT/deploy/nginx/hearth-native-production.conf.template"
+grep -Fq 'StrictHostKeyChecking=yes' "$ROOT/deploy/sync-staging-certificate-to-native.sh"
+grep -Fq 'openssl x509 -checkhost' "$ROOT/deploy/sync-staging-certificate-to-native.sh"
+grep -Fq 'openssl pkey' "$ROOT/deploy/sync-staging-certificate-to-native.sh"
+grep -Fq 'install -o ubuntu -g ubuntu -m 0600 "$release/privkey.pem" "$staged_privkey"' "$ROOT/deploy/sync-staging-certificate-to-native.sh"
+grep -Fq 'sync-staging-certificate-to-native.sh' "$ROOT/deploy/deploy-native-staging.sh"
+grep -Fq 'hearth.build.commit-id' "$ROOT/Dockerfile"
+grep -Fq 'HEARTH_STAGING_E2E_USERNAME' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'HEARTH_STAGING_E2E_PASSWORD' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'IFS= read -r admin_password' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'test_status="${PIPESTATUS[1]}"' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'printf '\''%s\n%s\n'\''' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'security find-generic-password -a admin -s bytedepth-staging-e2e -w' "$ROOT/deploy/README.md"
+grep -Fq 'sudo -n --preserve-env=HEARTH_STAGING_E2E_USERNAME,HEARTH_STAGING_E2E_PASSWORD' "$ROOT/deploy/README.md"
+grep -Fq "test.use({trace: 'off', screenshot: 'off', video: 'off'})" "$ROOT/tests/e2e/native-oidc.spec.mjs"
+for endpoint in '/api/admin/oauth-clients' '/oauth2/token' '/userinfo' '/connect/logout' 'career-staging'; do
+  grep -Fq "$endpoint" "$ROOT/tests/e2e/native-oidc.spec.mjs"
+done
+grep -Fq '/version' "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/security/SecurityConfig.java"
+test -f "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/identity/BuildInfoController.java"
+grep -Fq 'proxy_pass http://127.0.0.1:18111' "$ROOT/deploy/nginx/hearth-native-staging.conf.template"
+grep -Fq 'proxy_pass http://127.0.0.1:18113' "$ROOT/deploy/nginx/hearth-native-production.conf.template"
+valid_tag_output="$(HEARTH_PRODUCTION_SSH_KEY=/missing/key HEARTH_PRODUCTION_SSH_KNOWN_HOSTS=/missing/known_hosts bash "$ROOT/deploy/deploy-native-production-remote.sh" v1.2.3 2>&1 || true)"
+grep -Fq 'Production SSH key/known_hosts required.' <<< "$valid_tag_output"
+invalid_tag_status=0
+HEARTH_PRODUCTION_SSH_KEY=/missing/key HEARTH_PRODUCTION_SSH_KNOWN_HOSTS=/missing/known_hosts bash "$ROOT/deploy/deploy-native-production-remote.sh" v1.2 2>/dev/null || invalid_tag_status=$?
+test "$invalid_tag_status" -eq 2
+printf 'Hearth native deployment contract passed.\n'

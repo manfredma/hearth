@@ -3,8 +3,11 @@ set -Eeuo pipefail
 readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 for file in \
   "$ROOT/deploy/hearth-native.conf.example" \
+  "$ROOT/deploy/bootstrap-native-env.sh" \
+  "$ROOT/deploy/bootstrap-native-mysql.sh" \
   "$ROOT/deploy/install-native-runtime.sh" \
   "$ROOT/deploy/systemd/hearth-staging-native-app.service.in" \
+  "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in" \
   "$ROOT/deploy/systemd/hearth-production-native-app.service.in" \
   "$ROOT/deploy/systemd/hearth-staging-native-edge.service.in" \
   "$ROOT/deploy/systemd/hearth-production-native-edge.service.in"; do
@@ -12,8 +15,34 @@ for file in \
 done
 grep -Fq 'HEARTH_NATIVE_STAGING_APP_PORT=18110' "$ROOT/deploy/hearth-native.conf.example"
 grep -Fq 'HEARTH_NATIVE_PRODUCTION_APP_PORT=18112' "$ROOT/deploy/hearth-native.conf.example"
+grep -Fq 'HEARTH_NATIVE_STAGING_REDIS_DB=5' "$ROOT/deploy/hearth-native.conf.example"
+grep -Fq 'HEARTH_NATIVE_PRODUCTION_REDIS_DB=6' "$ROOT/deploy/hearth-native.conf.example"
+grep -Fq 'HEARTH_NATIVE_STAGING_IT_REDIS_DB=12' "$ROOT/deploy/hearth-native.conf.example"
+grep -Fq 'HEARTH_NATIVE_STAGING_E2E_REDIS_DB=13' "$ROOT/deploy/hearth-native.conf.example"
+grep -Fq 'HEARTH_REDIS_DATABASE=$redis_db' "$ROOT/deploy/bootstrap-native-env.sh"
+grep -Fq 'database: ${HEARTH_REDIS_DATABASE:0}' "$ROOT/hearth-start/src/main/resources/application.yml"
+! grep -Fq '"$NATIVE_ROOT/current"' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'User=hearth' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
+grep -Fq 'MemoryMax=384M' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
+grep -Fq -- '-XX:MaxRAMPercentage=55' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
+grep -Fq 'Conflicts=hearth-staging-native-app.service' "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in"
+grep -Fq 'SPRING_PROFILES_ACTIVE=$ENVIRONMENT-native' "$ROOT/deploy/bootstrap-native-env.sh"
+grep -Fq 'NODE_OPTIONS=--max-old-space-size=384' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq 'MemAvailable' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq '/opt/hearth-native/e2e-runtime' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq 'lockfile_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq 'package_json_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq 'MemAvailable' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'groupadd --system hearth' "$ROOT/deploy/bootstrap-native-env.sh"
+grep -Fq 'groupadd --system hearth' "$ROOT/deploy/migrate-staging-docker-source.sh"
+grep -Fq 'on-profile: staging-native' "$ROOT/hearth-start/src/main/resources/application-staging-native.yml"
+grep -Fq 'on-profile: production-native' "$ROOT/hearth-start/src/main/resources/application-production-native.yml"
 grep -Fq 'User=hearth' "$ROOT/deploy/systemd/hearth-production-native-app.service.in"
+grep -Fq 'port: ${HEARTH_APP_PORT:8080}' "$ROOT/hearth-start/src/main/resources/application.yml"
+for profile in staging-native production-native staging-test; do
+  grep -Fq 'address: 127.0.0.1' "$ROOT/hearth-start/src/main/resources/application-$profile.yml"
+done
+grep -Fq 'listen 127.0.0.1:$edge_port' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'MemoryMax=' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
 grep -Fq 'install -d -o ubuntu -g ubuntu' "$ROOT/deploy/install-native-runtime.sh"
 if rg -n 'listen 80|listen 443' "$ROOT/deploy/systemd" >/dev/null; then

@@ -1,41 +1,90 @@
 # Hearth 部署说明
 
-Hearth 是统一身份服务。staging 入口为 `https://staging-hearth.bytedepth.cn/`，production 入口为 `https://hearth.bytedepth.cn/`。Hearth 与 ByteDepth、Career、Daylilt、Toolbox 共享宿主机基础设施，但使用独立 logical database/user、Redis DB/namespace、端口、目录、systemd unit、route、凭据和 evidence。
+Hearth 是统一身份服务，staging 与 production 分别运行于 129、175，并与 ByteDepth、Career、Daylilt、Toolbox 共用宿主机的 MySQL、Redis、公共 Nginx、Java 和测试运行时。Hearth 的 logical database/user、Redis DB/namespace、端口、目录、systemd unit、TLS 文件、配置和测试资源均独立。
 
-## 当前 native 拓扑
+## Native 拓扑
 
-| 环境 | 主机 | app | edge | MySQL | Redis | 数据根 |
-|---|---|---:|---:|---|---|---|
-| staging | 129 | 18110 | 18111 | 13306 / hearth / hearth_staging_native | 16379 / DB 5 / hearth:staging: | /data/hearth-native-staging |
-| production | 175 | 18112 | 18113 | 13306 / hearth / hearth_production_native | 16379 / DB 6 / hearth:production: | /data/hearth-native-production |
+| 环境 | 主机 | Spring profile | app / edge | MySQL | Redis | 数据根 |
+|---|---|---|---|---|---|---|
+| staging | 129 | `staging-native` | 18110 / 18111 | 13306，DB `hearth`，用户 `hearth_staging_native` | 16379，DB 5，`hearth:staging:session:v1` | `/data/hearth-native-staging` |
+| production | 175 | `production-native` | 18112 / 18113 | 13306，DB `hearth`，用户 `hearth_production_native` | 16379，DB 6，`hearth:production:session:v1` | `/data/hearth-native-production` |
 
-Hearth 不绑定 80/443；共享公网 Nginx 只加载项目专属 server 配置并 reload。旧 124 Docker Compose 仅作为 staging 迁移输入，不能继续作为验收入口。
+80/443 只由各主机已有的共享公网 Nginx 监听。Hearth app 与 private edge 的专属端口都只绑定 loopback；安装/更新 Hearth route 后只对共享 Nginx 执行配置检查与 graceful reload，禁止停止或覆盖其他项目。
 
-## 配置
+## 配置和文件归属
 
-复制 `deploy/.env.example` 或 `deploy/.env.staging.example` 为宿主机私有的 `.env`，并由部署系统注入真正的数据库、Redis、RSA 私钥和 Remember-Me 签名密钥配置。`HEARTH_SIGNING_KEY` 使用 base64 编码的 PKCS#8 RSA 私钥 DER；`HEARTH_REMEMBER_ME_KEY` 必须是独立的高熵随机值，staging/production 不得共用。密钥不得提交到仓库。不要把 `.env` 提交到仓库。`HEARTH_COMMIT_ID` 与 `HEARTH_BUILT_AT` 必须由发布流程显式注入，不接受隐式默认值。
+`deploy/hearth-native.conf.example` 是 native 端口、路径和 Redis DB 分配的唯一模板。部署将它安装到 `/etc/hearth/hearth-native.conf`，然后使用 Spring profile 加载环境配置。staging、production 配置和运行数据不得互相复用；私钥、数据库密码和 Remember-Me key 不得写入 Git 或日志。
 
-旧 Compose 文件和 hearth-* 服务只用于理解迁移输入与回退边界；当前 staging/production 正常运行必须使用 native systemd app/edge、共享 MySQL/Redis 和宿主机公共 Nginx。
+线上/staging 的 Hearth 项目文件、配置、制品、TLS bundle、运行数据、日志和测试资源都必须归 `ubuntu`；服务只以 `hearth` 用户运行，并通过 `hearth` group 获得必要数据目录权限。以 sudo 创建的项目文件也必须在同一步骤中明确设为 `ubuntu` 所有。
 
-## 验证边界
+## Staging 数据迁移与证书
 
-本机只执行静态配置检查和 `docker compose config` 语法检查；MySQL、Redis、Flyway、OIDC 的跨进程验收必须在 staging 完成。发布前先执行：
+staging 原 Hearth MySQL 数据源位于 124（`124.221.143.25`），仅迁移 `hearth` logical database。迁移脚本会在需要时短暂启动旧 MySQL 容器进行一致性 dump，然后恢复其原运行状态；不会迁移 Redis Session、停止其他项目或删除旧 Docker 数据目录。导入若出现不确定状态会 fail-closed，不能自动清库重试。
+
+staging TLS 源证书由 124 的 Let’s Encrypt 管理。部署前运行 `deploy/sync-staging-certificate-to-native.sh`；它会校验精确 SAN、有效期和证书/私钥匹配，只写入 129 的 `/etc/hearth/staging-tls/`，文件和目录归 `ubuntu`。124 续期证书后，必须重新运行此同步脚本，再 reload 129 的共享 Nginx。证书同步不会代理或改变其他域名。
+
+production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.bytedepth.cn` 签发独立证书；account 副本、renewal 配置、private key 和 challenge root 全部归 `ubuntu`，存放在 `/data/hearth-native-production/letsencrypt`。签发时只临时加载 Hearth HTTP-01 challenge server，申请后删除并 reload；production Hearth route 保留专属 challenge location。`hearth-production-cert-renew.timer` 每日两次检查续期，续期 hook 先 `nginx -t` 再 graceful reload production shared Nginx，不停止其他项目。
+
+生产空库完成 Flyway 后，部署流程只初始化一个永久 `admin` identity：从 staging 的现有管理员 credential 读取 BCrypt hash，经本机临时 `0600` 文件传输到 175 的 `/run`，导入生产 issuer 下的新 identity 后立即删除。hash 不会放入 SSH 命令参数或日志；不会复制 staging 用户、授权记录或 OAuth client，也不会创建临时用户。若 staging 管理员缺失、hash 格式不支持、或 production identity 表非空而没有同 hash 的管理员，流程 fail-closed，不重置已有账号。
+
+## Staging 集成/E2E 资源隔离
+
+每次 integration/E2E run 生成带唯一 run-id 的 MySQL logical database/user，并从 staging Hearth DB 做一致性快照；测试写入不会落到 staging 主库。集成测试使用 Redis DB 12，E2E 使用 Redis DB 13，并分别带 `hearth:staging:test:<suite>:<run-id>:` namespace。Redis DB 14/15 保留给 ByteDepth 的集成/E2E，不能分配给 Hearth。
+
+测试 app 使用 `staging-test` Spring profile 和独立 systemd test-slot。test-slot 与 staging app 声明冲突，测试期间 edge 和共享 Nginx 保持不变；测试结束后脚本停止 test-slot、仅清理该 run 的 Redis namespace/MySQL 库和用户、恢复 staging app，并验证服务健康。存在不确定状态时保留 manifest 与资源，不自动删除。
+
+共享 129 主机曾发生全局 OOM：内核日志明确记录被杀进程是 `release-platform` 的 `npm ci`（RSS 约 1.07 GiB）；当时 Hearth 源 MySQL 仅约 200 MB，native logical DB 尚未导入，不能据此把 OOM 归因于 Hearth dump。为避免复发，Hearth staging npm runtime 仅在 `MemAvailable` 至少 512 MiB 时安装，并将 Node heap 限为 384 MiB、网络 socket 限为 1；测试 app 的 systemd 上限为 384 MiB，test-slot / Playwright 启动前再次检查剩余内存。检查失败时保持现有项目服务不变，不通过停止其他项目释放资源，也不盲目重跑。
+
+在 129 上依次执行：
 
 ```bash
-bash scripts/test-deploy-hearth-config.sh
-docker compose --env-file deploy/.env -f deploy/docker-compose.single-host.yml config --quiet
+sudo -n /opt/hearth-native/source/current/deploy/run-staging-integration-tests.sh
+sudo -n /opt/hearth-native/source/current/deploy/run-staging-e2e-tests.sh
 ```
 
-native staging 部署使用命名候选分支或 Tag：
+两个 runner 共用 `/var/lib/hearth-staging/deployment-test.lock`，开始时作废自己的旧 evidence；会检查 test-slot 和恢复后 staging app 的本轮 systemd journal，只有部署 SHA 稳定、测试全绿、无 WARNING 且清理/恢复成功才写入 commit-bound `result=passed` evidence。集成/E2E 必须在 staging 执行，本机结果不是验收证据。
+
+### E2E 管理员凭据
+
+完整 OIDC E2E 使用既有 staging 管理员，不创建临时用户。ByteDepth 系列共享的 Keychain item 为 account `admin`、service `bytedepth-staging-e2e`。密码只在本机 Keychain 读取，通过 SSH 标准输入传到远端 shell；SSH 命令参数、远端历史、部署日志和测试报告中都不得出现明文：
 
 ```bash
-bash deploy/deploy-staging.sh <candidate-branch-or-tag>
+staging_e2e_username=admin
+staging_e2e_password="$(security find-generic-password -a admin -s bytedepth-staging-e2e -w)"
+test -n "$staging_e2e_password"
+{
+  printf '%s\n' "$staging_e2e_username"
+  printf '%s\n' "$staging_e2e_password"
+} | ssh -i "$HOME/.ssh/ubuntu_2.pem" \
+  -o IdentitiesOnly=yes -o BatchMode=yes \
+  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+  ubuntu@129.211.6.82 \
+  "sudo -n bash -c 'IFS= read -r HEARTH_STAGING_E2E_USERNAME; IFS= read -r HEARTH_STAGING_E2E_PASSWORD; export HEARTH_STAGING_E2E_USERNAME HEARTH_STAGING_E2E_PASSWORD; cd /opt/hearth-native/source/current; sudo -n --preserve-env=HEARTH_STAGING_E2E_USERNAME,HEARTH_STAGING_E2E_PASSWORD ./deploy/run-staging-e2e-tests.sh; status=\$?; unset HEARTH_STAGING_E2E_USERNAME HEARTH_STAGING_E2E_PASSWORD; exit \$status'"
+unset staging_e2e_username staging_e2e_password
 ```
 
-脚本使用显式的 SSH 私钥和 `known_hosts`，在 129 上传输外部构建 JAR、初始化共享 logical database/Redis namespace、重启 native app/edge，等待 Flyway/应用健康检查，再验证 HTTPS OIDC discovery；环境文件由宿主机私有配置提供，脚本不会把凭据写入 Git 或命令行。
+Runner 将凭据通过管道交给以 `ubuntu` 身份运行的 Playwright 进程，不放入进程参数；含真实凭据的浏览器 trace、截图和视频关闭。E2E 使用测试槽位中的 staging 数据库副本，密码错误或账号缺失时失败，不创建或重置管理员。
 
-部署脚本默认通过宿主机 root 的 GitHub SSH 凭据获取官方 Hearth 仓库：`git@github.com:manfredma/hearth.git`。如果 staging 宿主机暂时无法通过 SSH 访问 GitHub，可显式设置 `HEARTH_REPOSITORY_URL`，指向宿主机上的只读 Git mirror/bundle；该覆盖不会改变默认源仓库。
+## 发布顺序
 
-部署脚本会在同一把 `/opt/shared-maven/repository.lock` 全局锁内，使用固定的 Java 25 Maven 镜像预热 `/opt/shared-maven/repository`，再执行 Dockerfile 的离线构建；预热日志中的未登记 `WARN`/`WARNING` 会直接阻断发布。
+1. 在指定 Hearth feature worktree 实现、测试并更新 `docs/releases/CHANGELOG.md`。
+2. 候选 SHA 冻结后运行本机质量门禁：
 
-staging 入口由 124 上共享的 bytedepth-nginx 承载，路由文件见 [`nginx/staging-hearth.conf`](nginx/staging-hearth.conf)。证书路径固定为 `/etc/letsencrypt/live/staging-hearth.bytedepth.cn/`，证书申请与续期必须先在 124 完成，再 reload Nginx。正式部署脚本将在 staging 部署阶段补充，必须遵守不可变版本、完整 compose 重建、集成测试和 E2E 验收顺序。
+   ```bash
+   bash scripts/run-local-quality.sh
+   ```
+
+3. 从本机部署该候选 ref 到 staging（外部构建固定 SHA 的 JAR，不在目标主机编译）：
+
+   ```bash
+   HEARTH_STAGING_HOST=129.211.6.82 \
+   HEARTH_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
+   HEARTH_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
+   bash deploy/deploy-native-staging.sh <candidate-ref>
+   ```
+
+4. 在 129 运行全部 integration/E2E runner；检查两个 evidence 的完整 SHA 与 staging `/version` 一致，并检查服务日志无 WARNING。随后由项目所有者在 staging 验收。
+5. 验收通过后 fast-forward 合并同一候选 SHA 到 `main`；不得在验收与合并之间追加提交。
+6. 生产只接收已合并 `main` 历史上的新 annotated SemVer tag。执行 `deploy/deploy-native-production-remote.sh vX.Y.Z`；脚本必须校验 tag、候选 JAR SHA、175 的 Hearth TLS/Nginx、完整 systemd 重启、`/version`、health、OIDC discovery 和其他项目服务。
+
+生产没有旧 Hearth Docker 流量需要切换。生产初始化失败时保持 Hearth route 无流量，不停止、覆盖或迁移其他项目服务。

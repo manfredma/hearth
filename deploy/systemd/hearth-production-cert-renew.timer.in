@@ -1,0 +1,11 @@
+[Unit]
+Description=Twice-daily Hearth production certificate renewal check
+
+[Timer]
+OnCalendar=*-*-* 03,15:17:00
+RandomizedDelaySec=2h
+Persistent=true
+Unit=hearth-production-cert-renew.service
+
+[Install]
+WantedBy=timers.target

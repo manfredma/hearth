@@ -54,7 +54,8 @@ public class SecurityConfig {
 
     static String[] publicRequestMatchers() {
         return new String[]{
-                "/", "/index.html", "/assets/**", "/favicon.ico", "/favicon.svg", "/api/health",
+               "/", "/index.html", "/assets/**", "/favicon.ico", "/favicon.svg", "/api/health",
+                "/version",
                 "/api/login", "/api/csrf", "/login", "/consent-preview", "/.well-known/openid-configuration", "/oauth2/jwks"
         };
     }

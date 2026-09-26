@@ -14,4 +14,6 @@ grep -Fq './mvnw -B clean install -DskipTests -Dsort.skip=true' "$SOURCE_ROOT/de
 grep -Fq '/opt/shared-maven/repository.lock' "$SOURCE_ROOT/deploy/deploy-staging.sh"
 grep -Fq 'HEARTH_REPOSITORY_URL:-git@github.com:manfredma/hearth.git' "$SOURCE_ROOT/deploy/deploy-staging.sh"
 grep -Fqx 'COPY public public' "$SOURCE_ROOT/Dockerfile"
+test -x "$SOURCE_ROOT/deploy/deploy-native-staging.sh"
+test -x "$SOURCE_ROOT/deploy/deploy-native-production-remote.sh"
 printf 'Hearth deployment configuration contract passed.\n'

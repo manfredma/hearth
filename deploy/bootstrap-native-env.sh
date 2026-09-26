@@ -8,6 +8,9 @@ readonly ENV_DIR=/etc/hearth
 readonly NATIVE_ENV="$ENV_DIR/$ENVIRONMENT-native.env"
 readonly CONFIG_FILE=/etc/hearth/hearth-native.conf
 source "$CONFIG_FILE"
+getent group hearth >/dev/null || groupadd --system hearth
+getent passwd hearth >/dev/null || useradd --system --gid hearth --home-dir /nonexistent --shell /usr/sbin/nologin hearth
+[[ "$(id -gn hearth)" == hearth ]] || { printf 'Hearth service user must use the Hearth service group.\n' >&2; exit 1; }
 if [[ "$ENVIRONMENT" == staging ]]; then
   readonly REDIS_CONF=/data/bytedepth-native-staging/redis/redis.conf
   readonly ISSUER=https://staging-hearth.bytedepth.cn
@@ -25,8 +28,12 @@ fi
 redis_password="$(awk '$1 == "requirepass" {print $2; exit}' "$REDIS_CONF")"
 [[ -n "$redis_password" ]] || { printf 'Shared Redis requirepass is missing.\n' >&2; exit 1; }
 source_env="$ENV_DIR/$ENVIRONMENT.env"
+if [[ -r "$NATIVE_ENV" ]]; then source_env="$NATIVE_ENV"; fi
 if [[ ! -r "$source_env" && "$ENVIRONMENT" == staging ]]; then source_env=/opt/hearth/deploy/.env; fi
-read_env() { awk -F= -v key="$1" '$1 == key {print substr($0, index($0, "=") + 1); exit}' "$source_env"; }
+read_env() {
+  [[ -r "$source_env" ]] || return 0
+  awk -F= -v key="$1" '$1 == key {print substr($0, index($0, "=") + 1); exit}' "$source_env"
+}
 issuer=""
 signing_key=""
 remember_key=""
@@ -40,24 +47,28 @@ elif [[ "$ENVIRONMENT" != production ]]; then
 fi
 if [[ "$ENVIRONMENT" == production ]]; then
   issuer="$ISSUER"
-  signing_key="$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | openssl pkcs8 -topk8 -nocrypt -outform DER 2>/dev/null | base64 | tr -d '\n')"
-  remember_key="$(openssl rand -hex 32)"
+  [[ -n "$signing_key" ]] || signing_key="$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | openssl pkcs8 -topk8 -nocrypt -outform DER 2>/dev/null | base64 | tr -d '\n')"
+  [[ -n "$remember_key" ]] || remember_key="$(openssl rand -hex 32)"
 fi
 [[ "$issuer" =~ ^https:// ]] || { printf 'Hearth issuer must use HTTPS.\n' >&2; exit 1; }
 [[ -n "$signing_key" && "$signing_key" != *replace* && "$signing_key" != *inject* ]] || { printf 'Hearth signing key is missing or placeholder.\n' >&2; exit 1; }
 [[ -n "$remember_key" && "$remember_key" != *replace* && "$remember_key" != *inject* ]] || { printf 'Hearth Remember-Me key is missing or placeholder.\n' >&2; exit 1; }
-db_password="$(openssl rand -hex 32)"
+db_password="$(read_env HEARTH_DATASOURCE_PASSWORD)"
+[[ -n "$db_password" ]] || db_password="$(openssl rand -hex 32)"
 db_user="hearth_"$ENVIRONMENT"_native"
 app_port="$([[ "$ENVIRONMENT" == staging ]] && printf '%s' "$HEARTH_NATIVE_STAGING_APP_PORT" || printf '%s' "$HEARTH_NATIVE_PRODUCTION_APP_PORT")"
+redis_db="$([[ "$ENVIRONMENT" == staging ]] && printf '%s' "$HEARTH_NATIVE_STAGING_REDIS_DB" || printf '%s' "$HEARTH_NATIVE_PRODUCTION_REDIS_DB")"
 native_tmp="$(mktemp "$ENV_DIR/.$ENVIRONMENT-native-env.XXXXXX")"
 trap 'rm -f -- "$native_tmp"' EXIT
 printf '%s\n' \
   "HEARTH_ENVIRONMENT=$ENVIRONMENT" \
+  "SPRING_PROFILES_ACTIVE=$ENVIRONMENT-native" \
   "HEARTH_DATASOURCE_URL=jdbc:mysql://127.0.0.1:$HEARTH_NATIVE_MYSQL_PORT/hearth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true" \
   "HEARTH_DATASOURCE_USERNAME=$db_user" \
   "HEARTH_DATASOURCE_PASSWORD=$db_password" \
   "HEARTH_REDIS_HOST=127.0.0.1" \
   "HEARTH_REDIS_PORT=$HEARTH_NATIVE_REDIS_PORT" \
+  "HEARTH_REDIS_DATABASE=$redis_db" \
   "HEARTH_REDIS_PASSWORD=$redis_password" \
   "HEARTH_SESSION_REDIS_NAMESPACE=hearth:$ENVIRONMENT:session:v1" \
   "HEARTH_SESSION_COOKIE_NAME=$COOKIE" \

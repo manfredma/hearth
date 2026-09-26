@@ -37,7 +37,7 @@ COPY --from=frontend-build /frontend/hearth-start/src/main/resources/static hear
 RUN install -m 0644 /root/.m2/settings.xml .mvn/settings.xml
 ARG HEARTH_COMMIT_ID=unknown
 ARG HEARTH_BUILT_AT=unknown
-RUN printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$(sed -n 's/.*<version>\([^<]*\)<\/version>.*/\1/p' pom.xml | head -1)" "$HEARTH_COMMIT_ID" "$HEARTH_BUILT_AT" > hearth-start/src/main/resources/hearth-build.properties
+RUN printf 'hearth.build.version=%s\nhearth.build.commit-id=%s\nhearth.build.built-at=%s\n' "$(sed -n 's/.*<version>\([^<]*\)<\/version>.*/\1/p' pom.xml | head -1)" "$HEARTH_COMMIT_ID" "$HEARTH_BUILT_AT" > hearth-start/src/main/resources/hearth-build.properties
 # .mvn/maven.config explicitly selects this workspace file, taking precedence
 # over /root/.m2/settings.xml.  Replace it only inside the build layer so the
 # image build uses the Tencent mirror without changing the source checkout.

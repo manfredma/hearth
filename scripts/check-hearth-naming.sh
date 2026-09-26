@@ -37,7 +37,11 @@ for relative_file in "${files[@]}"; do
   if matches=$(rg -n -i 'bytedepth|BYTEDEPTH' "$absolute_file" 2>/dev/null); then
     filtered_matches=$(printf '%s\n' "$matches" | while IFS= read -r line; do
       case "$line" in
-        *'staging-hearth.bytedepth.cn'*|*'staging-career.bytedepth.cn'*|*'bytedepth_default'*) ;;
+        *'staging-hearth.bytedepth.cn'*|*'staging-career.bytedepth.cn'*|*'hearth.bytedepth.cn'*|\
+        *'/data/bytedepth-native-staging/'*|*'/data/bytedepth-native-production/'*|\
+        *'/etc/bytedepth/'*|*'bytedepth-production-green-public-nginx.service'*|\
+        *'bytedepth-staging-e2e'*|\
+        *'bytedepth_default'*) ;;
         *) printf '%s\n' "$line" ;;
       esac
     done)

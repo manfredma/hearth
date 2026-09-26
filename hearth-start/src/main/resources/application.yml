@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:classpath:hearth-build.properties
   application:
     name: hearth
   datasource:
@@ -14,9 +16,11 @@ spring:
     redis:
       host: ${HEARTH_REDIS_HOST:localhost}
       port: ${HEARTH_REDIS_PORT:6379}
+      database: ${HEARTH_REDIS_DATABASE:0}
       password: ${HEARTH_REDIS_PASSWORD:}
 
 server:
+  port: ${HEARTH_APP_PORT:8080}
   forward-headers-strategy: framework
   servlet:
     session:
@@ -27,6 +31,10 @@ server:
         same-site: ${HEARTH_SESSION_COOKIE_SAME_SITE:lax}
 
 hearth:
+  build:
+    version: ${HEARTH_VERSION:unknown}
+    commit-id: ${HEARTH_COMMIT_ID:unknown}
+    built-at: ${HEARTH_BUILT_AT:unknown}
   environment: ${HEARTH_ENVIRONMENT:local}
   authentication:
     failure-threshold: ${HEARTH_LOGIN_FAILURE_THRESHOLD:5}

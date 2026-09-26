@@ -11,7 +11,7 @@
 | staging | 129 | staging-hearth.bytedepth.cn | 18110 | 18111 | 13306 / hearth | 16379 / DB 5 | /data/hearth-native-staging |
 | production | 175 | hearth.bytedepth.cn | 18112 | 18113 | 13306 / hearth | 16379 / DB 6 | /data/hearth-native-production |
 
-共享公网 Nginx 精确按 Host/SNI 路由到 Hearth edge；Hearth 不监听 80/443，也不重启共享 Nginx，只执行 nginx -t 和 reload。
+共享公网 Nginx 精确按 Host/SNI 路由到 Hearth edge；app 与 edge 均仅监听 loopback，Hearth 不监听公网 80/443，也不重启共享 Nginx，只执行 nginx -t 和 graceful reload。
 
 ## 配置与隔离
 
@@ -19,6 +19,9 @@
 - native app 使用外部构建不可变 JAR；/version 必须返回完整构建 SHA、版本和构建时间。
 - MySQL 用户分别为 hearth_staging_native、hearth_production_native；Redis logical DB 和 namespace 必须显式注入，不使用默认值。
 - staging/production 分别使用 HEARTH_SESSION_COOKIE_NAME、HEARTH_OIDC_ISSUER、HEARTH_SIGNING_KEY、HEARTH_REMEMBER_ME_KEY，禁止跨环境复用。
+- Staging integration/E2E 各用独立 `staging-test` Spring profile、run-scoped MySQL logical database/user、Redis DB 12/13 与唯一 Session namespace；DB 14/15 保留给 ByteDepth 测试。测试 database 是 staging snapshot 的独立副本，测试写操作不得落入 staging 主库。
+- 专用 staging test-slot 与 staging app 通过 systemd `Conflicts=` 互斥；测试期间只切换 Hearth app 进程，edge、公共 Nginx 和其他项目保持运行。测试结束先清理精确 run-id 资源，再恢复 staging app 并健康检查。
+- Staging TLS 源证书由 124 管理；同步到 129 的 Hearth 专属 TLS bundle 前必须校验精确 SAN、有效期和证书/私钥匹配，所有 bundle 文件归 ubuntu。
 
 ## 迁移与发布
 

@@ -6,7 +6,19 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
+- 当前 v0.1.0 候选已冻结；后续变更需作为新版本候选处理。
+
+## 0.1.0 - 2026-09-26
+
+### Changed
+
 - 将 Hearth staging/production 规划为与 ByteDepth、Career、Daylilt、Toolbox 共用宿主机基础设施的 native 部署，使用独立 MySQL logical database、Redis DB/namespace、端口、目录、systemd unit 和 Nginx route。
+- 增加 `staging-native`、`production-native` 与 `staging-test` Spring profiles；integration/E2E 使用 run-scoped MySQL logical database/user、Redis DB 12/13 与专属 test-slot，测试后验证清理并恢复 staging app。
+- Native app 和 private edge 端口仅绑定 loopback，避免绕过共享 Nginx 直接访问项目服务。
+- 增加 124→129 的 staging TLS bundle 校验/同步流程，证书和私钥 bundle 归 `ubuntu` 持有，不修改其他项目的证书或 Nginx route。
+- 增加 175 Hearth 专属 Certbot account/config、webroot HTTP-01 签发和 systemd 自动续期；证书配置与私钥由 `ubuntu` 管理，renewal hook 只验证并 graceful reload 项目共享 Nginx。
+- 限制 staging Node 安装和 test-slot 的内存预算，避免与同机多项目构建争抢内存；资源不足时 fail-closed，不停止其他服务或自动重跑。
+- 首次 production 初始化只创建永久的共享管理员 identity：复用 staging 中现有管理员的 BCrypt password hash，不复制其他身份或 OAuth client，不创建临时账号。
 
 ### Added
 

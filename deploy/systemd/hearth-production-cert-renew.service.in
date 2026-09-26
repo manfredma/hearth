@@ -1,0 +1,10 @@
+[Unit]
+Description=Hearth production Let’s Encrypt certificate renewal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+ExecStart=/usr/bin/certbot --config-dir /data/hearth-native-production/letsencrypt --work-dir /data/hearth-native-production/letsencrypt-work --logs-dir /data/hearth-native-production/letsencrypt-logs renew --quiet

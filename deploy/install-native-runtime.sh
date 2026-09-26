@@ -23,6 +23,8 @@ if [[ "$ENVIRONMENT" == staging ]]; then
     EDGE_SERVICE=hearth-staging-native-edge.service
     APP_TEMPLATE=hearth-staging-native-app.service.in
     EDGE_TEMPLATE=hearth-staging-native-edge.service.in
+    TEST_SLOT_SERVICE=hearth-staging-native-test-slot.service
+    TEST_SLOT_TEMPLATE=hearth-staging-native-test-slot.service.in
 else
     ROOT_DIR="$HEARTH_NATIVE_PRODUCTION_ROOT"
     APP_SERVICE=hearth-production-native-app.service
@@ -34,7 +36,7 @@ ENV_FILE="$ENV_DIR/$ENVIRONMENT-native.env"
 [[ -r "$ENV_FILE" ]] || { printf 'Missing native environment: %s\n' "$ENV_FILE" >&2; exit 1; }
 command -v nginx >/dev/null || { printf 'Nginx is required.\n' >&2; exit 1; }
 
-install -d -o ubuntu -g ubuntu -m 0755 "$NATIVE_ROOT" "$NATIVE_ROOT/releases" "$NATIVE_ROOT/source" "$ROOT_DIR" "$ROOT_DIR/data" "$ROOT_DIR/edge"
+install -d -o ubuntu -g ubuntu -m 0755 "$NATIVE_ROOT" "$NATIVE_ROOT/releases" "$NATIVE_ROOT/source" "$ROOT_DIR" "$ROOT_DIR/data" "$ROOT_DIR/edge" "$ROOT_DIR/edge/client_body_temp" "$ROOT_DIR/edge/proxy_temp"
 chown ubuntu:hearth "$ROOT_DIR/data"
 chmod 0770 "$ROOT_DIR/data"
 chown -R hearth:hearth "$ROOT_DIR/edge"
@@ -55,7 +57,7 @@ http {
     client_body_temp_path $ROOT_DIR/edge/client_body_temp;
     proxy_temp_path $ROOT_DIR/edge/proxy_temp;
     server {
-        listen $edge_port;
+        listen 127.0.0.1:$edge_port;
         server_name _;
         location / {
             proxy_pass http://127.0.0.1:$app_port;
@@ -71,6 +73,11 @@ sed "s#__JAVA_BIN__#$JAVA_BIN#g" "$SOURCE_ROOT/deploy/systemd/$APP_TEMPLATE" > "
 sed "s#__JAVA_BIN__#$JAVA_BIN#g" "$SOURCE_ROOT/deploy/systemd/$EDGE_TEMPLATE" > "/etc/systemd/system/$EDGE_SERVICE"
 chown ubuntu:ubuntu "/etc/systemd/system/$APP_SERVICE" "/etc/systemd/system/$EDGE_SERVICE"
 chmod 0644 "/etc/systemd/system/$APP_SERVICE" "/etc/systemd/system/$EDGE_SERVICE"
+if [[ "$ENVIRONMENT" == staging ]]; then
+    sed "s#__JAVA_BIN__#$JAVA_BIN#g" "$SOURCE_ROOT/deploy/systemd/$TEST_SLOT_TEMPLATE" > "/etc/systemd/system/$TEST_SLOT_SERVICE"
+    chown ubuntu:ubuntu "/etc/systemd/system/$TEST_SLOT_SERVICE"
+    chmod 0644 "/etc/systemd/system/$TEST_SLOT_SERVICE"
+fi
 systemctl daemon-reload
 systemctl enable "$APP_SERVICE" "$EDGE_SERVICE"
 printf 'Installed Hearth native runtime for %s.\n' "$ENVIRONMENT"
