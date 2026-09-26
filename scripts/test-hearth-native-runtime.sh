@@ -46,6 +46,8 @@ for profile in staging-native production-native staging-test; do
   grep -Fq 'address: 127.0.0.1' "$ROOT/hearth-start/src/main/resources/application-$profile.yml"
 done
 grep -Fq 'listen 127.0.0.1:$edge_port' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'access_log $ROOT_DIR/edge/access.log;' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'error_log $ROOT_DIR/edge/error.log warn;' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'MemoryMax=' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
 grep -Fq 'install -d -o ubuntu -g ubuntu' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'chown -R ubuntu:hearth "$ROOT_DIR/edge"' "$ROOT/deploy/install-native-runtime.sh"

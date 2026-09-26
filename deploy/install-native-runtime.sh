@@ -54,6 +54,8 @@ events { worker_connections 1024; }
 pid $ROOT_DIR/edge/nginx.pid;
 http {
     include /etc/nginx/mime.types;
+    access_log $ROOT_DIR/edge/access.log;
+    error_log $ROOT_DIR/edge/error.log warn;
     client_body_temp_path $ROOT_DIR/edge/client_body_temp;
     proxy_temp_path $ROOT_DIR/edge/proxy_temp;
     server {
