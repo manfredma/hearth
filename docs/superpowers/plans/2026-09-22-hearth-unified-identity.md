@@ -1,5 +1,7 @@
 # Hearth Unified Identity Implementation Plan
 
+> 状态：历史计划。最初的外部 OIDC Provider 方向已由 [ADR-0006](../../architecture/decisions/0006-self-hosted-oidc-provider.md) 与 2026-09-23 自建 Provider 设计取代；此处已勾选步骤仅作历史记录，不是当前待办或发布流程。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 将 bytedepth 模板收敛为一个可运行的 Hearth 统一身份服务骨架，支持标准 OIDC 登录、应用访问管理和跨环境身份隔离。

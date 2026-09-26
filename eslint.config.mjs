@@ -12,7 +12,7 @@ export default [
             ecmaVersion: 'latest',
             sourceType: 'script',
             parserOptions: { ecmaFeatures: { jsx: true } },
-            globals: {...globals.browser, Vditor: 'readonly'}
+            globals: {...globals.browser}
         },
         rules: {
             'no-var': 'error',

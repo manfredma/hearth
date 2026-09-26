@@ -1,5 +1,7 @@
 # Hearth 30 天免登录 Implementation Plan
 
+> 状态：历史实施计划。Remember-Me 代码和单元测试已存在；下方未勾选项保留原始计划记录，不代表当前待办或 staging evidence。当前发布步骤以 [`deploy/README.md`](../../deploy/README.md) 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task with checkpoints.
 
 **Goal:** 让 Hearth 通过 Spring Security 无状态签名 Remember-Me Cookie 提供 30 天免登录，并让 Career 等 OIDC 接入方在 Hearth Session 过期后自动恢复登录。
@@ -108,4 +110,3 @@
 - [ ] **Step 4: Verify the evidence commit remains bound to Career SHA `129a5b375ad07b1b96f6119ca68204c8641c806d`.**
 - [ ] **Step 5: Manually validate the 30-day flow in staging using browser evidence: check the box, confirm `hearth-remember-me` has Max-Age 30 days, expire the short Session, revisit Career, and confirm no password prompt; then logout and confirm the Cookie is cleared.**
 - [ ] **Step 6: Do not modify production.**
-

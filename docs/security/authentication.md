@@ -4,7 +4,7 @@ Hearth 自己提供 OIDC，Spring Security 7 Authorization Server 负责协议�
 
 ## 配置
 
-每个环境必须显式设置自己的 `HEARTH_OIDC_ISSUER` 和签名密钥来源 `HEARTH_SIGNING_KEY_LOCATION`。issuer 必须稳定且在 staging/production 使用 HTTPS；不同环境必须使用独立的数据库、Redis namespace、Client 注册和签名密钥。
+每个环境必须显式设置自己的 `HEARTH_OIDC_ISSUER` 和 `HEARTH_SIGNING_KEY`。Spring 配置属性 `hearth.authorization-server.signing-key-location` 当前通过 `env:HEARTH_SIGNING_KEY` 读取 PKCS#8 RSA 私钥。issuer 必须稳定且在 staging/production 使用 HTTPS；不同环境必须使用独立的数据库、Redis namespace、Client 注册和签名密钥。
 
 ## 约束
 

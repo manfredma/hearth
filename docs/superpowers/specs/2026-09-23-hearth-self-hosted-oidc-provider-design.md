@@ -1,6 +1,6 @@
 # Hearth 自建 OIDC Provider 设计规格
 
-- **状态**: Proposed
+- **状态**: Accepted（MVP 方向已实现；当前部署状态以 `deploy/README.md` 与 SHA-bound staging evidence 为准）
 - **日期**: 2026-09-23
 - **项目**: Hearth
 - **关联 ADR**: [ADR-0006](../../architecture/decisions/0006-self-hosted-oidc-provider.md)

@@ -17,7 +17,7 @@ Spring Boot 多模块统一身份服务（DDD 分层）+ React/Vite 管理端。
 - ByteDepth、Career、Daylilt、Toolbox 与 Hearth 共用宿主机基础设施（MySQL、Redis、公共 Nginx、Java/Maven/Node/Chromium 及实际需要的中间件），但 Hearth 的 logical database/user、Redis DB/namespace、端口、目录、systemd unit、route、凭据和 evidence 必须独立。
 - Hearth native staging 使用 app/edge 18110/18111，production 使用 18112/18113；不得绑定公网 80/443，不得修改其他项目的服务、数据或路由。
 - native 项目文件、配置、制品、日志和测试资源由 ubuntu 持有；服务用户 hearth 只通过服务组写入专属数据目录。
-- Compose 服务名必须带 `hearth-` 前缀，禁止使用通用 `app`、`web` 等别名；完整 Compose 服务必须重建启动，不能只启动单个容器。
+- 当前 staging/production 发布采用宿主机 native runtime，唯一流程见 `deploy/README.md`；旧 Docker/Compose 文件不代表当前发布拓扑。若用于本地或数据迁移，服务名仍必须带 `hearth-` 前缀，避免与共享 Docker 网络别名冲突。
 - 任何用户可见、运行时、配置或部署变更，首次 staging 前必须先写入 `docs/releases/CHANGELOG.md` 的非空分类 `## Unreleased`。
 - 涉及模块边界、外部接口、OIDC、身份主键或长期约束的设计，必须先写 ADR（`docs/architecture/decisions/`），再写 spec 和代码。
 

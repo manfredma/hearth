@@ -11,10 +11,10 @@
 
 ## 部署与数据
 
-- 同机多项目的 compose service 必须带 `hearth-` 前缀，不能使用通用的 `app` 名称，避免共享 Docker 网络 DNS 别名冲突。
+- 当前 staging/production 是宿主机 native runtime，不要把历史 Compose 配置当作当前部署拓扑；确需使用的本地/迁移 Compose service 必须带 `hearth-` 前缀，避免共享 Docker 网络 DNS 别名冲突。
 - staging 和生产必须使用独立数据库目录、Redis namespace、Session Cookie 和 OIDC client；前端不得用 localStorage 保存私人身份或业务数据。
 - 已执行的 Flyway 迁移不可修改，schema 变化必须追加新迁移。
-- 部署必须重建并启动完整 compose 服务，不能只 `up --build -d` 单个应用服务。
+- native 发布必须按 `deploy/README.md` 执行不可变 JAR 校验、systemd restart、版本检查和 Nginx reload；不能只替换文件或手工启动进程。
 
 ## 安全
 

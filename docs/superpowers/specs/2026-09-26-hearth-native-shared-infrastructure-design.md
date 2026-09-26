@@ -1,5 +1,8 @@
 # Hearth native 共享基础设施改造设计
 
+- **状态**：Accepted（ADR-0014）；staging/production 发布验收仍按实施计划跟踪。
+- **日期**：2026-09-26
+
 ## 目标
 
 将 Hearth 从 Docker-only 运行时迁移到与 ByteDepth、Career、Daylilt、Toolbox 一致的共享宿主机 native 运行方式，并同时完成 staging/production 部署。

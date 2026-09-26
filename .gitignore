@@ -59,7 +59,6 @@ settings.xml
 .claude/
 .gstack/
 __pycache__/
-/scripts/obsidian-import/sync_state.json
 .superpowers/
 
 # Tool-generated analysis artifacts
@@ -70,12 +69,6 @@ __pycache__/
 node_modules/
 coverage/
 hearth-start/src/main/resources/static/
-
-# MaxMind GeoLite2 数据库（约 60MB，手动部署，勿提交）
-# 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
-# 部署路径：/opt/hearth/GeoLite2-City.mmdb
-# 配置：export HEARTH_GEOIP_DB_PATH=/opt/hearth/GeoLite2-City.mmdb
-*.mmdb
 
 # Playwright 测试产物
 test-results/

@@ -1,12 +1,12 @@
 # hearth-domain
 
-领域模型与 Repository 抽象层。不依赖框架或持久化 API。
+Hearth 的身份与应用领域模型；不依赖 Spring、Web、MySQL 或 Redis。
 
 **依赖方向：** 无内部依赖（最底层模块）
 
 **责任：**
-- 领域实体（Post、Comment、User、Category、Tag、Series 等）
-- 值对象与枚举
-- Repository 接口定义
-- 领域事件
-- 通用工具（SlugUtils、DomainException）
+- 身份主体、身份账号和本地密码凭据。
+- 应用标识、应用登记与应用访问关系。
+- 领域不变量和受控的值对象。
+
+本模块不包含文章、评论、专栏、搜索或博客用户等 ByteDepth 业务模型。

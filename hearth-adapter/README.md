@@ -1,12 +1,13 @@
 # hearth-adapter
 
-Web 适配层。Controller、页面渲染、安全配置与输入适配。
+Hearth 的外部协议与 Web 适配层：将 OIDC/OAuth、登录、Session 和应用 Client 管理请求接到应用用例或协议框架。
 
 **依赖方向：** app（不直接使用持久化或 Redis API）
 
 **责任：**
-- 前台页面 Controller（文章列表/详情、搜索、专栏、评论、评分等）
-- 后台管理 Controller（文章管理、专栏管理、分类/标签管理、用户管理、运维等）
-- 安全配置（Spring Security、CSRF、权限校验）
-- 限流过滤
-- 工具类（Markdown 渲染、SEO、IP 解析等）
+- OIDC Authorization Server 配置、Discovery、Token、JWKS、UserInfo 与退出。
+- 登录页、CSRF、Session API 和健康/版本端点。
+- 应用元数据与 OAuth Client HTTP 适配。
+- Spring Security 路由与身份适配。
+
+这里不承载业务应用的功能、资源或数据权限。MVP 中 Client 管理接口的管理员权限属于已记录的技术债，见 [技术债清单](../docs/engineering/technical-debt.md)。

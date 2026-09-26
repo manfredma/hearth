@@ -33,7 +33,7 @@
 ### Task 3: MySQL/Redis 隔离与 staging 数据迁移
 
 - [x] 新增 bootstrap-native-mysql.sh，创建 logical database/user 和 native env。
-- [ ] 新增 124→129 的 Hearth 限定 database dump/import；dump 已校验并在 129 待导入，native DB 导入尚未执行。
+- [x] 完成 124→129 的 Hearth 限定 database dump/import；129 上 `imported` 与 `recovery-completed` 状态标记均存在，native database 已可供 staging app 使用。
 - [x] 遇到缺少 dump-complete marker 的已有 dump 时分类为 uncertain 并保留，不自动删除或重做。
 - [x] staging dump 与 TLS current 更新使用唯一临时输入并在 deployment-test lock 内提交，不能并发覆盖或观察半成品。
 - [x] 新增 run-scoped integration/E2E MySQL database/user、Redis DB/namespace 和 test root。
