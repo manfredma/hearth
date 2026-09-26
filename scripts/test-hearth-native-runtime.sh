@@ -35,6 +35,13 @@ grep -Fq 'MemAvailable' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq '/opt/hearth-native/e2e-runtime' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq 'lockfile_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq 'package_json_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq '$1 == "lockfile_sha256" {print $2}' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq '$1 == "package_json_sha256" {print $2}' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq 'index($0,"=")' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+if grep -Fq '\\"lockfile_sha256\\"' "$ROOT/deploy/bootstrap-staging-runtime.sh"; then
+  printf 'Hearth runtime manifest awk programs must not escape quotes inside single-quoted scripts.\n' >&2
+  exit 1
+fi
 grep -Fq 'MemAvailable' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-e2e-tests.sh"

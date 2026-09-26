@@ -32,4 +32,5 @@
 - 恢复 MySQL 部分导入时，必须先把 mysqldump 中的 `CREATE DATABASE` 与 `USE` 明确重写到唯一临时 schema，并用测试断言重写后的 SQL；动态 schema 标识符统一经安全引用函数生成，避免 Shell 双引号中的反引号触发命令替换。只有导入管道所有步骤成功后才能写 `recovery-ready` 检查点；从旧版中断状态 adoption 时，必须显式指定唯一临时 schema，并在落盘检查点前重新验证表集、管理员、Flyway、日志和对象类型。
 - 多服务主机的 `/tmp` 可能是接近满载的 tmpfs；大型部署上传应放入工程专属、由 `ubuntu` 持有的 `/var/tmp` 目录，避免与其他服务竞争共享 tmpfs。
 - 被部署脚本直接执行的 Shell 文件必须在 Git 中保留可执行位；迁移门禁要对每个直接调用的入口使用 `test -x`，避免部署到远端后才因 `Permission denied` 中断。
+- Shell 中已经单引号包围的 `awk` 程序不要再把双引号写成 `\"`；反斜杠会被传入 awk 并造成语法错误。manifest 解析应有契约测试，避免静默退化成每次重装依赖。
 - 以项目服务账号运行的私有 Nginx edge 不能写共享 `/var/log/nginx/*.log`；access/error log 必须落到项目专属日志目录，文件由 `ubuntu:hearth` 预创建/持有、服务组只追加写入。轮转使用 Ubuntu 用户级 timer，禁止让 Ubuntu 可写的 logrotate 配置被 root 执行；copytruncate 可能在复制/截断窗口丢少量日志。运行时契约测试保护该约束；已有日志文件不能通过安装 `/dev/null` 截断重建。

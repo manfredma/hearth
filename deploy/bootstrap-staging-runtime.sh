@@ -27,10 +27,10 @@ install -d -o ubuntu -g ubuntu -m 0755 "$RUNTIME_ROOT"
 install -o ubuntu -g ubuntu -m 0644 "$SOURCE_ROOT/package.json" "$RUNTIME_ROOT/package.json"
 install -o ubuntu -g ubuntu -m 0644 "$SOURCE_ROOT/package-lock.json" "$RUNTIME_ROOT/package-lock.json"
 if [[ -x "$RUNTIME_ROOT/node_modules/.bin/playwright" && -f "$RUNTIME_MANIFEST" ]] \
-  && [[ "$(awk -F= '$1 == \"lockfile_sha256\" {print $2}' "$RUNTIME_MANIFEST")" == "$LOCK_SHA" ]] \
-  && [[ "$(awk -F= '$1 == \"package_json_sha256\" {print $2}' "$RUNTIME_MANIFEST")" == "$PACKAGE_JSON_SHA" ]] \
-  && [[ "$(awk -F= '$1 == \"chromium_version\" {print substr($0,index($0,\"=\")+1); exit}' "$RUNTIME_MANIFEST")" == "$CHROME_VERSION" ]] \
-  && [[ "$(awk -F= '$1 == \"node_version\" {print $2}' "$RUNTIME_MANIFEST")" == "$NODE_VERSION" ]]; then
+  && [[ "$(awk -F= '$1 == "lockfile_sha256" {print $2}' "$RUNTIME_MANIFEST")" == "$LOCK_SHA" ]] \
+  && [[ "$(awk -F= '$1 == "package_json_sha256" {print $2}' "$RUNTIME_MANIFEST")" == "$PACKAGE_JSON_SHA" ]] \
+  && [[ "$(awk -F= '$1 == "chromium_version" {print substr($0,index($0,"=")+1); exit}' "$RUNTIME_MANIFEST")" == "$CHROME_VERSION" ]] \
+  && [[ "$(awk -F= '$1 == "node_version" {print $2}' "$RUNTIME_MANIFEST")" == "$NODE_VERSION" ]]; then
   printf 'Reusing the Hearth staging E2E runtime for unchanged dependency inputs.\n'
 else
   available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"

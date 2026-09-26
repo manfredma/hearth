@@ -6,7 +6,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
-- `v0.1.0` staging candidate 已重新冻结；edge 日志通过 Ubuntu 用户级 timer 限额轮转，不把 Ubuntu 可写配置交给 root 执行。
+- `v0.1.0` staging candidate 已冻结；runtime manifest awk、edge 日志所有权与 Ubuntu 用户级轮转均有自动门禁，部署使用该提交完整 SHA。
 - staging Docker→native 数据迁移可恢复已开始但未完成的 Hearth 导入：保留原始 dump，将数据先导入唯一临时 schema，校验后原子备份部分表并切换完整表集。
 - staging 发布制品上传使用工程专属 `/var/tmp/hearth-native-staging-uploads`，避免大型 JAR 与其他服务竞争共享 tmpfs。
 - staging 导入成功检查点只在所有管道步骤成功后落盘；进程中断后的续跑会重新校验唯一临时 schema、管理员、Flyway 和对象类型，再交换表集。
@@ -16,6 +16,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 ### Fixed
 
 - 用系统 `grep` 的共享 WARNING-log verifier 取代错误的 ripgrep 参数/远端工具依赖，并在所有 build/test pipelines 中同时检查产生命令与 `tee` 的退出状态，避免日志缺失时写 passed evidence。
+- 修复 staging runtime manifest 的 awk 双引号转义，确保依赖未变化时能够复用既有 Playwright/Chromium runtime。
 
 ## 0.1.0 - 2026-09-26
 
