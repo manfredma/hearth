@@ -9,6 +9,11 @@ test -x "$ROOT/deploy/verify-staging-evidence.sh"
 test -x "$ROOT/deploy/verify-release-version.sh"
 test -f "$ROOT/deploy/lib/production-release-transaction.sh"
 test -f "$ROOT/deploy/lib/staging-certificate-current.sh"
+test -f "$ROOT/deploy/lib/check-warning-log.sh"
+if rg -n 'rg -Eqi' "$ROOT/deploy" >/dev/null; then
+  printf 'ripgrep WARNING checks must not pass the invalid -E encoding option.\n' >&2
+  exit 1
+fi
 grep -Fq 'hearth_production_release_begin' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq 'systemctl restart' "$ROOT/deploy/lib/production-release-transaction.sh"
 grep -Fq 'mv -Tf' "$ROOT/deploy/lib/production-release-transaction.sh"

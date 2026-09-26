@@ -40,6 +40,7 @@ grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-integration-tests.sh"
 grep -Fq 'pipeline_statuses=("${PIPESTATUS[@]}")' "$ROOT/deploy/run-staging-integration-tests.sh"
 grep -Fq 'hearth_require_successful_pipeline' "$ROOT/deploy/run-staging-integration-tests.sh"
-grep -Fq "rg -Eqi '\\bWARN(ING)?\\b'" "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'check-warning-log.sh' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'hearth_assert_log_has_no_warning "$log"' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'pipeline_statuses=("${PIPESTATUS[@]}")' "$ROOT/deploy/run-staging-e2e-tests.sh"
 printf 'Hearth staging test-slot isolation contract passed.\n'

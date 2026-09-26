@@ -12,6 +12,7 @@ readonly CHROME=/opt/shared-e2e/chrome-linux64/chrome
 readonly RUNTIME_MANIFEST="$STATE_ROOT/e2e-runtime.manifest"
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
 source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
+source "$SOURCE_ROOT/deploy/lib/check-warning-log.sh"
 install -d -o ubuntu -g ubuntu -m 0700 "$STATE_ROOT" "$STATE_ROOT/test-history"
 touch "$LOCK"
 chown ubuntu:ubuntu "$LOCK"
@@ -79,10 +80,7 @@ pipeline_statuses=("${PIPESTATUS[@]}")
 set -e
 [[ ${#pipeline_statuses[@]} -eq 3 ]] || { printf 'E2E output pipeline status is incomplete.\n' >&2; exit 1; }
 hearth_require_successful_pipeline "${pipeline_statuses[@]}" || { printf 'Hearth Playwright or its log capture failed.\n' >&2; exit 1; }
-if rg -Eqi '\bWARN(ING)?\b' "$log"; then
-  printf 'Hearth staging E2E emitted WARNING.\n' >&2
-  exit 1
-fi
+hearth_assert_log_has_no_warning "$log" || { printf 'Hearth staging E2E emitted WARNING or its log could not be scanned.\n' >&2; exit 1; }
 hearth_test_slot_end "$HEARTH_TEST_SLOT_MANIFEST"
 cleanup_done=1
 [[ "$(cat "$SOURCE_ROOT/.hearth-commit")" == "$commit" && "$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")" == "$commit" ]] || { printf 'Hearth E2E candidate SHA changed during test.\n' >&2; exit 1; }

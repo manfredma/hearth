@@ -46,6 +46,7 @@
 - [x] 为 Maven integration 与 Playwright/Chromium 子进程设置 512 MiB `MemoryMax`、零 swap cgroup 限制，E2E Node heap 限为 256 MiB。
 - [x] Maven Failsafe 离线只读使用 `/opt/shared-maven/repository`，并持有全局共享仓库读锁。
 - [x] Integration/E2E 在写 passed evidence 前校验测试进程和 tee 日志两个 pipeline 的全部退出码，且对完整 WARNING 单词边界 fail-closed。
+- [x] 本机 staging/production candidate build 同样校验 npm/Maven 与 tee 全部状态；WARNING-log 缺失或不可读时拒绝制品。
 - [x] 测试 runner 在结束时清理 run-scoped 资源、恢复 staging app 并校验服务日志；实机 evidence 尚未生成。
 - [ ] 在 129 执行 integration 与 E2E 并检查两份 SHA-bound `result=passed` evidence。
 

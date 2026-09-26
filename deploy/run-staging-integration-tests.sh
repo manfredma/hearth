@@ -13,6 +13,7 @@ readonly DOMAIN=staging-hearth.bytedepth.cn
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
 source "$SOURCE_ROOT/deploy/lib/invalidate-staging-evidence.sh"
 source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
+source "$SOURCE_ROOT/deploy/lib/check-warning-log.sh"
 commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
 deployed="$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")"
 [[ "$commit" == "$deployed" && "$commit" =~ ^[0-9a-f]{40}$ ]] || { printf 'Hearth integration SHA is not deployed.\n' >&2; exit 1; }
@@ -71,10 +72,7 @@ systemd-run --scope --quiet --wait --pipe \
   ' 2>&1 | tee "$maven_log"
 pipeline_statuses=("${PIPESTATUS[@]}")
 set -e
-if rg -Eqi '\bWARN(ING)?\b' "$maven_log"; then
-  printf 'Hearth Maven staging integration emitted WARNING.\n' >&2
-  exit 1
-fi
+hearth_assert_log_has_no_warning "$maven_log" || { printf 'Hearth Maven staging integration emitted WARNING or its log could not be scanned.\n' >&2; exit 1; }
 [[ ${#pipeline_statuses[@]} -eq 2 ]] || { printf 'Maven output pipeline status is incomplete.\n' >&2; exit 1; }
 hearth_require_successful_pipeline "${pipeline_statuses[@]}" || { printf 'Hearth Maven staging integration or log capture failed.\n' >&2; exit 1; }
 [[ -f "$summary" ]] || { printf 'Maven Failsafe summary is missing.\n' >&2; exit 1; }

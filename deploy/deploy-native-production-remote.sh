@@ -42,7 +42,16 @@ ssh "${SSH_OPTS[@]}" "ubuntu@$STAGING_HOST" \
 "$(dirname "$0")/verify-staging-evidence.sh" "$commit" \
   "$build_root/staging-integration.evidence" "$build_root/staging-e2e.evidence"
 git archive "$commit" | tar -x -C "$build_root"
-(cd "$build_root" && npm ci --ignore-scripts --no-audit --no-fund && npm run build)
+source "$build_root/deploy/lib/check-warning-log.sh"
+source "$build_root/deploy/lib/pipeline-status.sh"
+frontend_log="$build_root/frontend-build.log"
+set +e
+(cd "$build_root" && npm ci --ignore-scripts --no-audit --no-fund && npm run build) 2>&1 | tee "$frontend_log"
+frontend_pipeline_statuses=("${PIPESTATUS[@]}")
+set -e
+[[ ${#frontend_pipeline_statuses[@]} -eq 2 ]] || { printf 'Frontend build output pipeline status is incomplete.\n' >&2; exit 1; }
+hearth_require_successful_pipeline "${frontend_pipeline_statuses[@]}" || { printf 'Frontend build or log capture failed.\n' >&2; exit 1; }
+hearth_assert_log_has_no_warning "$frontend_log" || { printf 'Frontend build emitted WARNING or its log could not be scanned.\n' >&2; exit 1; }
 version="$(sed -n 's/.*<version>\([^<]*\)<\/version>.*/\1/p' "$build_root/pom.xml" | head -1)"
 built_at="$(date -u +%FT%TZ)"
 printf 'hearth.build.version=%s\nhearth.build.commit-id=%s\nhearth.build.built-at=%s\n' "$version" "$HEARTH_COMMIT_ID" "$built_at" > "$build_root/hearth-start/src/main/resources/hearth-build.properties"
@@ -51,10 +60,11 @@ java_home="${JAVA_HOME:-$('/usr/libexec/java_home' -v 25 2>/dev/null || true)}"
 build_log="$build_root/build.log"
 set +e
 (cd "$build_root" && JAVA_HOME="$java_home" ./mvnw -B -DskipTests -Dsort.skip=true clean package) 2>&1 | tee "$build_log"
-build_status="${PIPESTATUS[0]}"
+build_pipeline_statuses=("${PIPESTATUS[@]}")
 set -e
-(( build_status == 0 )) || exit "$build_status"
-if rg -Eqi '\bWARN(ING)?\b' "$build_log"; then printf 'Hearth production build emitted WARNING.\n' >&2; exit 1; fi
+[[ ${#build_pipeline_statuses[@]} -eq 2 ]] || { printf 'Maven build output pipeline status is incomplete.\n' >&2; exit 1; }
+hearth_require_successful_pipeline "${build_pipeline_statuses[@]}" || { printf 'Maven build or log capture failed.\n' >&2; exit 1; }
+hearth_assert_log_has_no_warning "$build_log" || { printf 'Hearth production build emitted WARNING or its log could not be scanned.\n' >&2; exit 1; }
 jar_file="$build_root/hearth-start/target/hearth-start.jar"
 [[ -f "$jar_file" ]]
 jar_sha="$(shasum -a 256 "$jar_file" | awk '{print $1}')"

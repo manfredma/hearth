@@ -28,3 +28,4 @@
 - Hearth 命名门禁禁止复制 bytedepth 的运行时标识，但允许明确登记的业务应用 staging 域名作为 OAuth 来源应用展示数据；新增来源域名时必须同步更新门禁测试，不能放宽为任意 bytedepth 字符串。
 - Native 多服务主机的生产安全检查需要引用真实的共享 systemd unit 与公开域名；命名门禁只允许这些完整标识作为独立行，并有混入 `bytedepth-app` 的负向测试，不能因同一行出现合法域名就忽略整行。
 - 更新运行服务使用的 current symlink 时，不能用 `ln -sfn` 直接覆盖；先在同一目录以服务拥有者创建临时 symlink，再通过同文件系统原子 rename 替换，并在失败时恢复旧指针。
+- ripgrep 的 `-E` 参数是字符编码选项，不是 grep 的扩展正则开关；用 `rg -Eqi` 会因 `unknown encoding: qi` 报错。构建/测试 warning 扫描统一走 `check-warning-log.sh`，日志缺失、不可读、`tee` 失败或测试进程失败都必须阻止 passed evidence。
