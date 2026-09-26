@@ -24,7 +24,7 @@ chmod 0600 "$LOCK"
 exec 9>>"$LOCK"
 flock -x 9
 hearth_invalidate_staging_evidence "$EVIDENCE"
-run_id="$(date -u +%Y%m%dt%H%M%S)_$(openssl rand -hex 4)"
+run_id="$(hearth_test_slot_new_run_id)"
 cleanup_done=0
 cookie=""
 response=""

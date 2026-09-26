@@ -39,6 +39,7 @@
 - Failsafe 会动态选择 JUnit Platform provider，Maven dependency `go-offline` 不保证发现它；staging profile 应在 Failsafe plugin dependencies 中显式声明与插件同版本的 `surefire-junit-platform`，才能可靠预热给离线集成运行。
 - 远端 curl 自定义 header 必须使用 `-H "Name: value"` 的冒号语法；用等号拼接 CSRF header 会使请求未携带预期 header，导致 403 并阻止 integration evidence 写入。
 - E2E runtime manifest 的值允许包含空格；解析 `key=value` 时用 `substr($0, index($0, "=")+1)` 保留原始值，不要清空 `$1` 后重建 `$0`，否则会引入前导空格并误判 runtime 不匹配。
+- Integration 与 E2E 必须共用 `hearth_test_slot_new_run_id` 生成器，保证 run-id 符合 test-slot 的 UTC 时间格式；不要手工拆分 `date` 格式参数，空格会被解释成额外操作数。
 - 多服务 staging 机的 Maven 依赖预热不得先做完整编译/PMD；用 `dependency:go-offline`、MemAvailable 门槛和受限 transient service，避免预热任务挤压同机服务。
 - staging 的宿主机 Maven 仓库是多项目共享且锁保护的。若 Maven 输入指纹（全部模块 POM 与 `.mvn` 配置）未变，且最近成功部署的离线 Failsafe 与无 WARNING 预热日志证明依赖闭包可用，应复用该缓存；不得将 manifest 绑定 checkout SHA，也不能因低内存重复预热相同依赖。
 - staging integration 的 512 MiB transient cgroup 同时容纳 Maven 主 JVM 与 Failsafe fork；仅配置 PMD `skip` 仍会加载插件，进程内 javac 的内存也会留在 Maven JVM。因本地/CI 门禁已运行 PMD，`staging-integration` profile 必须解绑 `pmd-check`（phase `none`），并使用显式 `executable=javac`、maxmem 128 MiB 的 forked javac；Failsafe fork heap 限在 128 MiB。显式 javac 可避免远端 Maven compiler autodetection 的 WARNING。

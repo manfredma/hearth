@@ -37,7 +37,7 @@ manifest_chrome="$(awk -F= '$1 == "chromium_version" {print substr($0, index($0,
 [[ "$manifest_lock" == "$expected_lock" && "$manifest_package" == "$expected_package" \
   && "$manifest_node" == "$expected_node" && "$manifest_chrome" == "$("$CHROME" --version)" ]] \
   || { printf 'Hearth E2E runtime manifest does not match dependencies/runtime.\n' >&2; exit 1; }
-run_id="$(date -u +%Y%m%d t%H%M%S | tr -d ' ')_$(openssl rand -hex 4)"
+run_id="$(hearth_test_slot_new_run_id)"
 log="$STATE_ROOT/e2e-$commit.log"
 : > "$log"
 chown ubuntu:ubuntu "$log"

@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/deploy/lib/staging-test-slot.sh"
+if ! declare -F hearth_test_slot_new_run_id >/dev/null; then
+  printf 'Staging test-slot run-id helper is missing.\n' >&2
+  exit 1
+fi
+generated_run_id="$(hearth_test_slot_new_run_id)"
+[[ "$generated_run_id" =~ ^[0-9]{8}t[0-9]{6}_[a-f0-9]{8}$ ]]
 test -f "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in"
 test -f "$ROOT/hearth-start/src/main/resources/application-staging-test.yml"
 test -x "$ROOT/deploy/provision-staging-test-slot.sh"

@@ -10,6 +10,10 @@ HEARTH_TEST_SLOT_EDGE_HEALTH=http://127.0.0.1:18111/api/health
 HEARTH_TEST_SLOT_MINIMUM_AVAILABLE_KIB=655360
 HEARTH_TEST_SLOT_STARTED_AT=""
 
+hearth_test_slot_new_run_id() {
+  printf '%s_%s\n' "$(date -u +%Y%m%dt%H%M%S)" "$(openssl rand -hex 4)"
+}
+
 hearth_test_slot_check_journal() {
   local service="$1" since="$2" journal
   journal="$(journalctl --unit "$service" --since "$since" --no-pager --output=short-iso)"
