@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StagingIntegrationProfileTest {
 
     @Test
-    void stagingIntegrationProfileSkipsPmdInMemoryBoundedRunner() throws Exception {
+    void stagingIntegrationProfileUnbindsPmdFromMemoryBoundedRunner() throws Exception {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         while (root != null && !(Files.exists(root.resolve(".mvn/wrapper/maven-wrapper.properties"))
                 && Files.exists(root.resolve("hearth-start/pom.xml")))) {
@@ -28,7 +28,10 @@ class StagingIntegrationProfileTest {
         int pmdEnd = profile.indexOf("</plugin>", pmdStart);
         assertTrue(pmdStart >= 0 && pmdEnd > pmdStart,
                 "staging integration must define its PMD resource policy");
-        assertTrue(profile.substring(pmdStart, pmdEnd).contains("<skip>true</skip>"),
-                "staging integration already runs in a memory-capped cgroup; PMD belongs to local/CI quality gates");
+        String pmdPlugin = profile.substring(pmdStart, pmdEnd);
+        assertTrue(pmdPlugin.contains("<id>pmd-check</id>"),
+                "the inherited PMD lifecycle execution must be explicitly disabled for staging integration");
+        assertTrue(pmdPlugin.contains("<phase>none</phase>"),
+                "staging integration has a 512 MiB cgroup; unbind PMD instead of loading it and merely skipping the goal");
     }
 }

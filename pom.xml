@@ -240,14 +240,17 @@
                             <skipTests>true</skipTests>
                         </configuration>
                     </plugin>
-                    <!-- Local/CI quality gates run PMD. Keep it out of the constrained
-                         staging integration cgroup, which also contains Maven and Failsafe. -->
+                    <!-- Local/CI quality gates run PMD. Unbind its lifecycle execution so
+                         the plugin class realm is never loaded in the constrained test cgroup. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-pmd-plugin</artifactId>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>pmd-check</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
