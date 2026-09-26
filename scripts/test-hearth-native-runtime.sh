@@ -38,6 +38,10 @@ grep -Fq 'package_json_sha256' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq '$1 == "lockfile_sha256" {print $2}' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq '$1 == "package_json_sha256" {print $2}' "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq 'index($0,"=")' "$ROOT/deploy/bootstrap-staging-runtime.sh"
+grep -Fq 'substr($0, index($0, "=")+1)' "$ROOT/deploy/run-staging-e2e-tests.sh"
+! grep -Fq 'manifest_chrome="$(awk -F= '\''$1 == "chromium_version" {$1=""; sub(/^=/, ""); print}'\''' "$ROOT/deploy/run-staging-e2e-tests.sh"
+manifest_chrome="$(printf '%s\n' 'chromium_version=Google Chrome for Testing 151.0.7922.34' | awk -F= '$1 == "chromium_version" {print substr($0, index($0, "=")+1); exit}')"
+[[ "$manifest_chrome" == 'Google Chrome for Testing 151.0.7922.34' ]]
 if grep -Fq '\\"lockfile_sha256\\"' "$ROOT/deploy/bootstrap-staging-runtime.sh"; then
   printf 'Hearth runtime manifest awk programs must not escape quotes inside single-quoted scripts.\n' >&2
   exit 1

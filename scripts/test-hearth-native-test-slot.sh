@@ -30,6 +30,8 @@ grep -Fq -- '-Dmaven.repo.local=/opt/shared-maven/repository' "$ROOT/deploy/run-
 grep -Fq 'flock -s 8' "$ROOT/deploy/run-staging-integration-tests.sh"
 grep -Fq 'failsafe-summary.xml' "$ROOT/deploy/run-staging-integration-tests.sh"
 grep -Fq 'rm -f -- "$summary"' "$ROOT/deploy/run-staging-integration-tests.sh"
+grep -Fq -- '-H "X-CSRF-TOKEN: $csrf"' "$ROOT/deploy/run-staging-integration-tests.sh"
+! grep -Fq -- '-H "X-CSRF-TOKEN=$csrf"' "$ROOT/deploy/run-staging-integration-tests.sh"
 test -f "$ROOT/hearth-start/src/test/java/manfred/hearth/nativeintegration/NativeInfrastructureIT.java"
 grep -Fq 'hearth_invalidate_staging_evidence "$EVIDENCE"' "$ROOT/deploy/run-staging-e2e-tests.sh"
 invalidate_line="$(grep -n 'hearth_invalidate_staging_evidence "$EVIDENCE"' "$ROOT/deploy/run-staging-e2e-tests.sh" | cut -d: -f1)"

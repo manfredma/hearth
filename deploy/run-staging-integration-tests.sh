@@ -94,7 +94,7 @@ printf '%s' "$discovery" | jq -e --arg issuer "$BASE" '.issuer == $issuer and (.
 jwks_uri="$(printf '%s' "$discovery" | jq -er '.jwks_uri')"
 curl --fail --silent --show-error --max-time 10 --resolve "$DOMAIN:443:127.0.0.1" "$jwks_uri" | jq -e '.keys | length > 0' >/dev/null
 csrf="$(curl --fail --silent --show-error --max-time 10 --resolve "$DOMAIN:443:127.0.0.1" -c "$cookie" -b "$cookie" -H 'Accept: application/json' "$BASE/api/csrf" | jq -er '.token')"
-status="$(curl --silent --show-error --max-time 10 --resolve "$DOMAIN:443:127.0.0.1" -o "$response" -w '%{http_code}' -c "$cookie" -b "$cookie" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "X-CSRF-TOKEN=$csrf" --data "{\"login\":\"native-missing-$run_id\",\"password\":\"invalid-e2e-password\"}" "$BASE/api/login")"
+status="$(curl --silent --show-error --max-time 10 --resolve "$DOMAIN:443:127.0.0.1" -o "$response" -w '%{http_code}' -c "$cookie" -b "$cookie" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $csrf" --data "{\"login\":\"native-missing-$run_id\",\"password\":\"invalid-e2e-password\"}" "$BASE/api/login")"
 [[ "$status" == 401 && "$(jq -r '.authenticated' "$response")" == false ]] || { printf 'Invalid login did not return the expected 401 response.\n' >&2; exit 1; }
 rm -f -- "$cookie" "$response"
 cookie=""

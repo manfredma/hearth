@@ -33,7 +33,7 @@ expected_node="$(sudo -n -u ubuntu -- node --version)"
 manifest_lock="$(awk -F= '$1 == "lockfile_sha256" {print $2}' "$RUNTIME_MANIFEST")"
 manifest_package="$(awk -F= '$1 == "package_json_sha256" {print $2}' "$RUNTIME_MANIFEST")"
 manifest_node="$(awk -F= '$1 == "node_version" {print $2}' "$RUNTIME_MANIFEST")"
-manifest_chrome="$(awk -F= '$1 == "chromium_version" {$1=""; sub(/^=/, ""); print}' "$RUNTIME_MANIFEST")"
+manifest_chrome="$(awk -F= '$1 == "chromium_version" {print substr($0, index($0, "=")+1); exit}' "$RUNTIME_MANIFEST")"
 [[ "$manifest_lock" == "$expected_lock" && "$manifest_package" == "$expected_package" \
   && "$manifest_node" == "$expected_node" && "$manifest_chrome" == "$("$CHROME" --version)" ]] \
   || { printf 'Hearth E2E runtime manifest does not match dependencies/runtime.\n' >&2; exit 1; }
