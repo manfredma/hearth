@@ -6,11 +6,12 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
-- `v0.1.0` staging candidate 已重新冻结；私有 edge Nginx 使用 Hearth 专属可写日志路径，部署使用该候选的完整 SHA。
+- `v0.1.0` staging candidate 已重新冻结；edge 日志通过 Ubuntu 用户级 timer 限额轮转，不把 Ubuntu 可写配置交给 root 执行。
 - staging Docker→native 数据迁移可恢复已开始但未完成的 Hearth 导入：保留原始 dump，将数据先导入唯一临时 schema，校验后原子备份部分表并切换完整表集。
 - staging 发布制品上传使用工程专属 `/var/tmp/hearth-native-staging-uploads`，避免大型 JAR 与其他服务竞争共享 tmpfs。
 - staging 导入成功检查点只在所有管道步骤成功后落盘；进程中断后的续跑会重新校验唯一临时 schema、管理员、Flyway 和对象类型，再交换表集。
 - native private edge 的 Nginx access/error 日志写入项目 edge 数据目录，避免服务账号写共享 `/var/log/nginx` 被拒绝。
+- staging/production private edge 日志由 Ubuntu 用户级 timer 每 5 分钟检查 10 MiB 阈值，保留 14 份并使用 copytruncate；新日志由 `ubuntu:hearth` 创建。
 
 ### Fixed
 

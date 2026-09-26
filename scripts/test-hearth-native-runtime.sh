@@ -6,6 +6,9 @@ for file in \
   "$ROOT/deploy/bootstrap-native-env.sh" \
   "$ROOT/deploy/bootstrap-native-mysql.sh" \
   "$ROOT/deploy/install-native-runtime.sh" \
+  "$ROOT/deploy/logrotate/hearth-native-edge.conf.template" \
+  "$ROOT/deploy/systemd/hearth-native-edge-logrotate.service.in" \
+  "$ROOT/deploy/systemd/hearth-native-edge-logrotate.timer.in" \
   "$ROOT/deploy/systemd/hearth-staging-native-app.service.in" \
   "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in" \
   "$ROOT/deploy/systemd/hearth-production-native-app.service.in" \
@@ -46,8 +49,21 @@ for profile in staging-native production-native staging-test; do
   grep -Fq 'address: 127.0.0.1' "$ROOT/hearth-start/src/main/resources/application-$profile.yml"
 done
 grep -Fq 'listen 127.0.0.1:$edge_port' "$ROOT/deploy/install-native-runtime.sh"
-grep -Fq 'access_log $ROOT_DIR/edge/access.log;' "$ROOT/deploy/install-native-runtime.sh"
-grep -Fq 'error_log $ROOT_DIR/edge/error.log warn;' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'access_log $ROOT_DIR/edge/logs/access.log;' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'error_log $ROOT_DIR/edge/logs/error.log warn;' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'install -d -o ubuntu -g hearth -m 0750 "$ROOT_DIR/edge/logs"' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'install -o ubuntu -g hearth -m 0660 /dev/null "$log_path"' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'hearth-native-edge.conf.template' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'command -v logrotate' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'install -o ubuntu -g ubuntu -m 0640 "$logrotate_tmp" "$ROOT_DIR/edge/logrotate.conf"' "$ROOT/deploy/install-native-runtime.sh"
+grep -Fq 'copytruncate' "$ROOT/deploy/logrotate/hearth-native-edge.conf.template"
+grep -Fq 'size 10M' "$ROOT/deploy/logrotate/hearth-native-edge.conf.template"
+grep -Fq 'rotate 14' "$ROOT/deploy/logrotate/hearth-native-edge.conf.template"
+! grep -Fq 'postrotate' "$ROOT/deploy/logrotate/hearth-native-edge.conf.template"
+grep -Fq 'User=ubuntu' "$ROOT/deploy/systemd/hearth-native-edge-logrotate.service.in"
+grep -Fq 'copytruncate' "$ROOT/deploy/logrotate/hearth-native-edge.conf.template"
+grep -Fq 'OnUnitActiveSec=5min' "$ROOT/deploy/systemd/hearth-native-edge-logrotate.timer.in"
+grep -Fq 'LOGROTATE_TIMER' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'MemoryMax=' "$ROOT/deploy/systemd/hearth-staging-native-app.service.in"
 grep -Fq 'install -d -o ubuntu -g ubuntu' "$ROOT/deploy/install-native-runtime.sh"
 grep -Fq 'chown -R ubuntu:hearth "$ROOT_DIR/edge"' "$ROOT/deploy/install-native-runtime.sh"

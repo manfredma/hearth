@@ -17,6 +17,8 @@ Hearth 是统一身份服务，staging 与 production 分别运行于 129、175�
 
 线上/staging 的 Hearth 项目文件、配置、制品、TLS bundle、运行数据、日志和测试资源都必须归 `ubuntu`；服务只以 `hearth` 用户运行，并通过 `hearth` group 获得必要数据目录权限。以 sudo 创建的项目文件也必须在同一步骤中明确设为 `ubuntu` 所有。
 
+Private edge 的 access/error log 位于各环境 edge 数据目录的 `logs/`，文件为 `ubuntu:hearth`、0660，目录为 0750。对应的 `hearth-{staging,production}-native-edge-logrotate.timer` 每 5 分钟以非特权 `ubuntu` 用户检查 10 MiB 大小阈值，保留 14 份并使用 copytruncate；因此轮转的极短复制/截断窗口可能丢少量日志。logrotate 配置不放入 root 执行的 `/etc/logrotate.d`，避免 Ubuntu 可写配置中的脚本以 root 身份执行。
+
 ## Staging 数据迁移与证书
 
 staging 原 Hearth MySQL 数据源位于 124（`124.221.143.25`），仅迁移 `hearth` logical database。迁移脚本会在需要时短暂启动旧 MySQL 容器进行一致性 dump，然后恢复其原运行状态；不会迁移 Redis Session、停止其他项目或删除旧 Docker 数据目录。导入若出现不确定状态会 fail-closed，不能自动清库重试。

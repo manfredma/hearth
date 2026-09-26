@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Hearth __ENVIRONMENT__ native edge log rotation
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Unit=__LOGROTATE_SERVICE__
+
+[Install]
+WantedBy=timers.target

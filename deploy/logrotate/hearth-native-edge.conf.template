@@ -1,0 +1,9 @@
+__EDGE_LOG_DIR__/*.log {
+    size 10M
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}
