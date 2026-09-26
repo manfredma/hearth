@@ -56,8 +56,9 @@ available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
 [[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge 393216 ]] || { printf 'Refusing Playwright start: need 384 MiB MemAvailable after test-slot startup.\n' >&2; exit 1; }
 cd "$SOURCE_ROOT"
 set +e
+# Keep Bash parameter expansion and positional arguments intact in the transient service.
 printf '%s\n%s\n' "$HEARTH_STAGING_E2E_USERNAME" "$HEARTH_STAGING_E2E_PASSWORD" | \
-  systemd-run --unit="hearth-staging-e2e-$run_id.service" --collect --quiet --wait --pipe --property=MemoryMax=512M --property=MemorySwapMax=0 \
+  systemd-run --expand-environment=no --unit="hearth-staging-e2e-$run_id.service" --collect --quiet --wait --pipe --property=MemoryMax=512M --property=MemorySwapMax=0 \
     /usr/bin/bash -c '
     set -Eeuo pipefail
     IFS= read -r admin_username

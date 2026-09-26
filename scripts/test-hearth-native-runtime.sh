@@ -44,7 +44,8 @@ if grep -Fq '\\"lockfile_sha256\\"' "$ROOT/deploy/bootstrap-staging-runtime.sh";
 fi
 grep -Fq 'MemAvailable' "$ROOT/deploy/run-staging-e2e-tests.sh"
 ! grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-e2e-tests.sh"
-grep -Fq 'systemd-run --unit=' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq -- '--unit="hearth-staging-e2e-' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq -- '--expand-environment=no' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'NODE_OPTIONS=--max-old-space-size=256' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'groupadd --system hearth' "$ROOT/deploy/bootstrap-native-env.sh"

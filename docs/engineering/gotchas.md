@@ -33,5 +33,5 @@
 - 多服务主机的 `/tmp` 可能是接近满载的 tmpfs；大型部署上传应放入工程专属、由 `ubuntu` 持有的 `/var/tmp` 目录，避免与其他服务竞争共享 tmpfs。
 - 被部署脚本直接执行的 Shell 文件必须在 Git 中保留可执行位；迁移门禁要对每个直接调用的入口使用 `test -x`，避免部署到远端后才因 `Permission denied` 中断。
 - Shell 中已经单引号包围的 `awk` 程序不要再把双引号写成 `\"`；反斜杠会被传入 awk 并造成语法错误。manifest 解析应有契约测试，避免静默退化成每次重装依赖。
-- 目标机 systemd 的 `systemd-run --pipe` 与 `--scope` 不兼容；需要接 stdin/stdout 时改用唯一名称的 transient service unit（`--unit --collect --wait --pipe`），并保留其 cgroup 内存限制。
+- 目标机 systemd 的 `systemd-run --pipe` 与 `--scope` 不兼容；需要接 stdin/stdout 时改用唯一名称的 transient service unit（`--unit --collect --wait --pipe`），并保留其 cgroup 内存限制。systemd-run 默认还会扩展 transient service ExecStart 中的 `$`/`%` 表达式；执行 Bash 脚本字符串时必须加 `--expand-environment=no`，否则脚本内参数展开可能被清空。
 - 以项目服务账号运行的私有 Nginx edge 不能写共享 `/var/log/nginx/*.log`；access/error log 必须落到项目专属日志目录，文件由 `ubuntu:hearth` 预创建/持有、服务组只追加写入。轮转使用 Ubuntu 用户级 timer，禁止让 Ubuntu 可写的 logrotate 配置被 root 执行；copytruncate 可能在复制/截断窗口丢少量日志。运行时契约测试保护该约束；已有日志文件不能通过安装 `/dev/null` 截断重建。
