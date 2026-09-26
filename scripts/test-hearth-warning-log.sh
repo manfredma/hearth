@@ -2,6 +2,16 @@
 set -Eeuo pipefail
 readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/deploy/lib/check-warning-log.sh"
+for remote_script in \
+  "$ROOT/deploy/bootstrap-staging-runtime.sh" \
+  "$ROOT/deploy/provision-production-certificate.sh" \
+  "$ROOT/deploy/lib/staging-test-slot.sh" \
+  "$ROOT/deploy/deploy-native-production-remote.sh"; do
+  if grep -Eq '(^|[[:space:]])rg[[:space:]]' "$remote_script"; then
+    printf 'Remote runtime script depends on optional ripgrep: %s\n' "$remote_script" >&2
+    exit 1
+  fi
+done
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 

@@ -6,11 +6,12 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
-- `v0.1.0` staging candidate 已重新冻结；验收通过后，不在验收与合并之间追加代码或文档提交。
+- `v0.1.0` staging candidate 已冻结；验收通过后，不在验收与合并之间追加代码或文档提交。
+- staging Docker→native 数据迁移可恢复已开始但未完成的 Hearth 导入：保留原始 dump，将数据先导入唯一临时 schema，校验后原子备份部分表并切换完整表集。
 
 ### Fixed
 
-- 用共享 WARNING-log verifier 取代无效的 `rg -Eqi` 参数，并在所有 build/test pipelines 中同时检查产生命令与 `tee` 的退出状态，避免日志缺失时写 passed evidence。
+- 用系统 `grep` 的共享 WARNING-log verifier 取代错误的 ripgrep 参数/远端工具依赖，并在所有 build/test pipelines 中同时检查产生命令与 `tee` 的退出状态，避免日志缺失时写 passed evidence。
 
 ## 0.1.0 - 2026-09-26
 
@@ -56,7 +57,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - staging dump 使用唯一临时文件，并在共享锁内重新核对状态后原子落盘；不再覆盖缺少完成标记的 dump。
 - E2E 在凭据检查前先作废旧 evidence；E2E/Maven 进程树使用内存与 swap 上限；集成 Maven 离线只读复用共享 Maven 仓库；edge 运行目录归 `ubuntu:hearth`。
 - integration/E2E 校验测试进程和日志 `tee` 的全部退出状态，并用完整 WARNING 单词边界 fail-closed；生产部署后核对其他项目服务、公开路由与监听端口。
-- 修复 staging/production 构建脚本把 ripgrep `-E` 误当 grep 扩展正则选项的问题；warning log 缺失或不可读时也 fail-closed。
+- 修复 staging/production 构建脚本对远端 ripgrep 的隐式依赖及将 ripgrep `-E` 误当 grep 扩展正则选项的问题；warning log 缺失或不可读时也 fail-closed。
 - Hearth 命名门禁精确登记生产共享服务名与公开 host，并回归验证合法共享主机标识不会放行夹带的非法项目名。
 - 基础设施 JDBC 仓储保持可代理，避免 Spring Repository 异常转换在启动阶段失败。
 - 修正 Spring Security 7 Authorization Server endpoint matcher 绑定，并移除未使用的 Thymeleaf 模板依赖。

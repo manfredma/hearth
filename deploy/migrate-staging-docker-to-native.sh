@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
-[[ $# -eq 1 && "$1" == prepare ]] || { printf 'Usage: %s prepare\n' "$0" >&2; exit 2; }
+[[ $# -eq 1 && "$1" =~ ^(prepare|recover)$ ]] || { printf 'Usage: %s prepare|recover\n' "$0" >&2; exit 2; }
+readonly MODE="$1"
+[[ ${HEARTH_STAGING_DEPLOYMENT_LOCK_HELD:-} == 1 ]] || { printf 'Staging deployment lock is required for Hearth MySQL migration.\n' >&2; exit 1; }
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly IMPORT_ROOT=/var/lib/hearth-native-staging-migration/import
 readonly STATE_ROOT=/var/lib/hearth-native-staging-migration
@@ -11,12 +13,15 @@ readonly CONFIG_FILE=/etc/hearth/hearth-native.conf
 readonly NATIVE_ROOT=/data/hearth-native-staging
 source "$CONFIG_FILE"
 mysql_exec() { mysql --defaults-extra-file="$ADMIN_FILE" --protocol=tcp --host=127.0.0.1 --port="$HEARTH_NATIVE_MYSQL_PORT" --batch --skip-column-names "$@"; }
+if [[ "$MODE" == recover ]]; then
+  exec "$SOURCE_ROOT/deploy/recover-staging-import.sh"
+fi
 [[ -r "$IMPORT_ROOT/hearth.sql.gz" ]] || { printf 'Missing Hearth staging dump.\n' >&2; exit 1; }
 [[ -r "$ADMIN_FILE" ]] || { printf 'Missing shared MySQL admin file.\n' >&2; exit 1; }
 [[ -e "$STATE_ROOT/dump-ready" ]] || { printf 'Hearth source dump has no completed transfer marker.\n' >&2; exit 1; }
 if [[ -e "$STATE_ROOT/imported" ]]; then
-  printf 'Hearth staging database was already imported.\n'
-  exit 0
+  printf 'Verifying the previously imported Hearth staging database.\n'
+  exec "$SOURCE_ROOT/deploy/recover-staging-import.sh"
 fi
 if mysql_exec --execute='SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = "hearth"' | grep -Eq '^[1-9][0-9]*$'; then
   printf 'Hearth native database is non-empty without an imported marker; refusing to overwrite it.\n' >&2

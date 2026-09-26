@@ -6,7 +6,7 @@ hearth_assert_log_has_no_warning() {
     return 2
   }
   local matches status
-  if matches="$(rg -n -i '\bWARN(ING)?\b' "$1")"; then
+  if matches="$(grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$1")"; then
     printf 'WARNING output found in %s.\n' "$1" >&2
     return 1
   else

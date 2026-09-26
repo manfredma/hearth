@@ -4,6 +4,7 @@ umask 077
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SOURCE_ROOT/deploy/lib/staging-dump-state.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-import-recovery.sh"
 source_host="${HEARTH_STAGING_SOURCE_HOST:-124.221.143.25}"
 target_host="${HEARTH_STAGING_HOST:-129.211.6.82}"
 ssh_key="${HEARTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
@@ -26,8 +27,25 @@ ssh_cmd() {
 ssh_cmd "ubuntu@$target_host" "sudo -n install -d -o ubuntu -g ubuntu -m 0700 $import_root $state_root /etc/hearth /var/lib/hearth-staging"
 ssh_cmd "ubuntu@$target_host" "sudo -n getent group hearth >/dev/null || sudo -n groupadd --system hearth"
 ssh_cmd "ubuntu@$target_host" "sudo -n touch $lock_file && sudo -n chown ubuntu:ubuntu $lock_file && sudo -n chmod 0600 $lock_file"
-state="$(ssh_cmd "ubuntu@$target_host" "sudo -n flock -x $lock_file bash -c 'for path in $state_root/import-started $state_root/dump-ready $state_root/dump-clean $dump_file; do if test -e \"\$path\"; then printf \"1 \"; else printf \"0 \"; fi; done'")"
-read -r import_started dump_ready dump_clean dump_exists <<< "$state"
+state="$(ssh_cmd "ubuntu@$target_host" "sudo -n flock -x $lock_file bash -c 'for path in $state_root/import-started $state_root/imported $state_root/recovery-started $state_root/recovery-completed $state_root/dump-ready $state_root/dump-clean $dump_file; do if test -e \"\$path\"; then printf \"1 \"; else printf \"0 \"; fi; done'")"
+read -r import_started imported recovery_started recovery_completed dump_ready dump_clean dump_exists <<< "$state"
+import_state="$(hearth_staging_import_state "$import_started" "$imported" "$recovery_started" "$recovery_completed")"
+case "$import_state" in
+  imported)
+    [[ "$dump_ready" == 1 && "$dump_exists" == 1 ]] || { printf 'Imported Hearth staging database has no verified source dump; preserving state.\n' >&2; exit 1; }
+    ssh_cmd "ubuntu@$target_host" "sudo -n flock -x $lock_file bash -c 'test -f $dump_file && test ! -L $dump_file && gzip -t $dump_file'"
+    printf 'Hearth source dump and native import are already verified.\n'
+    exit 0
+    ;;
+  recovery-required|recovery-interrupted|recovery-finalize-marker)
+    [[ "$dump_ready" == 1 && "$dump_exists" == 1 ]] || { printf 'Hearth import recovery requires the preserved verified source dump.\n' >&2; exit 1; }
+    ssh_cmd "ubuntu@$target_host" "sudo -n flock -x $lock_file bash -c 'test -f $dump_file && test ! -L $dump_file && gzip -t $dump_file && test -r /etc/hearth/staging.env'"
+    printf 'Hearth import marker requires the guarded backup-and-swap recovery step; preserving the existing source dump.\n'
+    exit 0
+    ;;
+  fresh) ;;
+  *) printf 'Unknown Hearth import marker state.\n' >&2; exit 1 ;;
+esac
 dump_state="$(hearth_staging_dump_state "$import_started" "$dump_ready" "$dump_clean" "$dump_exists")"
 case "$dump_state" in
   import-started)
@@ -71,7 +89,7 @@ ssh_cmd "ubuntu@$source_host" "sudo -n docker exec $source_container sh -lc 'MYS
 ssh_cmd "ubuntu@$target_host" "sudo -n chown ubuntu:ubuntu '$remote_dump_tmp' && sudo -n chmod 0600 '$remote_dump_tmp'"
 scp "${SSH_OPTS[@]}" "$SOURCE_ROOT/deploy/lib/staging-dump-state.sh" "ubuntu@$target_host:$remote_state_helper"
 ssh_cmd "ubuntu@$target_host" "sudo -n chown ubuntu:ubuntu '$remote_state_helper' && sudo -n chmod 0600 '$remote_state_helper'"
-if rg -qi 'WARNING|WARN|ERROR' "$dump_log"; then
+if grep -Eqi 'WARNING|WARN|ERROR' "$dump_log"; then
   printf 'Hearth staging mysqldump emitted a warning or error.\n' >&2
   exit 1
 fi

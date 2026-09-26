@@ -46,7 +46,7 @@ else
   sudo -n -u ubuntu -- bash -c 'cd /opt/hearth-native/e2e-runtime && NODE_OPTIONS=--max-old-space-size=384 npm ci --ignore-scripts --no-audit --no-fund --maxsockets=1' 2>&1 | tee "$NPM_LOG"
   npm_status="${PIPESTATUS[0]}"
   set -e
-  if rg -n -i '\bWARN(ING)?\b' "$NPM_LOG"; then
+  if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$NPM_LOG"; then
     printf 'Hearth staging npm ci emitted WARNING; stopping.\n' >&2
     exit 1
   fi

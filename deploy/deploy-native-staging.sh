@@ -70,6 +70,11 @@ install -o ubuntu -g ubuntu -m 0644 "$HEARTH_JAR" "$r/app.jar"
 cd "$s"
 ./deploy/bootstrap-native-env.sh staging
 ./deploy/bootstrap-native-mysql.sh staging
+export HEARTH_STAGING_DEPLOYMENT_LOCK_HELD=1
+if [[ -e /var/lib/hearth-native-staging-migration/import-started \
+  && ! -e /var/lib/hearth-native-staging-migration/imported ]]; then
+  ./deploy/migrate-staging-docker-to-native.sh recover
+fi
 ./deploy/migrate-staging-docker-to-native.sh prepare
 ./deploy/install-native-runtime.sh staging
 if [[ -d /opt/hearth-native/current && ! -L /opt/hearth-native/current ]]; then rmdir /opt/hearth-native/current; fi

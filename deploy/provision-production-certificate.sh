@@ -84,7 +84,7 @@ EOF
     --non-interactive --agree-tos --quiet 2>&1 | tee "$certbot_log"
   certbot_status="${PIPESTATUS[0]}"
   set -e
-  if rg -n -i '\bwarn(ing)?\b' "$certbot_log"; then
+  if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$certbot_log"; then
     printf 'Certbot emitted WARNING; refusing production deployment.\n' >&2
     exit 1
   fi

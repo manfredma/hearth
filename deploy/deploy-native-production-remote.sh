@@ -195,7 +195,7 @@ cleanup_production_deployment() {
       nginx_log="$transaction_dir/nginx-rollback.log"
       install -o ubuntu -g ubuntu -m 0600 /dev/null "$nginx_log"
       if nginx -t -c /etc/bytedepth/production-green-public-nginx.conf > "$nginx_log" 2>&1; then
-        if rg -n -i '\bWARN(ING)?\b' "$nginx_log"; then rollback_status=1; fi
+        if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$nginx_log"; then rollback_status=1; fi
         systemctl reload "$nginx_unit" || rollback_status=1
       else
         cat "$nginx_log" >&2
@@ -261,7 +261,7 @@ install -o ubuntu -g ubuntu -m 0644 "$src/deploy/nginx/hearth-native-production.
 nginx_log="$transaction_dir/nginx-test.log"
 install -o ubuntu -g ubuntu -m 0600 /dev/null "$nginx_log"
 nginx -t -c /etc/bytedepth/production-green-public-nginx.conf > "$nginx_log" 2>&1 || { cat "$nginx_log" >&2; exit 1; }
-if rg -n -i '\bWARN(ING)?\b' "$nginx_log"; then printf 'Production Nginx configuration test emitted WARNING.\n' >&2; exit 1; fi
+if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$nginx_log"; then printf 'Production Nginx configuration test emitted WARNING.\n' >&2; exit 1; fi
 chown ubuntu:ubuntu "$nginx_log"
 chmod 0600 "$nginx_log"
 systemctl reload "$nginx_unit"
@@ -277,7 +277,7 @@ listeners_after="$(listener_snapshot)"
 expected_listeners="$(printf '%s\n127.0.0.1:18112\n127.0.0.1:18113\n' "$listeners_before" | sort -u)"
 [[ "$listeners_after" == "$expected_listeners" ]] || { printf 'Production listeners changed beyond Hearth loopback ports.\n' >&2; diff -u <(printf '%s\n' "$expected_listeners") <(printf '%s\n' "$listeners_after") >&2 || true; exit 1; }
 journal="$(journalctl --unit "$app_unit" --unit "$edge_unit" --since "$deployment_started" --no-pager --output=short-iso)"
-if rg -n -i '\bWARN(ING)?\b' <<< "$journal"; then printf 'Hearth production service journal emitted WARNING.\n' >&2; exit 1; fi
+if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' <<< "$journal"; then printf 'Hearth production service journal emitted WARNING.\n' >&2; exit 1; fi
 install -d -o ubuntu -g ubuntu -m 0700 /var/lib/hearth-deploy
 history_changed=1
 printf 'version=%s\ncommit=%s\ndeployed_at=%s\nruntime_mode=host-native\n---\n' "$tag" "$commit" "$(date -u +%FT%TZ)" >> /var/lib/hearth-deploy/release-history

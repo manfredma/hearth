@@ -13,7 +13,7 @@ HEARTH_TEST_SLOT_STARTED_AT=""
 hearth_test_slot_check_journal() {
   local service="$1" since="$2" journal
   journal="$(journalctl --unit "$service" --since "$since" --no-pager --output=short-iso)"
-  if rg -n -i '\bWARN(ING)?\b' <<< "$journal" >/dev/null; then
+  if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' <<< "$journal" >/dev/null; then
     printf 'Hearth staging service emitted WARNING during test slot: %s\n' "$service" >&2
     return 1
   fi
