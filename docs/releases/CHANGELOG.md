@@ -4,19 +4,9 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
-### Added
+### Changed
 
-- staging 集成 runner 执行真实 Maven Failsafe 测试，验证 run-scoped MySQL 快照迁移与 Redis 隔离读写；没有 completed Failsafe 测试时拒绝生成 evidence。
-
-### Fixed
-
-- 生产发布强制校验 integration/E2E 两份 passed evidence 与 Tag 完整 SHA 一致，并校验 Tag 与 POM 版本一致且未曾发布。
-- 生产版本切换使用独占锁、systemd 完整重启和失败回滚；部署后核对其他项目服务、公开路由、监听端口与 Hearth WARNING。
-- staging TLS 证书按完整版本目录校验后原子切换 current 指针；同步、部署和 test-slot 共用锁，避免证书/私钥混合及并发覆盖。
-- staging dump 使用唯一临时文件，并在共享锁内重新核对状态后原子落盘；不再覆盖缺少完成标记的 dump。
-- E2E 在凭据检查前先作废旧 evidence；E2E/Maven 进程树使用内存与 swap 上限；集成 Maven 离线只读复用共享 Maven 仓库；edge 运行目录归 `ubuntu:hearth`。
-- integration/E2E 必须同时确认测试进程和日志 `tee` 成功，并使用统一单词边界 WARNING 检查；生产 source/current 与 release/current 均以同目录原子 symlink 替换。
-- Hearth 命名门禁精确登记生产共享服务名与公开 host，并回归验证合法共享主机标识不会放行夹带的非法项目名。
+- `v0.1.0` release candidate 与本文件已冻结；staging 验收通过后，不在验收与合并之间追加代码或文档提交。
 
 ## 0.1.0 - 2026-09-26
 
@@ -28,6 +18,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 增加 124→129 的 staging TLS bundle 校验/同步流程，证书和私钥 bundle 归 `ubuntu` 持有，不修改其他项目的证书或 Nginx route。
 - 增加 175 Hearth 专属 Certbot account/config、webroot HTTP-01 签发和 systemd 自动续期；证书配置与私钥由 `ubuntu` 管理，renewal hook 只验证并 graceful reload 项目共享 Nginx。
 - 限制 staging Node 安装和 test-slot 的内存预算，避免与同机多项目构建争抢内存；资源不足时 fail-closed，不停止其他服务或自动重跑。
+- staging 集成 runner 执行真实 Maven Failsafe 测试，验证 run-scoped MySQL 快照迁移与 Redis 隔离读写；没有 completed Failsafe 测试时拒绝生成 evidence。
 - 首次 production 初始化只创建永久的共享管理员 identity：复用 staging 中现有管理员的 BCrypt password hash，不复制其他身份或 OAuth client，不创建临时账号。
 
 ### Added
@@ -56,6 +47,12 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 放行 OIDC RP-Initiated Logout 协议入口到端点自身校验，避免业务系统没有 Hearth Session 时被外层认证规则返回 403。
 - 修复 OAuth Client 将登录回调地址误用为退出回跳地址导致 Career RP-Initiated Logout 返回 403 的问题，分别保存并校验两类 URI。
 - 由 bytedepth 模板转换为独立的 Hearth 身份服务工程，模块、包名、运行时变量和服务名统一使用 Hearth 命名。
+- 生产发布强制校验 integration/E2E 两份 passed evidence 与 Tag 完整 SHA 一致，并校验 Tag 与 POM 版本一致且未曾发布；版本切换使用独占锁、原子 symlink、systemd 完整重启和失败回滚。
+- staging TLS 证书按完整版本目录校验后原子切换 current 指针；同步、部署和 test-slot 共用锁，避免证书/私钥混合及并发覆盖。
+- staging dump 使用唯一临时文件，并在共享锁内重新核对状态后原子落盘；不再覆盖缺少完成标记的 dump。
+- E2E 在凭据检查前先作废旧 evidence；E2E/Maven 进程树使用内存与 swap 上限；集成 Maven 离线只读复用共享 Maven 仓库；edge 运行目录归 `ubuntu:hearth`。
+- integration/E2E 校验测试进程和日志 `tee` 的全部退出状态，并用完整 WARNING 单词边界 fail-closed；生产部署后核对其他项目服务、公开路由与监听端口。
+- Hearth 命名门禁精确登记生产共享服务名与公开 host，并回归验证合法共享主机标识不会放行夹带的非法项目名。
 - 基础设施 JDBC 仓储保持可代理，避免 Spring Repository 异常转换在启动阶段失败。
 - 修正 Spring Security 7 Authorization Server endpoint matcher 绑定，并移除未使用的 Thymeleaf 模板依赖。
 - 修正登录页 CSRF 请求头名称，使服务端会话登录请求能够通过 Spring Security 校验。
