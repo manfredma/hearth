@@ -34,6 +34,8 @@ class StagingIntegrationProfileTest {
         assertTrue(compilerPlugin.contains("<fork>true</fork>")
                         && compilerPlugin.contains("<maxmem>128m</maxmem>"),
                 "in-process javac memory remains resident in Maven when Failsafe starts; fork javac with a bounded heap");
+        assertTrue(compilerPlugin.contains("<executable>javac</executable>"),
+                "resolve javac explicitly from the controlled Java 25 PATH instead of emitting compiler autodetection warnings");
     }
 
     private String stagingIntegrationProfile() throws Exception {

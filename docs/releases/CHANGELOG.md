@@ -20,7 +20,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 用系统 `grep` 的共享 WARNING-log verifier 取代错误的 ripgrep 参数/远端工具依赖，并在所有 build/test pipelines 中同时检查产生命令与 `tee` 的退出状态，避免日志缺失时写 passed evidence。
 - 修复 staging runtime manifest 的 awk 双引号转义，确保依赖未变化时能够复用既有 Playwright/Chromium runtime。
 - 对 transient systemd service 显式关闭 ExecStart 环境变量扩展，使 runner 自己的 Bash 参数展开与 stdin 凭据解析正常工作。
-- staging integration 在 512 MiB transient cgroup 中解绑已由本机/CI 完成的 PMD 生命周期执行、使用受限 forked javac，并收紧 Failsafe fork heap，避免 Maven 与测试 JVM合计触发 OOM。
+- staging integration 在 512 MiB transient cgroup 中解绑已由本机/CI 完成的 PMD 生命周期执行、使用显式可解析且受限的 forked javac，并收紧 Failsafe fork heap，避免 Maven 与测试 JVM合计触发 OOM。
 
 ## 0.1.0 - 2026-09-26
 

@@ -247,6 +247,7 @@
                             <!-- Do not retain javac's memory in Maven before the Failsafe fork starts. -->
                             <fork>true</fork>
                             <maxmem>128m</maxmem>
+                            <executable>javac</executable>
                         </configuration>
                     </plugin>
                     <!-- Local/CI quality gates run PMD. Unbind its lifecycle execution so
