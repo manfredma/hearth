@@ -33,7 +33,7 @@ production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.b
 
 ## Staging 集成/E2E 资源隔离
 
-每次 integration/E2E run 生成带唯一 run-id 的 MySQL logical database/user，并从 staging Hearth DB 做一致性快照；测试写入不会落到 staging 主库。Maven Failsafe 的 `NativeInfrastructureIT` 验证快照中的 Flyway 迁移与永久管理员、MySQL 临时表读写，以及 Redis 隔离 DB/namespace 的真实 set/get/delete。集成 runner 离线只读复用宿主机唯一共享 Maven 仓库 `/opt/shared-maven/repository`，持有 `/opt/shared-maven/repository.lock` 共享锁；不在 Hearth 下创建独立 artifact cache。集成测试使用 Redis DB 12，E2E 使用 Redis DB 13，并分别带 `hearth:staging:test:<suite>:<run-id>:` namespace。Redis DB 14/15 保留给 ByteDepth 的集成/E2E，不能分配给 Hearth。
+每次 staging 部署在 `/opt/shared-maven/repository.lock` 全局排他锁下运行 `deploy/bootstrap-staging-maven-runtime.sh`，通过 Maven Wrapper 执行 `clean install -DskipTests` 和 `verify -DskipTests`，预热唯一共享 Maven 仓库 `/opt/shared-maven/repository`；不会运行集成测试，也不会另建 Hearth Maven cache。随后每次 integration/E2E run 生成带唯一 run-id 的 MySQL logical database/user，并从 staging Hearth DB 做一致性快照；测试写入不会落到 staging 主库。Maven Failsafe 的 `NativeInfrastructureIT` 验证快照中的 Flyway 迁移与永久管理员、MySQL 临时表读写，以及 Redis 隔离 DB/namespace 的真实 set/get/delete。集成 runner 持共享 Maven 仓库的只读锁并在 `-o` 离线模式复用该仓库。集成测试使用 Redis DB 12，E2E 使用 Redis DB 13，并分别带 `hearth:staging:test:<suite>:<run-id>:` namespace。Redis DB 14/15 保留给 ByteDepth 的集成/E2E，不能分配给 Hearth。
 
 测试 app 使用 `staging-test` Spring profile 和独立 systemd test-slot。test-slot 与 staging app 声明冲突，测试期间 edge 和共享 Nginx 保持不变；测试结束后脚本停止 test-slot、仅清理该 run 的 Redis namespace/MySQL 库和用户、恢复 staging app，并验证服务健康。存在不确定状态时保留 manifest 与资源，不自动删除。
 

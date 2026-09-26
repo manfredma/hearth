@@ -75,9 +75,10 @@ install -o ubuntu -g ubuntu -m 0644 "$s/deploy/hearth-native.conf.example" /etc/
 install -o ubuntu -g ubuntu -m 0644 "$HEARTH_JAR" "$r/app.jar"
 [[ "$(sha256sum "$r/app.jar" | awk '{print $1}')" == "$HEARTH_JAR_SHA" ]]
 cd "$s"
+export HEARTH_STAGING_DEPLOYMENT_LOCK_HELD=1
+./deploy/bootstrap-staging-maven-runtime.sh
 ./deploy/bootstrap-native-env.sh staging
 ./deploy/bootstrap-native-mysql.sh staging
-export HEARTH_STAGING_DEPLOYMENT_LOCK_HELD=1
 if [[ -e /var/lib/hearth-native-staging-migration/import-started \
   && ! -e /var/lib/hearth-native-staging-migration/imported ]]; then
   if [[ -n "$HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA" ]]; then
