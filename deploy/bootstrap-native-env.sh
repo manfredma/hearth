@@ -26,11 +26,18 @@ redis_password="$(awk '$1 == "requirepass" {print $2; exit}' "$REDIS_CONF")"
 [[ -n "$redis_password" ]] || { printf 'Shared Redis requirepass is missing.\n' >&2; exit 1; }
 source_env="$ENV_DIR/$ENVIRONMENT.env"
 if [[ ! -r "$source_env" && "$ENVIRONMENT" == staging ]]; then source_env=/opt/hearth/deploy/.env; fi
-[[ -r "$source_env" ]] || { printf 'Missing Hearth owner environment: %s\n' "$source_env" >&2; exit 1; }
 read_env() { awk -F= -v key="$1" '$1 == key {print substr($0, index($0, "=") + 1); exit}' "$source_env"; }
-issuer="$(read_env HEARTH_OIDC_ISSUER)"
-signing_key="$(read_env HEARTH_SIGNING_KEY)"
-remember_key="$(read_env HEARTH_REMEMBER_ME_KEY)"
+issuer=""
+signing_key=""
+remember_key=""
+if [[ -r "$source_env" ]]; then
+  issuer="$(read_env HEARTH_OIDC_ISSUER)"
+  signing_key="$(read_env HEARTH_SIGNING_KEY)"
+  remember_key="$(read_env HEARTH_REMEMBER_ME_KEY)"
+elif [[ "$ENVIRONMENT" != production ]]; then
+  printf 'Missing Hearth owner environment: %s\n' "$source_env" >&2
+  exit 1
+fi
 if [[ "$ENVIRONMENT" == production ]]; then
   issuer="$ISSUER"
   signing_key="$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | openssl pkcs8 -topk8 -nocrypt -outform DER 2>/dev/null | base64 | tr -d '\n')"
