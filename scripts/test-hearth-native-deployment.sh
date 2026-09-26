@@ -4,6 +4,7 @@ readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 for name in deploy-native-staging.sh deploy-native-production-remote.sh; do
   test -x "$ROOT/deploy/$name"
 done
+test -x "$ROOT/deploy/bootstrap-staging-runtime.sh"
 grep -Fq './deploy/bootstrap-native-env.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
 grep -Fq './deploy/bootstrap-native-env.sh production' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq './deploy/bootstrap-native-mysql.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
