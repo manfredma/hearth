@@ -219,7 +219,7 @@
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>
-                            <argLine>-Xmx256m ${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${maven.repo.local}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
+                            <argLine>-Xmx128m ${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${maven.repo.local}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <systemPropertyVariables>
                                 <hearth.it.redis.password>${env.HEARTH_IT_REDIS_PASSWORD}</hearth.it.redis.password>
                             </systemPropertyVariables>
@@ -238,6 +238,15 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                    <!-- Local/CI quality gates run PMD. Keep it out of the constrained
+                         staging integration cgroup, which also contains Maven and Failsafe. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-pmd-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
                         </configuration>
                     </plugin>
                 </plugins>
