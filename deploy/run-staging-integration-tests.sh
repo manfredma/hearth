@@ -53,9 +53,7 @@ chmod 0600 "$maven_log"
 summary="$SOURCE_ROOT/hearth-start/target/failsafe-reports/failsafe-summary.xml"
 rm -f -- "$summary"
 set +e
-systemd-run --scope --quiet --wait --pipe \
-  --unit="hearth-staging-integration-$run_id.scope" \
-  --property=MemoryMax=512M --property=MemorySwapMax=0 \
+systemd-run --unit="hearth-staging-integration-$run_id.service" --collect --quiet --wait --pipe --property=MemoryMax=512M --property=MemorySwapMax=0 \
   /usr/bin/bash -c '
     set -Eeuo pipefail
     while IFS= read -r entry; do

@@ -57,9 +57,7 @@ available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
 cd "$SOURCE_ROOT"
 set +e
 printf '%s\n%s\n' "$HEARTH_STAGING_E2E_USERNAME" "$HEARTH_STAGING_E2E_PASSWORD" | \
-  systemd-run --scope --quiet --wait --pipe \
-    --unit="hearth-staging-e2e-$run_id.scope" \
-    --property=MemoryMax=512M --property=MemorySwapMax=0 \
+  systemd-run --unit="hearth-staging-e2e-$run_id.service" --collect --quiet --wait --pipe --property=MemoryMax=512M --property=MemorySwapMax=0 \
     /usr/bin/bash -c '
     set -Eeuo pipefail
     IFS= read -r admin_username

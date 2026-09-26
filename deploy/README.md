@@ -37,7 +37,7 @@ production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.b
 
 测试 app 使用 `staging-test` Spring profile 和独立 systemd test-slot。test-slot 与 staging app 声明冲突，测试期间 edge 和共享 Nginx 保持不变；测试结束后脚本停止 test-slot、仅清理该 run 的 Redis namespace/MySQL 库和用户、恢复 staging app，并验证服务健康。存在不确定状态时保留 manifest 与资源，不自动删除。
 
-共享 129 主机曾发生全局 OOM：内核日志明确记录被杀进程是 `release-platform` 的 `npm ci`（RSS 约 1.07 GiB）；当时 Hearth 源 MySQL 仅约 200 MB，native logical DB 尚未导入，不能据此把 OOM 归因于 Hearth dump。为避免复发，Hearth staging npm runtime 仅在 `MemAvailable` 至少 512 MiB 时安装，并将 Node heap 限为 384 MiB、网络 socket 限为 1；测试 app 的 systemd 上限为 384 MiB。Maven integration 与 Playwright/Chromium 子进程分别放入 `MemoryMax=512M`、`MemorySwapMax=0` 的 scope，Node E2E heap 限为 256 MiB；启动前仍需通过 test-slot 内存门槛。检查失败时保持现有项目服务不变，不通过停止其他项目释放资源，也不盲目重跑。
+共享 129 主机曾发生全局 OOM：内核日志明确记录被杀进程是 `release-platform` 的 `npm ci`（RSS 约 1.07 GiB）；当时 Hearth 源 MySQL 仅约 200 MB，native logical DB 尚未导入，不能据此把 OOM 归因于 Hearth dump。为避免复发，Hearth staging npm runtime 仅在 `MemAvailable` 至少 512 MiB 时安装，并将 Node heap 限为 384 MiB、网络 socket 限为 1；测试 app 的 systemd 上限为 384 MiB。Maven integration 与 Playwright/Chromium 使用唯一 run-id 的 transient systemd service units，设置 `MemoryMax=512M`、`MemorySwapMax=0`，Node E2E heap 限为 256 MiB；启动前仍需通过 test-slot 内存门槛。检查失败时保持现有项目服务不变，不通过停止其他项目释放资源，也不盲目重跑。
 
 在 129 上依次执行：
 
