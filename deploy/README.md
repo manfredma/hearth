@@ -1,12 +1,21 @@
 # Hearth 部署说明
 
-Hearth 是统一身份服务。staging 入口为 `https://staging-hearth.bytedepth.cn/`。生产与 staging 必须使用不同的数据目录、Redis namespace、session cookie、issuer 和签名密钥；staging 不得复用生产凭据或数据库。
+Hearth 是统一身份服务。staging 入口为 `https://staging-hearth.bytedepth.cn/`，production 入口为 `https://hearth.bytedepth.cn/`。Hearth 与 ByteDepth、Career、Daylilt、Toolbox 共享宿主机基础设施，但使用独立 logical database/user、Redis DB/namespace、端口、目录、systemd unit、route、凭据和 evidence。
+
+## 当前 native 拓扑
+
+| 环境 | 主机 | app | edge | MySQL | Redis | 数据根 |
+|---|---|---:|---:|---|---|---|
+| staging | 129 | 18110 | 18111 | 13306 / hearth / hearth_staging_native | 16379 / DB 5 / hearth:staging: | /data/hearth-native-staging |
+| production | 175 | 18112 | 18113 | 13306 / hearth / hearth_production_native | 16379 / DB 6 / hearth:production: | /data/hearth-native-production |
+
+Hearth 不绑定 80/443；共享公网 Nginx 只加载项目专属 server 配置并 reload。旧 124 Docker Compose 仅作为 staging 迁移输入，不能继续作为验收入口。
 
 ## 配置
 
 复制 `deploy/.env.example` 或 `deploy/.env.staging.example` 为宿主机私有的 `.env`，并由部署系统注入真正的数据库、Redis、RSA 私钥和 Remember-Me 签名密钥配置。`HEARTH_SIGNING_KEY` 使用 base64 编码的 PKCS#8 RSA 私钥 DER；`HEARTH_REMEMBER_ME_KEY` 必须是独立的高熵随机值，staging/production 不得共用。密钥不得提交到仓库。不要把 `.env` 提交到仓库。`HEARTH_COMMIT_ID` 与 `HEARTH_BUILT_AT` 必须由发布流程显式注入，不接受隐式默认值。
 
-生产使用 `docker-compose.single-host.yml`，staging 使用它叠加 `docker-compose.staging.yml`。服务名统一带 `hearth-` 前缀，避免与同机其他项目的 compose DNS 别名冲突；只有 `hearth-app` 接入共享 `bytedepth_default` 网络供边缘 Nginx 反向代理，MySQL/Redis 保持在 Hearth 私有网络。
+旧 Compose 文件和 hearth-* 服务只用于理解迁移输入与回退边界；当前 staging/production 正常运行必须使用 native systemd app/edge、共享 MySQL/Redis 和宿主机公共 Nginx。
 
 ## 验证边界
 
@@ -17,13 +26,13 @@ bash scripts/test-deploy-hearth-config.sh
 docker compose --env-file deploy/.env -f deploy/docker-compose.single-host.yml config --quiet
 ```
 
-staging 部署使用命名分支或 Tag：
+native staging 部署使用命名候选分支或 Tag：
 
 ```bash
 bash deploy/deploy-staging.sh <candidate-branch-or-tag>
 ```
 
-脚本使用显式的 SSH 私钥和 `known_hosts`，在 124 上获取候选 ref，重建完整 Compose 服务，等待 Flyway/应用健康检查，再验证 HTTPS OIDC discovery；staging 的 `.env` 由宿主机私有配置提供，脚本不会把凭据写入 Git 或命令行。
+脚本使用显式的 SSH 私钥和 `known_hosts`，在 129 上传输外部构建 JAR、初始化共享 logical database/Redis namespace、重启 native app/edge，等待 Flyway/应用健康检查，再验证 HTTPS OIDC discovery；环境文件由宿主机私有配置提供，脚本不会把凭据写入 Git 或命令行。
 
 部署脚本默认通过宿主机 root 的 GitHub SSH 凭据获取官方 Hearth 仓库：`git@github.com:manfredma/hearth.git`。如果 staging 宿主机暂时无法通过 SSH 访问 GitHub，可显式设置 `HEARTH_REPOSITORY_URL`，指向宿主机上的只读 Git mirror/bundle；该覆盖不会改变默认源仓库。
 

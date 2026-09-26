@@ -4,6 +4,10 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
+### Changed
+
+- 将 Hearth staging/production 规划为与 ByteDepth、Career、Daylilt、Toolbox 共用宿主机基础设施的 native 部署，使用独立 MySQL logical database、Redis DB/namespace、端口、目录、systemd unit 和 Nginx route。
+
 ### Added
 
 - 初始化 Hearth 统一身份中心：OIDC 登录边界、服务端 Redis Session、MySQL 身份目录和应用访问数据模型。
