@@ -253,6 +253,12 @@
                                 <artifactId>byte-buddy-agent</artifactId>
                                 <version>${byte-buddy.version}</version>
                             </dependency>
+                            <!-- Pin the dynamically selected provider so the shared staging cache can be prewarmed offline. -->
+                            <dependency>
+                                <groupId>org.apache.maven.surefire</groupId>
+                                <artifactId>surefire-junit-platform</artifactId>
+                                <version>3.2.5</version>
+                            </dependency>
                         </dependencies>
                         <configuration>
                             <!--
