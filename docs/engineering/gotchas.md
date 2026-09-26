@@ -27,3 +27,4 @@
 - 未登录可访问的 SPA 原型入口必须同时加入前端路由和 `SecurityConfig.publicRequestMatchers()`，并用安全路由单元测试锁定白名单；否则页面会被统一认证规则返回 403。
 - Hearth 命名门禁禁止复制 bytedepth 的运行时标识，但允许明确登记的业务应用 staging 域名作为 OAuth 来源应用展示数据；新增来源域名时必须同步更新门禁测试，不能放宽为任意 bytedepth 字符串。
 - Native 多服务主机的生产安全检查需要引用真实的共享 systemd unit 与公开域名；命名门禁只允许这些完整标识作为独立行，并有混入 `bytedepth-app` 的负向测试，不能因同一行出现合法域名就忽略整行。
+- 更新运行服务使用的 current symlink 时，不能用 `ln -sfn` 直接覆盖；先在同一目录以服务拥有者创建临时 symlink，再通过同文件系统原子 rename 替换，并在失败时恢复旧指针。

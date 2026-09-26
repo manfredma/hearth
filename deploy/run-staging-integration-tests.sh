@@ -12,6 +12,7 @@ readonly BASE=https://staging-hearth.bytedepth.cn
 readonly DOMAIN=staging-hearth.bytedepth.cn
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
 source "$SOURCE_ROOT/deploy/lib/invalidate-staging-evidence.sh"
+source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
 commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
 deployed="$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")"
 [[ "$commit" == "$deployed" && "$commit" =~ ^[0-9a-f]{40}$ ]] || { printf 'Hearth integration SHA is not deployed.\n' >&2; exit 1; }
@@ -68,13 +69,14 @@ systemd-run --scope --quiet --wait --pipe \
     cd /opt/hearth-native/source/current
     exec sudo -n -u ubuntu --preserve-env=HEARTH_DATASOURCE_URL,HEARTH_DATASOURCE_USERNAME,HEARTH_DATASOURCE_PASSWORD,HEARTH_REDIS_HOST,HEARTH_REDIS_PORT,HEARTH_REDIS_DATABASE,HEARTH_REDIS_PASSWORD,HEARTH_SESSION_REDIS_NAMESPACE,HEARTH_IT_REDIS_PASSWORD,MAVEN_OPTS -- ./mvnw --offline -B -Dmaven.repo.local=/opt/shared-maven/repository -Pstaging-integration -pl hearth-start -am verify
   ' 2>&1 | tee "$maven_log"
-maven_status="${PIPESTATUS[0]}"
+pipeline_statuses=("${PIPESTATUS[@]}")
 set -e
 if rg -Eqi '\bWARN(ING)?\b' "$maven_log"; then
   printf 'Hearth Maven staging integration emitted WARNING.\n' >&2
   exit 1
 fi
-(( maven_status == 0 )) || { printf 'Hearth Maven staging integration failed.\n' >&2; exit "$maven_status"; }
+[[ ${#pipeline_statuses[@]} -eq 2 ]] || { printf 'Maven output pipeline status is incomplete.\n' >&2; exit 1; }
+hearth_require_successful_pipeline "${pipeline_statuses[@]}" || { printf 'Hearth Maven staging integration or log capture failed.\n' >&2; exit 1; }
 [[ -f "$summary" ]] || { printf 'Maven Failsafe summary is missing.\n' >&2; exit 1; }
 completed="$(sed -n 's/.*<completed>\([0-9][0-9]*\)<\/completed>.*/\1/p' "$summary")"
 failures="$(sed -n 's/.*<failures>\([0-9][0-9]*\)<\/failures>.*/\1/p' "$summary")"

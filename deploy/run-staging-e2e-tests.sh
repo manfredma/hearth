@@ -11,6 +11,7 @@ readonly DOMAIN=staging-hearth.bytedepth.cn
 readonly CHROME=/opt/shared-e2e/chrome-linux64/chrome
 readonly RUNTIME_MANIFEST="$STATE_ROOT/e2e-runtime.manifest"
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
 install -d -o ubuntu -g ubuntu -m 0700 "$STATE_ROOT" "$STATE_ROOT/test-history"
 touch "$LOCK"
 chown ubuntu:ubuntu "$LOCK"
@@ -74,10 +75,11 @@ printf '%s\n%s\n' "$HEARTH_STAGING_E2E_USERNAME" "$HEARTH_STAGING_E2E_PASSWORD" 
       PLAYWRIGHT_CHROMIUM_EXECUTABLE="$3" \
       npm run test:e2e
   ' hearth-e2e "$BASE" "$commit" "$CHROME" "$DOMAIN" 2>&1 | tee "$log"
-test_status="${PIPESTATUS[1]}"
+pipeline_statuses=("${PIPESTATUS[@]}")
 set -e
-(( test_status == 0 )) || { printf 'Hearth staging E2E failed.\n' >&2; exit "$test_status"; }
-if rg -Eqi '\[WARN(ING)?\]|WARN(ING)?[: ]' "$log"; then
+[[ ${#pipeline_statuses[@]} -eq 3 ]] || { printf 'E2E output pipeline status is incomplete.\n' >&2; exit 1; }
+hearth_require_successful_pipeline "${pipeline_statuses[@]}" || { printf 'Hearth Playwright or its log capture failed.\n' >&2; exit 1; }
+if rg -Eqi '\bWARN(ING)?\b' "$log"; then
   printf 'Hearth staging E2E emitted WARNING.\n' >&2
   exit 1
 fi

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+if [[ $# -eq 3 && "$1" == -Tf ]]; then
+  shift
+  printf '%s\n' -Tf >> "${HEARTH_ATOMIC_MV_LOG:?atomic mv test log is required}"
+  /usr/bin/perl -e 'rename($ARGV[0], $ARGV[1]) or die "atomic rename failed: $!\n"' "$1" "$2"
+else
+  /bin/mv "$@"
+fi

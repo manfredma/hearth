@@ -38,4 +38,8 @@ credentials_line="$(grep -n 'E2E administrator credentials must be explicitly in
 grep -Fq 'hearth_test_slot_begin e2e' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'systemd-run --scope' "$ROOT/deploy/run-staging-integration-tests.sh"
+grep -Fq 'pipeline_statuses=("${PIPESTATUS[@]}")' "$ROOT/deploy/run-staging-integration-tests.sh"
+grep -Fq 'hearth_require_successful_pipeline' "$ROOT/deploy/run-staging-integration-tests.sh"
+grep -Fq "rg -Eqi '\\bWARN(ING)?\\b'" "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'pipeline_statuses=("${PIPESTATUS[@]}")' "$ROOT/deploy/run-staging-e2e-tests.sh"
 printf 'Hearth staging test-slot isolation contract passed.\n'

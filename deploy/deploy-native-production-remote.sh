@@ -225,7 +225,15 @@ cd "$src"
 install -o ubuntu -g ubuntu -m 0644 "$HEARTH_JAR" "$rel/app.jar"
 [[ "$(sha256sum "$rel/app.jar" | awk '{print $1}')" == "$HEARTH_JAR_SHA" ]]
 source "$src/deploy/lib/production-release-transaction.sh"
-hearth_production_link() { sudo -n -u ubuntu -- ln -sfn "$1" "$2"; }
+hearth_production_link() {
+  local staged_link="${2}.new.$$.${RANDOM}"
+  [[ ! -e "$staged_link" && ! -L "$staged_link" ]] || return 1
+  sudo -n -u ubuntu -- ln -s "$1" "$staged_link"
+  if ! sudo -n -u ubuntu -- mv -Tf "$staged_link" "$2"; then
+    sudo -n -u ubuntu -- rm -f -- "$staged_link"
+    return 1
+  fi
+}
 release_transaction_loaded=1
 hearth_production_release_begin /opt/hearth-native/current /opt/hearth-native/source/current "$rel" "$src" "$app_unit" "$edge_unit"
 ready=0

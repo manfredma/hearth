@@ -3,7 +3,13 @@
 HEARTH_PRODUCTION_TXN_ACTIVE=0
 
 hearth_production_link() {
-  ln -sfn "$1" "$2"
+  local staged_link="${2}.new.$$.${RANDOM}"
+  [[ ! -e "$staged_link" && ! -L "$staged_link" ]] || return 1
+  ln -s "$1" "$staged_link"
+  if ! mv -Tf "$staged_link" "$2"; then
+    rm -f -- "$staged_link"
+    return 1
+  fi
 }
 
 hearth_production_release_begin() {
@@ -30,10 +36,10 @@ hearth_production_release_begin() {
   if systemctl is-active --quiet "$edge_service"; then HEARTH_PRODUCTION_TXN_EDGE_WAS_ACTIVE=1; else HEARTH_PRODUCTION_TXN_EDGE_WAS_ACTIVE=0; fi
 
   HEARTH_PRODUCTION_TXN_ACTIVE=1
-  hearth_production_link "$source_target" "$source_link"
-  hearth_production_link "$release_target" "$current_link"
-  systemctl restart "$app_service"
-  systemctl restart "$edge_service"
+  hearth_production_link "$source_target" "$source_link" || return 1
+  hearth_production_link "$release_target" "$current_link" || return 1
+  systemctl restart "$app_service" || return 1
+  systemctl restart "$edge_service" || return 1
 }
 
 hearth_production_release_commit() {
