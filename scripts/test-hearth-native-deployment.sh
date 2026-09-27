@@ -117,7 +117,7 @@ done
 grep -Fq 'captureRequestUrl(page' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 ! grep -Fq '.route(' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq "url.hostname === 'staging-career.bytedepth.cn'" "$ROOT/tests/e2e/native-oidc.spec.mjs"
-grep -Fq "name: /允许 Hearth E2E 使用你的 Hearth 账号/" "$ROOT/tests/e2e/native-oidc.spec.mjs"
+grep -Fq '允许 ${client.clientId} 使用你的 Hearth 账号' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq "sessionAfterLogout.json()).authenticated).toBe(false)" "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq '/version' "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/security/SecurityConfig.java"
 test -f "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/identity/BuildInfoController.java"

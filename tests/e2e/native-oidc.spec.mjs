@@ -135,8 +135,10 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       challenge,
     }));
     await expect(page).toHaveURL(/\/oauth2\/consent(?:\?|$)/);
-    await expect(page.getByRole('heading', {name: /允许 Hearth E2E 使用你的 Hearth 账号/})).toBeVisible();
-    await expect(page.getByText('Hearth E2E 可访问')).toBeVisible();
+    await expect(page.getByRole('heading', {
+      name: new RegExp(`允许 ${client.clientId} 使用你的 Hearth 账号`),
+    })).toBeVisible();
+    await expect(page.getByText(`${client.clientId} 可访问`)).toBeVisible();
     await expect(page.getByText('基本资料')).toBeVisible();
     await expect(page.getByText('查看你的显示名称和头像')).toBeVisible();
     await expect(page.getByText('邮箱地址')).toBeVisible();
