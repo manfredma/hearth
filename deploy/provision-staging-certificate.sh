@@ -115,17 +115,40 @@ EOF
   mv "$chain_tmp" "$archive_root/chain1.pem"
   mv "$fullchain_tmp" "$archive_root/fullchain1.pem"
   mv "$key_tmp" "$archive_root/privkey1.pem"
-  sudo -n -u ubuntu -- ln -s "../../archive/$DOMAIN/cert1.pem" "$live_root/cert.pem"
-  sudo -n -u ubuntu -- ln -s "../../archive/$DOMAIN/privkey1.pem" "$live_root/privkey.pem"
-  sudo -n -u ubuntu -- ln -s "../../archive/$DOMAIN/chain1.pem" "$live_root/chain.pem"
-  sudo -n -u ubuntu -- ln -s "../../archive/$DOMAIN/fullchain1.pem" "$live_root/fullchain.pem"
   mv "$renewal_tmp" "$renewal_conf"
   chown ubuntu:ubuntu "$renewal_conf"
 
-elif [[ ! -f "$renewal_conf" || -L "$renewal_conf" || ! -f "$CERT" || ! -f "$PRIVATE_KEY" ]]; then
+elif [[ ! -f "$renewal_conf" || -L "$renewal_conf" ]]; then
   printf 'Hearth staging Certbot lineage is incomplete; preserving state and refusing renewal setup.\n' >&2
   exit 1
 fi
+
+install -d -o ubuntu -g ubuntu -m 0700 "$CERTBOT_ROOT/archive" "$CERTBOT_ROOT/live" "$archive_root" "$live_root"
+ensure_live_link() {
+  local name="$1" archive_prefix="$2" live_path="$live_root/$1" target archive_file
+  if [[ -L "$live_path" ]]; then
+    target="$(readlink "$live_path")"
+    [[ "$target" == "../../archive/$DOMAIN/"* ]] || { printf 'Unexpected Hearth Certbot live symlink: %s\n' "$live_path" >&2; return 1; }
+    archive_file="${target##*/}"
+    [[ "$archive_file" =~ ^${archive_prefix}[1-9][0-9]*\.pem$ \
+      && -f "$archive_root/$archive_file" && ! -L "$archive_root/$archive_file" ]] || {
+      printf 'Hearth Certbot live symlink target is missing or invalid: %s\n' "$live_path" >&2
+      return 1
+    }
+    return 0
+  fi
+  [[ ! -e "$live_path" ]] || { printf 'Unexpected non-symlink Hearth Certbot live path: %s\n' "$live_path" >&2; return 1; }
+  archive_file="${archive_prefix}1.pem"
+  [[ -f "$archive_root/$archive_file" && ! -L "$archive_root/$archive_file" ]] || {
+    printf 'Cannot repair Hearth Certbot lineage; archive file is missing: %s\n' "$archive_root/$archive_file" >&2
+    return 1
+  }
+  sudo -n -u ubuntu -- ln -s "../../archive/$DOMAIN/$archive_file" "$live_path"
+}
+ensure_live_link cert.pem cert
+ensure_live_link privkey.pem privkey
+ensure_live_link chain.pem chain
+ensure_live_link fullchain.pem fullchain
 
 if [[ ! -f "$adoption_marker" || -L "$adoption_marker" ]]; then
   certbot_log="$(mktemp "$ROOT/letsencrypt-logs/.hearth-certbot-dry-run.XXXXXX")"

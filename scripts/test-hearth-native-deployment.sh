@@ -74,6 +74,8 @@ grep -Fq 'for renewal in /etc/letsencrypt/renewal/*.conf' "$ROOT/deploy/provisio
 grep -Fq 'for renewal in /etc/letsencrypt/renewal/*.conf' "$ROOT/deploy/provision-staging-certificate.sh"
 grep -Fq '"$CERTBOT_ROOT/live"' "$ROOT/deploy/provision-staging-certificate.sh"
 grep -Fq '"$CERTBOT_ROOT/accounts/acme-v02.api.letsencrypt.org/directory"' "$ROOT/deploy/provision-staging-certificate.sh"
+grep -Fq 'ensure_live_link()' "$ROOT/deploy/provision-staging-certificate.sh"
+grep -Fq 'Unexpected Hearth Certbot live symlink' "$ROOT/deploy/provision-staging-certificate.sh"
 grep -Fq 'renew --cert-name "$DOMAIN" --dry-run' "$ROOT/deploy/provision-staging-certificate.sh"
 ! grep -Fq 'certonly --webroot' "$ROOT/deploy/provision-staging-certificate.sh"
 grep -Fq 'certificates)' "$ROOT/deploy/provision-staging-certificate.sh"
