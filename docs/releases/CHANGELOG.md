@@ -24,6 +24,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Fixed
 
+- 生产监听端口验收统一 IPv4 loopback 与 IPv4-mapped IPv6 loopback 表示，避免 Java 双栈监听被误判为超出 Hearth 端口范围。
 - 生产部署等待共享 Nginx 完成 reload 后再校验证书，并在失败回滚时先恢复 Hearth release 指针与服务，再恢复配置文件，避免留下半发布状态。
 - 本地质量入口捕获每步输出并阻断 WARN/WARNING、非零退出和日志捕获失败；恢复对 PR 变更 Java 类的 100% 行、分支、方法覆盖率检查，合并各模块单元测试执行数据后逐模块检查实际报告。
 - 身份目录 upsert 后的查询补齐 RowMapper 读取的 issuer/subject 列，并补充 JDBC 边界回归测试。

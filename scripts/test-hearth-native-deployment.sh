@@ -25,6 +25,8 @@ config_rollback_line="$(grep -nF 'hearth_production_config_rollback || rollback_
 [[ -n "$release_rollback_line" && -n "$config_rollback_line" && "$release_rollback_line" -lt "$config_rollback_line" ]]
 grep -Fq 'hearth_wait_for_production_certificate' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq 'hearth_wait_for_production_certificate "$domain"' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'sub(/^\[::ffff:/,"",addr)' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'sub(/\]:/,":",addr)' "$ROOT/deploy/deploy-native-production-remote.sh"
 shared_units=(
   bytedepth-production-app.service
   bytedepth-production-edge.service

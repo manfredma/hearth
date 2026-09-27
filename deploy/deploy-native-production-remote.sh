@@ -151,7 +151,9 @@ public_route_snapshot() {
     printf '%s=%s\n' "$host" "$code"
   done
 }
-listener_snapshot() { ss -ltnH | awk '{print $4}' | sort -u; }
+listener_snapshot() {
+  ss -ltnH | awk '{addr=$4; sub(/^\[::ffff:/,"",addr); sub(/\]:/,":",addr); print addr}' | sort -u
+}
 shared_services_before="$(shared_service_snapshot)"
 routes_before="$(public_route_snapshot)"
 listeners_before="$(listener_snapshot)"
