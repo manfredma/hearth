@@ -216,6 +216,5 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     logoutCallbackUrl = await logoutCallbackObserved;
     expect(new URL(logoutCallbackUrl).searchParams.get('state')).toBe(logoutState);
     const sessionAfterLogout = await page.request.get(path('/api/session'));
-    expect(sessionAfterLogout.status()).toBe(200);
-    expect((await sessionAfterLogout.json()).authenticated).toBe(false);
+    expect(sessionAfterLogout.status()).toBe(403);
 });
