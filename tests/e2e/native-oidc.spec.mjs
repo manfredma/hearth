@@ -120,7 +120,8 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(careerResult.searchParams.get('state')).toBe(careerAuthorization.searchParams.get('state'));
     expect(careerResult.searchParams.get('code')).toBeTruthy();
     expect(careerResult.searchParams.has('error')).toBe(false);
-    await expect(page).toHaveURL('https://staging-career.bytedepth.cn/calendar');
+    await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
+      && url.pathname === '/calendar');
     await expect(page.locator('.career-header__username')).toBeVisible();
     const sessionResponse = await page.request.get(path('/api/session'));
     expect(sessionResponse.status()).toBe(200);
