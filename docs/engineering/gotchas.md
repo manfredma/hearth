@@ -34,6 +34,7 @@
 - staging 主机对公网暴露 SSH 且持续有未认证探测；Hearth native 发布和 Docker→native 状态检查若为每条 SSH/SCP 命令分别建立连接，可能触发 sshd `MaxStartups` 并被远端无提示丢弃。两个脚本必须在上传/迁移前用同一 `ControlPath` 建立 SSH multiplex（`ControlMaster=auto`、短期 `ControlPersist`），并对 master 建立使用有限 5 次重试；不得通过调高/修改多项目主机的全局 sshd 参数规避。
 - staging E2E 的管理员凭据先经 stdin 传入 root runner，再由 `sudo` 降权给 ubuntu 启动 Playwright；`sudo` 默认清理环境变量，必须显式 `--preserve-env=HEARTH_E2E_ADMIN_USERNAME,HEARTH_E2E_ADMIN_PASSWORD`。只能保留变量名，禁止把密码放进命令参数；契约测试必须覆盖该降权边界，避免只有公开匿名用例通过而管理员 E2E 在登录前失败。
 - 登录 E2E 中，前端会消费 `/api/login` 响应 JSON 后立即导航；Playwright 若在导航后再读取同一 `Response` body，Chromium 会返回 `No resource with given identifier found`。应断言登录响应状态，再通过共享 Session Cookie 的 `/api/session` 验证登录态，不要将浏览器响应体重复读取当作认证结果。
+- OIDC E2E 用授权页原生表单完成 consent 和整页跳转；callback stubs（包括其他业务域名）使用 `BrowserContext.route`，避免 Page 级 handler 未覆盖导航目标、请求穿透到 Hearth 后得到 403。保持 stub 在发起 authorization request 前注册。
 - 被部署脚本直接执行的 Shell 文件必须在 Git 中保留可执行位；迁移门禁要对每个直接调用的入口使用 `test -x`，避免部署到远端后才因 `Permission denied` 中断。
 - Shell 中已经单引号包围的 `awk` 程序不要再把双引号写成 `\"`；反斜杠会被传入 awk 并造成语法错误。manifest 解析应有契约测试，避免静默退化成每次重装依赖。
 - 目标机 systemd 的 `systemd-run --pipe` 与 `--scope` 不兼容；需要接 stdin/stdout 时改用唯一名称的 transient service unit（`--unit --collect --wait --pipe`），并保留其 cgroup 内存限制。systemd-run 默认还会扩展 transient service ExecStart 中的 `$`/`%` 表达式；执行 Bash 脚本字符串时必须加 `--expand-environment=no`，否则脚本内参数展开可能被清空。

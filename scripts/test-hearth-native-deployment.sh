@@ -114,6 +114,8 @@ grep -Fq "test.use({trace: 'off', screenshot: 'off', video: 'off'})" "$ROOT/test
 for endpoint in '/api/admin/oauth-clients' '/api/session' '/oauth2/token' '/userinfo' '/connect/logout' 'career-staging'; do
   grep -Fq "$endpoint" "$ROOT/tests/e2e/native-oidc.spec.mjs"
 done
+grep -Fq "page.context().route('**/__hearth_e2e/callback**'" "$ROOT/tests/e2e/native-oidc.spec.mjs"
+grep -Fq "page.context().route('https://staging-career.bytedepth.cn/**'" "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq '/version' "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/security/SecurityConfig.java"
 test -f "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/identity/BuildInfoController.java"
 grep -Fq 'proxy_pass http://127.0.0.1:18111' "$ROOT/deploy/nginx/hearth-native-staging.conf.template"

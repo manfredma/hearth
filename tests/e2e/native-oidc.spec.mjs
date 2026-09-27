@@ -112,7 +112,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const {verifier, challenge} = pkcePair();
     const state = randomSuffix();
     let callbackUrl;
-    await page.route('**/__hearth_e2e/callback**', async (route) => {
+    await page.context().route('**/__hearth_e2e/callback**', async (route) => {
       callbackUrl = route.request().url();
       await route.fulfill({status: 200, contentType: 'text/plain', body: 'callback captured'});
     });
@@ -162,7 +162,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const careerPkce = pkcePair();
     const careerState = randomSuffix();
     let careerCallbackUrl;
-    await page.route('https://staging-career.bytedepth.cn/**', async (route) => {
+    await page.context().route('https://staging-career.bytedepth.cn/**', async (route) => {
       careerCallbackUrl = route.request().url();
       await route.fulfill({status: 200, contentType: 'text/plain', body: 'Career callback captured'});
     });
