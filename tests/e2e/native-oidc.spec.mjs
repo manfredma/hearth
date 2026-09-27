@@ -105,8 +105,8 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const csrfResult = await page.request.get(path('/api/csrf'));
     expect(csrfResult.status()).toBe(200);
     const csrfToken = (await csrfResult.json()).token;
-    const callbackUri = path('/api/session');
-    const logoutUri = path('/api/session');
+    const callbackUri = path('/consent-preview');
+    const logoutUri = path('/consent-preview');
     const suffix = randomSuffix();
     const createClient = await page.request.post(path('/api/admin/oauth-clients'), {
       headers: {'X-CSRF-TOKEN': csrfToken},
@@ -122,11 +122,18 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const client = await createClient.json();
     expect(client.clientSecret).toBeTruthy();
 
+    const clientsResponse = await page.request.get(path('/api/admin/oauth-clients'));
+    expect(clientsResponse.status()).toBe(200);
+    const career = (await clientsResponse.json()).find((registered) => registered.clientId === 'career-staging');
+    expect(career).toBeTruthy();
+    const careerCallback = career.redirectUris.find((uri) => uri.startsWith('https://staging-career.bytedepth.cn/'));
+    expect(careerCallback).toBeTruthy();
+
     const {verifier, challenge} = pkcePair();
     const state = randomSuffix();
     let callbackUrl;
     const callbackObserved = captureRequestUrl(page, (url) =>
-      url.origin === new URL(base).origin && url.pathname === '/api/session' && url.searchParams.has('code'));
+      url.origin === new URL(base).origin && url.pathname === '/consent-preview' && url.searchParams.has('code'));
     await page.goto(authorizationUrl({
       clientId: client.clientId,
       redirectUri: callbackUri,
@@ -174,12 +181,6 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(userInfoResponse.status()).toBe(200);
     expect((await userInfoResponse.json()).sub).toBe(idClaims.sub);
 
-    const clientsResponse = await page.request.get(path('/api/admin/oauth-clients'));
-    expect(clientsResponse.status()).toBe(200);
-    const career = (await clientsResponse.json()).find((registered) => registered.clientId === 'career-staging');
-    expect(career).toBeTruthy();
-    const careerCallback = career.redirectUris.find((uri) => uri.startsWith('https://staging-career.bytedepth.cn/'));
-    expect(careerCallback).toBeTruthy();
     const careerPkce = pkcePair();
     const careerState = randomSuffix();
     let careerCallbackUrl;
@@ -205,7 +206,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
 
     let logoutCallbackUrl;
     const logoutCallbackObserved = captureRequestUrl(page, (url) =>
-      url.origin === new URL(base).origin && url.pathname === '/api/session' && url.searchParams.has('state'));
+      url.origin === new URL(base).origin && url.pathname === '/consent-preview' && url.searchParams.has('state'));
     const logoutState = randomSuffix();
     const logoutUrl = new URL('/connect/logout', base);
     logoutUrl.searchParams.set('id_token_hint', token.id_token);

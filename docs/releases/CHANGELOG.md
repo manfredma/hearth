@@ -6,7 +6,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
-- Hearth OIDC E2E 改为观察真实浏览器 callback 请求，使用 Hearth `/api/session` 完成授权码和 RP logout 回跳，并让 Career staging callback 实际完成登录；不再依赖无法稳定拦截顶层跨域跳转的 Playwright route stub。
+- Hearth OIDC E2E 改为观察真实浏览器 callback 请求，使用 Hearth `/consent-preview` 作为安全回跳落点完成授权码和 RP logout 检查，并让 Career staging callback 实际完成登录；同时断言首次 consent 页展示 Profile/Email 权限；不再依赖无法稳定拦截顶层跨域跳转的 Playwright route stub。
 - Hearth staging TLS 改为由 129 本机 Certbot 自动续期；将现有证书纳入续期管理，不重新签发或从已退役的 124 同步；首次 dry-run 跳过随机等待，日常续期仍保留错峰，并明确区分 Hearth 自有命名与真实共享基础设施标识。
 - staging 发布先以最多 5 次尝试建立短期 SSH multiplex，再复用同一连接执行上传/迁移，规避公网 SSH 未认证探测触发 sshd `MaxStartups` 后随机丢连接；不更改共享 sshd 配置。
 - 修复 staging E2E 降权启动 Playwright 时管理员凭据环境变量被 `sudo` 清理的问题；仅保留变量名传递，不把凭据放入命令参数。
