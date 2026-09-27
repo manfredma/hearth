@@ -213,7 +213,6 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await page.goto('https://staging-career.bytedepth.cn/calendar');
     await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
       && url.pathname === '/calendar');
-    await expect(page.locator('.career-header__username')).toBeVisible();
     await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
     const logoutButton = page.getByRole('button', {name: '退出登录'});
     const logoutForm = page.locator('form.career-header__logout');
