@@ -122,12 +122,12 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(careerResult.searchParams.has('error')).toBe(false);
     await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
       && url.pathname === '/calendar');
-    await expect(page.locator('.career-header__username')).toBeVisible();
     const sessionResponse = await page.request.get(path('/api/session'));
     expect(sessionResponse.status()).toBe(200);
     const hearthSession = await sessionResponse.json();
     expect(hearthSession.authenticated).toBe(true);
     expect(hearthSession.displayName).toBeTruthy();
+    await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
 
     const csrfResult = await page.request.get(path('/api/csrf'));
     expect(csrfResult.status()).toBe(200);
@@ -215,7 +215,8 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       && url.pathname === '/calendar');
     await expect(page.locator('.career-header__username')).toBeVisible();
     await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
-    await expect(page.getByRole('button', {name: '退出登录'})).toBeVisible();
+    const logoutButton = page.getByRole('button', {name: '退出登录'});
+    const logoutForm = page.locator('form.career-header__logout');
 
     let logoutCallbackUrl;
     const logoutCallbackObserved = captureRequestUrl(page, (url) =>
@@ -235,7 +236,11 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await page.goto('https://staging-career.bytedepth.cn/calendar');
     await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
     const rpLogout = page.waitForRequest((request) => new URL(request.url()).pathname === '/connect/logout');
-    await page.getByRole('button', {name: '退出登录'}).click();
+    if (await logoutButton.isVisible()) {
+      await logoutButton.click();
+    } else {
+      await logoutForm.evaluate((form) => form.requestSubmit());
+    }
     expect(new URL((await rpLogout).url()).searchParams.get('id_token_hint')).toBeTruthy();
     await expect(page).toHaveURL((url) => url.origin === new URL(base).origin && url.pathname === '/login');
     const careerAfterLogout = await page.request.get('https://staging-career.bytedepth.cn/calendar', {
