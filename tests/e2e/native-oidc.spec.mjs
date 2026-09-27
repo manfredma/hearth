@@ -32,6 +32,19 @@ async function approveIfShown(page) {
   }
 }
 
+function captureRequestUrl(page, matches) {
+  return new Promise((resolve) => {
+    const onRequest = (request) => {
+      const url = new URL(request.url());
+      if (matches(url)) {
+        page.off('request', onRequest);
+        resolve(request.url());
+      }
+    };
+    page.on('request', onRequest);
+  });
+}
+
 test('native candidate exposes matching version and OIDC discovery', async ({request}) => {
   const expectedCommit = process.env.HEARTH_EXPECTED_COMMIT;
   expect(expectedCommit).toMatch(/^[0-9a-f]{40}$/);
@@ -112,10 +125,8 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const {verifier, challenge} = pkcePair();
     const state = randomSuffix();
     let callbackUrl;
-    await page.context().route('**/__hearth_e2e/callback**', async (route) => {
-      callbackUrl = route.request().url();
-      await route.fulfill({status: 200, contentType: 'text/plain', body: 'callback captured'});
-    });
+    const callbackObserved = captureRequestUrl(page, (url) =>
+      url.origin === new URL(base).origin && url.pathname === '/__hearth_e2e/callback');
     await page.goto(authorizationUrl({
       clientId: client.clientId,
       redirectUri: callbackUri,
@@ -124,7 +135,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       challenge,
     }));
     await approveIfShown(page);
-    await expect.poll(() => callbackUrl).toBeTruthy();
+    callbackUrl = await callbackObserved;
     const callback = new URL(callbackUrl);
     expect(callback.searchParams.get('state')).toBe(state);
     const code = callback.searchParams.get('code');
@@ -162,10 +173,8 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const careerPkce = pkcePair();
     const careerState = randomSuffix();
     let careerCallbackUrl;
-    await page.context().route('https://staging-career.bytedepth.cn/**', async (route) => {
-      careerCallbackUrl = route.request().url();
-      await route.fulfill({status: 200, contentType: 'text/plain', body: 'Career callback captured'});
-    });
+    const careerCallbackObserved = captureRequestUrl(page, (url) =>
+      url.hostname === 'staging-career.bytedepth.cn' && url.pathname === new URL(careerCallback).pathname);
     await page.goto(authorizationUrl({
       clientId: career.clientId,
       redirectUri: careerCallback,
@@ -174,23 +183,25 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       challenge: careerPkce.challenge,
     }));
     await approveIfShown(page);
-    await expect.poll(() => careerCallbackUrl).toBeTruthy();
+    careerCallbackUrl = await careerCallbackObserved;
     const careerResult = new URL(careerCallbackUrl);
     expect(careerResult.toString().startsWith(careerCallback)).toBe(true);
     expect(careerResult.searchParams.get('state')).toBe(careerState);
     expect(careerResult.searchParams.get('code')).toBeTruthy();
+    await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn');
+    await page.goto('https://staging-career.bytedepth.cn/calendar');
+    await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
+      && url.pathname === '/calendar');
 
     let logoutCallbackUrl;
-    await page.route('**/__hearth_e2e/logout**', async (route) => {
-      logoutCallbackUrl = route.request().url();
-      await route.fulfill({status: 200, contentType: 'text/plain', body: 'logout callback captured'});
-    });
+    const logoutCallbackObserved = captureRequestUrl(page, (url) =>
+      url.origin === new URL(base).origin && url.pathname === '/__hearth_e2e/logout');
     const logoutState = randomSuffix();
     const logoutUrl = new URL('/connect/logout', base);
     logoutUrl.searchParams.set('id_token_hint', token.id_token);
     logoutUrl.searchParams.set('post_logout_redirect_uri', logoutUri);
     logoutUrl.searchParams.set('state', logoutState);
     await page.goto(logoutUrl.toString());
-    await expect.poll(() => logoutCallbackUrl).toBeTruthy();
+    logoutCallbackUrl = await logoutCallbackObserved;
     expect(new URL(logoutCallbackUrl).searchParams.get('state')).toBe(logoutState);
 });
