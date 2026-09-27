@@ -7,7 +7,6 @@ HEARTH_TEST_SLOT_MAIN_SERVICE=hearth-staging-native-app.service
 HEARTH_TEST_SLOT_EDGE_SERVICE=hearth-staging-native-edge.service
 HEARTH_TEST_SLOT_APP_HEALTH=http://127.0.0.1:18110/api/health
 HEARTH_TEST_SLOT_EDGE_HEALTH=http://127.0.0.1:18111/api/health
-HEARTH_TEST_SLOT_MINIMUM_AVAILABLE_KIB=655360
 HEARTH_TEST_SLOT_STARTED_AT=""
 
 hearth_test_slot_new_run_id() {
@@ -49,12 +48,6 @@ hearth_test_slot_begin() {
   install -d -o ubuntu -g hearth -m 0750 /run/hearth
   install -o ubuntu -g hearth -m 0640 "$env_file" "$HEARTH_TEST_SLOT_RUNTIME_ENV"
   systemctl stop "$HEARTH_TEST_SLOT_MAIN_SERVICE"
-  available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo)"
-  [[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge "$HEARTH_TEST_SLOT_MINIMUM_AVAILABLE_KIB" ]] || {
-    printf 'Refusing test-slot start: require %s KiB MemAvailable after stopping Hearth app, found %s KiB.\n' \
-      "$HEARTH_TEST_SLOT_MINIMUM_AVAILABLE_KIB" "${available_kib:-unknown}" >&2
-    return 1
-  }
   HEARTH_TEST_SLOT_STARTED_AT="$(date --iso-8601=seconds)"
   systemctl start "$HEARTH_TEST_SLOT_SERVICE"
   hearth_test_slot_wait_http "$HEARTH_TEST_SLOT_SERVICE" "$HEARTH_TEST_SLOT_APP_HEALTH"

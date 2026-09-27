@@ -43,5 +43,6 @@
 - 多服务 staging 机的 Maven 依赖预热不得先做完整编译/PMD；用 `dependency:go-offline`、MemAvailable 门槛和受限 transient service，避免预热任务挤压同机服务。
 - staging 的宿主机 Maven 仓库是多项目共享且锁保护的。若 Maven 输入指纹（全部模块 POM 与 `.mvn` 配置）未变，且最近成功部署的离线 Failsafe 与无 WARNING 预热日志证明依赖闭包可用，应复用该缓存；不得将 manifest 绑定 checkout SHA，也不能因低内存重复预热相同依赖。
 - staging integration 的 512 MiB transient cgroup 同时容纳 Maven 主 JVM 与 Failsafe fork；仅配置 PMD `skip` 仍会加载插件，进程内 javac 的内存也会留在 Maven JVM。因本地/CI 门禁已运行 PMD，`staging-integration` profile 必须解绑 `pmd-check`（phase `none`），并使用显式 `executable=javac`、maxmem 128 MiB 的 forked javac；Failsafe fork heap 限在 128 MiB。显式 javac 可避免远端 Maven compiler autodetection 的 WARNING。
+- Hearth test-slot 不再使用 640 MiB 主机 `MemAvailable` 预检；内存隔离依靠 test-slot 384 MiB、Maven/Playwright 512 MiB 的独立 cgroup 上限及 transient unit 禁用 swap，不通过停止其他项目释放内存。
 - Linux 的 `flock -x` 排他锁必须使用可写文件描述符；全局锁文件由 root 管理时，用 append-only 打开（`>>`）即可取得排他锁且不会截断锁文件，`<` 只读句柄只用于共享锁。
 - 以项目服务账号运行的私有 Nginx edge 不能写共享 `/var/log/nginx/*.log`；access/error log 必须落到项目专属日志目录，文件由 `ubuntu:hearth` 预创建/持有、服务组只追加写入。轮转使用 Ubuntu 用户级 timer，禁止让 Ubuntu 可写的 logrotate 配置被 root 执行；copytruncate 可能在复制/截断窗口丢少量日志。运行时契约测试保护该约束；已有日志文件不能通过安装 `/dev/null` 截断重建。

@@ -13,7 +13,16 @@ test -f "$ROOT/hearth-start/src/main/resources/application-staging-test.yml"
 test -x "$ROOT/deploy/provision-staging-test-slot.sh"
 test -x "$ROOT/deploy/teardown-staging-test-slot.sh"
 grep -Fq 'Conflicts=hearth-staging-native-app.service' "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in"
-grep -Fq 'HEARTH_TEST_SLOT_MINIMUM_AVAILABLE_KIB=655360' "$ROOT/deploy/lib/staging-test-slot.sh"
+if grep -Fq 'HEARTH_TEST_SLOT_MINIMUM_AVAILABLE_KIB' "$ROOT/deploy/lib/staging-test-slot.sh" \
+  || grep -Fq 'MemAvailable' "$ROOT/deploy/lib/staging-test-slot.sh"; then
+  printf 'The test-slot start must not apply a host MemAvailable threshold.\n' >&2
+  exit 1
+fi
+grep -Fq 'MemoryMax=384M' "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in"
+grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-integration-tests.sh"
+grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-e2e-tests.sh"
+grep -Fq 'MemorySwapMax=0' "$ROOT/deploy/run-staging-integration-tests.sh"
+grep -Fq 'MemorySwapMax=0' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'MemAvailable' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'readonly DATABASE="hearth_${SUITE}_${RUN_ID//t/_}"' "$ROOT/deploy/provision-staging-test-slot.sh"
 grep -Fq 'readonly DB_USER="h_${USER_SUITE}_${RUN_ID//t/_}"' "$ROOT/deploy/provision-staging-test-slot.sh"

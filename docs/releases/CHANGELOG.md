@@ -24,6 +24,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - 修正 staging integration 的 curl CSRF header 语法及 E2E Chromium runtime manifest 值解析，避免 smoke test 403 和误报 runtime mismatch。
 - staging Maven 预热新增依赖输入指纹复用；仅在 Maven 输入变化或既有离线验证不成立时才运行受内存门槛保护的预热。
 - 修复 Hearth E2E test-slot run-id 的日期格式，使浏览器测试能进入实际执行阶段。
+- 移除 test-slot 无文档依据的 640 MiB 主机可用内存预检，继续由 integration/E2E transient cgroup memory/swap 上限隔离资源。
 
 ## 0.1.0 - 2026-09-26
 
