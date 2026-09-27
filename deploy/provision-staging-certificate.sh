@@ -64,10 +64,37 @@ if [[ ! -e "$renewal_conf" && ! -L "$renewal_conf" ]]; then
   cert_source=/etc/hearth/staging-tls/current/fullchain.pem
   key_source=/etc/hearth/staging-tls/current/privkey.pem
   [[ -r "$cert_source" && -r "$key_source" ]] || { printf 'Existing Hearth staging certificate is unavailable; refusing to request a duplicate certificate.\n' >&2; exit 1; }
-  [[ ! -e "$live_root" && ! -L "$live_root" && ! -e "$archive_root" && ! -L "$archive_root" ]] || {
-    printf 'Partial Hearth staging Certbot lineage exists; preserving it for investigation.\n' >&2
-    exit 1
-  }
+  if [[ -e "$live_root" || -L "$live_root" || -e "$archive_root" || -L "$archive_root" ]]; then
+    [[ -d "$live_root" && ! -L "$live_root" && -d "$archive_root" && ! -L "$archive_root" ]] || {
+      printf 'Partial Hearth staging Certbot lineage is not the known archive-only state; preserving it.\n' >&2
+      exit 1
+    }
+    archive_entries="$(find "$archive_root" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)"
+    [[ "$archive_entries" == $'cert1.pem\nchain1.pem\nfullchain1.pem\nprivkey1.pem' ]] || {
+      printf 'Partial Hearth staging archive contains unexpected entries; preserving it.\n' >&2
+      exit 1
+    }
+    live_entries="$(find "$live_root" -mindepth 1 -maxdepth 1 -printf '%f\n')"
+    [[ -z "$live_entries" ]] || { printf 'Partial Hearth staging live directory is not empty; preserving it.\n' >&2; exit 1; }
+    for archive_file in cert1.pem chain1.pem fullchain1.pem privkey1.pem; do
+      [[ -f "$archive_root/$archive_file" && ! -L "$archive_root/$archive_file" ]] || {
+        printf 'Partial Hearth staging archive file is unsafe or missing: %s\n' "$archive_file" >&2
+        exit 1
+      }
+    done
+    current_bundle_sha="$(sha256sum "$cert_source" | awk '{print $1}')"
+    archive_bundle_sha="$(sha256sum "$archive_root/fullchain1.pem" | awk '{print $1}')"
+    current_key_sha="$(openssl pkey -in "$key_source" -pubout -outform DER 2>/dev/null | sha256sum | awk '{print $1}')"
+    archive_key_sha="$(openssl pkey -in "$archive_root/privkey1.pem" -pubout -outform DER 2>/dev/null | sha256sum | awk '{print $1}')"
+    current_leaf_sha="$(openssl x509 -in "$cert_source" -outform DER | sha256sum | awk '{print $1}')"
+    archive_leaf_sha="$(openssl x509 -in "$archive_root/cert1.pem" -outform DER | sha256sum | awk '{print $1}')"
+    [[ "$current_bundle_sha" == "$archive_bundle_sha" && "$current_key_sha" == "$archive_key_sha" \
+      && "$current_leaf_sha" == "$archive_leaf_sha" ]] || {
+      printf 'Partial Hearth staging archive does not match the active certificate; preserving it.\n' >&2
+      exit 1
+    }
+    printf 'Recovering the exact Hearth staging archive-only lineage left by the interrupted deployment.\n'
+  fi
   openssl x509 -checkend 2592000 -noout -in "$cert_source" >/dev/null
   openssl x509 -checkhost "$DOMAIN" -noout -in "$cert_source" >/dev/null
   sans="$(openssl x509 -in "$cert_source" -noout -ext subjectAltName 2>/dev/null | sed '1d' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
