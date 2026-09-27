@@ -68,7 +68,7 @@ printf '%s\n%s\n' "$HEARTH_STAGING_E2E_USERNAME" "$HEARTH_STAGING_E2E_PASSWORD" 
     export HEARTH_E2E_ADMIN_PASSWORD="$admin_password"
     unset admin_username admin_password
     cd /opt/hearth-native/source/current
-    exec sudo -n -u ubuntu -- env NODE_OPTIONS=--max-old-space-size=256 E2E_BASE_URL="$1" \
+    exec sudo -n --preserve-env=HEARTH_E2E_ADMIN_USERNAME,HEARTH_E2E_ADMIN_PASSWORD -u ubuntu -- env NODE_OPTIONS=--max-old-space-size=256 E2E_BASE_URL="$1" \
       HEARTH_EXPECTED_COMMIT="$2" \
       HEARTH_E2E_EXPECTED_ISSUER="$1" \
       HEARTH_E2E_HOST_RESOLVER_RULES="MAP $4 127.0.0.1" \
