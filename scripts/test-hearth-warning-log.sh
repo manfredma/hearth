@@ -26,4 +26,4 @@ if hearth_assert_log_has_no_warning "$tmp/missing.log" 2>/dev/null; then
   printf 'Warning checker accepted an unreadable log.\n' >&2
   exit 1
 fi
-printf 'Hearth warning-log tests passed.\n'
+printf 'Hearth diagnostic-log tests passed.\n'

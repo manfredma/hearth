@@ -88,7 +88,21 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(password).toBeTruthy();
 
     const csrfWait = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/csrf');
-    await page.goto(path('/login'));
+    // Career owns state, nonce and the PKCE verifier in its server-side session.
+    const careerAuthorizationObserved = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.origin === new URL(base).origin && url.pathname === '/oauth2/authorize'
+        && url.searchParams.get('client_id') === 'career-staging';
+    });
+    const careerCallbackObserved = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.hostname === 'staging-career.bytedepth.cn' && url.pathname === '/login/oauth2/code/hearth';
+    });
+    await page.goto('https://staging-career.bytedepth.cn/calendar');
+    const careerAuthorization = new URL((await careerAuthorizationObserved).url());
+    expect(careerAuthorization.searchParams.get('state')).toBeTruthy();
+    expect(careerAuthorization.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(careerAuthorization.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
     const csrfResponse = await csrfWait;
     expect(csrfResponse.status()).toBe(200);
     expect((await csrfResponse.json()).token).toBeTruthy();
@@ -98,6 +112,16 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await page.getByRole('button', {name: '登录'}).click();
     const loginResponse = await loginWait;
     expect(loginResponse.status()).toBe(200);
+    await expect(page).toHaveURL((url) => url.pathname === '/oauth2/consent'
+      || url.hostname === 'staging-career.bytedepth.cn');
+    await approveIfShown(page);
+    const careerResult = new URL((await careerCallbackObserved).url());
+    expect(careerResult.origin + careerResult.pathname).toBe(careerAuthorization.searchParams.get('redirect_uri'));
+    expect(careerResult.searchParams.get('state')).toBe(careerAuthorization.searchParams.get('state'));
+    expect(careerResult.searchParams.get('code')).toBeTruthy();
+    expect(careerResult.searchParams.has('error')).toBe(false);
+    await expect(page).toHaveURL('https://staging-career.bytedepth.cn/calendar');
+    await expect(page.locator('.career-header__username')).toBeVisible();
     const sessionResponse = await page.request.get(path('/api/session'));
     expect(sessionResponse.status()).toBe(200);
     const hearthSession = await sessionResponse.json();
@@ -184,26 +208,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(userInfoResponse.status()).toBe(200);
     expect((await userInfoResponse.json()).sub).toBe(idClaims.sub);
 
-    const careerPkce = pkcePair();
-    const careerState = randomSuffix();
-    let careerCallbackUrl;
-    const careerCallbackObserved = captureRequestUrl(page, (url) =>
-      url.hostname === 'staging-career.bytedepth.cn' && url.pathname === new URL(careerCallback).pathname);
-    await page.goto(authorizationUrl({
-      clientId: career.clientId,
-      redirectUri: careerCallback,
-      scope: career.scopes.filter((scope) => ['openid', 'profile', 'email'].includes(scope)).join(' '),
-      state: careerState,
-      challenge: careerPkce.challenge,
-    }));
-    await approveIfShown(page);
-    careerCallbackUrl = await careerCallbackObserved;
-    const careerResult = new URL(careerCallbackUrl);
-    expect(careerResult.toString().startsWith(careerCallback)).toBe(true);
-    expect(careerResult.searchParams.get('state')).toBe(careerState);
-    expect(careerResult.searchParams.get('code')).toBeTruthy();
-    await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn');
-    await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
+    expect(careerAuthorization.searchParams.get('redirect_uri')).toBe(careerCallback);
     await page.goto('https://staging-career.bytedepth.cn/calendar');
     await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
       && url.pathname === '/calendar');
@@ -224,4 +229,17 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(new URL(logoutCallbackUrl).searchParams.get('state')).toBe(logoutState);
     const sessionAfterLogout = await page.request.get(path('/api/session'));
     expect(sessionAfterLogout.status()).toBe(403);
+    // Hearth logout alone does not invalidate Career's local session. Exercise
+    // Career's real logout button and its RP-initiated logout navigation too.
+    await page.goto('https://staging-career.bytedepth.cn/calendar');
+    await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
+    const rpLogout = page.waitForRequest((request) => new URL(request.url()).pathname === '/connect/logout');
+    await page.getByRole('button', {name: '退出登录'}).click();
+    expect(new URL((await rpLogout).url()).searchParams.get('id_token_hint')).toBeTruthy();
+    await expect(page).toHaveURL((url) => url.origin === new URL(base).origin && url.pathname === '/login');
+    const careerAfterLogout = await page.request.get('https://staging-career.bytedepth.cn/calendar', {
+      headers: {Accept: 'text/html'}, maxRedirects: 0,
+    });
+    expect(careerAfterLogout.status()).toBe(302);
+    expect((await page.request.get(path('/api/session'))).status()).toBe(403);
 });

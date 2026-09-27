@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 [[ $# -eq 1 && -n "$1" ]] || { printf 'Usage: %s <ref>\n' "$0" >&2; exit 2; }
 readonly REF="$1"
+bash "$(dirname "$0")/../scripts/check-release-readiness.sh" --candidate "$REF"
 readonly HOST="${HEARTH_STAGING_HOST:-129.211.6.82}"
 readonly SSH_KEY="${HEARTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
 readonly KNOWN_HOSTS="${HEARTH_SSH_KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"

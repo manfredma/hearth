@@ -34,6 +34,8 @@ public class LoginController {
     private final HearthRememberMeServices rememberMeServices;
     private final Clock clock;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+    private final org.springframework.security.web.authentication.session.SessionAuthenticationStrategy sessionAuthenticationStrategy =
+            new org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy();
 
     public LoginController(PasswordLoginService passwordLoginService, IdentityDirectoryPort identityDirectory,
                            RequestCache requestCache, HearthRememberMeServices rememberMeServices, Clock clock) {
@@ -64,6 +66,9 @@ public class LoginController {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
                 principal, null, principal.getAuthorities()));
+        // Explicit context saves bypass the framework's authentication filters,
+        // so rotate any anonymous session before persisting the authenticated user.
+        sessionAuthenticationStrategy.onAuthentication(context.getAuthentication(), httpRequest, httpResponse);
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
         rememberMeServices.onInteractiveLogin(httpRequest, httpResponse, context.getAuthentication(),
                 Boolean.TRUE.equals(request.rememberMe()));
@@ -85,7 +90,7 @@ public class LoginController {
         boolean sameOrigin = request.getScheme().equalsIgnoreCase(uri.getScheme())
                 && request.getServerName().equalsIgnoreCase(uri.getHost())
                 && effectivePort(request) == effectivePort(uri);
-        return sameOrigin && uri.getRawPath() != null && uri.getRawPath().startsWith("/")
+        return sameOrigin && uri.getRawPath().startsWith("/")
                 ? uri.getRawPath() + query(uri)
                 : "/";
     }

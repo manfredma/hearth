@@ -244,6 +244,18 @@ describe('Hearth application shell', () => {
     expect(assign).toHaveBeenCalledWith('/target');
   });
 
+  it.each(['/\\evil.example/path', '//evil.example', 'https://evil.example', 'javascript:alert(1)',
+    '/\t/evil.example', '/\\evil.example@localhost', 'http://[invalid'])('rejects external browser return target %s', async (target) => {
+    const navigate = vi.fn();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ redirectTo: target }) });
+    render(<LoginPage navigate={navigate} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: '登录' }).disabled).toBe(false));
+    fireEvent.submit(screen.getByLabelText('账号').closest('form'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+  });
+
   it('renders the branded consent preview with source application and permissions', () => {
     render(<ConsentPreview />);
 
@@ -273,7 +285,7 @@ describe('Hearth application shell', () => {
     expect(screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' }).classList.contains('consent-title-type')).toBe(true);
     expect(screen.getByRole('heading', { name: 'Career 可访问' }).classList.contains('consent-title-type')).toBe(true);
     const permissions = screen.getByRole('region', { name: 'Career 可访问' });
-    expect(permissions.textContent).toContain('Career 只能访问你选择的信息，登录凭据不会共享；授权后可随时在 Hearth 中撤销。');
+    expect(permissions.textContent).toContain('Career 只能访问你选择的信息，登录凭据不会共享。');
     const title = screen.getByRole('heading', { name: '允许 Career 使用你的 Hearth 账号？' });
     expect(title.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '取消' }));

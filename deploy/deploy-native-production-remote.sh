@@ -14,7 +14,7 @@ git fetch --quiet origin main "refs/tags/$TAG:refs/tags/$TAG"
 [[ "$(git cat-file -t "$TAG" 2>/dev/null || true)" == tag ]] || { printf 'Release must be an annotated tag.\n' >&2; exit 1; }
 readonly HEARTH_COMMIT_ID="$(git rev-parse "$TAG^{commit}")"
 commit="$HEARTH_COMMIT_ID"
-git merge-base --is-ancestor "$commit" "$(git rev-parse origin/main)" || { printf 'Release tag is not in origin/main history.\n' >&2; exit 1; }
+bash "$(dirname "$0")/../scripts/check-release-readiness.sh" --production "$TAG"
 build_root="$(mktemp -d)"
 remote_admin_hash=""
 readonly remote_jar="/tmp/hearth-prod-$TAG.jar"
@@ -155,10 +155,6 @@ listener_snapshot() { ss -ltnH | awk '{print $4}' | sort -u; }
 shared_services_before="$(shared_service_snapshot)"
 routes_before="$(public_route_snapshot)"
 listeners_before="$(listener_snapshot)"
-while IFS= read -r listener; do
-  port="${listener##*:}"
-  [[ "$port" != 18112 && "$port" != 18113 ]] || { printf 'Hearth production port is already occupied: %s.\n' "$listener" >&2; exit 1; }
-done <<< "$listeners_before"
 deployment_started="$(date --iso-8601=seconds)"
 
 install -d -o ubuntu -g ubuntu -m 0700 "$transaction_dir"
@@ -168,6 +164,7 @@ route_changed=0
 history_was_present=0
 history_changed=0
 release_transaction_loaded=0
+config_transaction_loaded=0
 release_committed=0
 artifacts_created=0
 if [[ -e "$route" || -L "$route" ]]; then
@@ -205,7 +202,9 @@ cleanup_production_deployment() {
         rollback_status=1
       fi
     fi
+    if (( config_transaction_loaded == 1 )); then hearth_production_config_rollback || rollback_status=1; fi
     if (( release_transaction_loaded == 1 )); then hearth_production_release_rollback || rollback_status=1; fi
+    if (( config_transaction_loaded == 1 && rollback_status == 0 )); then hearth_production_config_restore_units || rollback_status=1; fi
     if (( rollback_status == 0 )); then
       if (( artifacts_created == 1 )); then
       [[ "$src" == "/opt/hearth-native/source/$commit" && -d "$src" && ! -L "$src" ]] && rm -rf -- "$src"
@@ -226,6 +225,21 @@ artifacts_created=1
 install -d -o ubuntu -g ubuntu -m 0755 /opt/hearth-native/source /opt/hearth-native/releases "$src" "$rel"
 tar -xf "$HEARTH_SOURCE" -C "$src"
 chown -R ubuntu:ubuntu "$src"
+source "$src/deploy/lib/production-port-preflight.sh"
+hearth_assert_production_ports || { printf 'Hearth production ports have foreign or unverified owners.\n' >&2; exit 1; }
+source "$src/deploy/lib/production-release-transaction.sh"
+config_files=(/etc/hearth/hearth-native.conf /etc/hearth/production-native.env
+  /etc/hearth/production-native-edge.conf /etc/hearth/production-mysql.cnf
+  /data/hearth-native-production/edge/logrotate.conf
+  /data/hearth-native-production/letsencrypt/renewal-hooks/deploy/hearth-production-reload-nginx.sh)
+for unit in hearth-production-native-app.service hearth-production-native-edge.service \
+  hearth-production-native-edge-logrotate.service hearth-production-native-edge-logrotate.timer \
+  hearth-production-cert-renew.service hearth-production-cert-renew.timer; do
+  config_files+=("/etc/systemd/system/$unit" "/etc/systemd/system/multi-user.target.wants/$unit"
+    "/etc/systemd/system/timers.target.wants/$unit")
+done
+hearth_production_config_begin "$transaction_dir/installed-config" "${config_files[@]}"
+config_transaction_loaded=1
 printf '%s\n' "$commit" > "$src/.hearth-commit"
 chown ubuntu:ubuntu "$src/.hearth-commit"
 install -d -o ubuntu -g ubuntu -m 0755 /etc/hearth
@@ -237,7 +251,6 @@ cd "$src"
 ./deploy/provision-production-certificate.sh production
 install -o ubuntu -g ubuntu -m 0644 "$HEARTH_JAR" "$rel/app.jar"
 [[ "$(sha256sum "$rel/app.jar" | awk '{print $1}')" == "$HEARTH_JAR_SHA" ]]
-source "$src/deploy/lib/production-release-transaction.sh"
 hearth_production_link() {
   local staged_link="${2}.new.$$.${RANDOM}"
   [[ ! -e "$staged_link" && ! -L "$staged_link" ]] || return 1

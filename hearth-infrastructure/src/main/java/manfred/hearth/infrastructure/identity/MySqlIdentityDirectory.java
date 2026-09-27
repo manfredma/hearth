@@ -25,7 +25,7 @@ public class MySqlIdentityDirectory implements IdentityDirectoryPort {
             ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), email = VALUES(email), updated_at = VALUES(updated_at)
             """;
     private static final String FIND_SQL = """
-            SELECT id, display_name, email
+            SELECT id, issuer, subject, display_name, email
             FROM user_identity
             WHERE issuer = ? AND subject = ?
             """;

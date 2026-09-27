@@ -7,6 +7,7 @@ if [[ $# -ne 1 || -z "${1:-}" ]]; then
 fi
 
 readonly REF="$1"
+bash "$(dirname "$0")/../scripts/check-release-readiness.sh" --candidate "$REF"
 if [[ ! "$REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
     printf 'Refusing unsafe candidate ref.\n' >&2
     exit 2

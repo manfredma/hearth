@@ -3,7 +3,7 @@ package manfred.hearth.adapter.oauth;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.oauth2.server.authorization.oidc.web.authentication.OidcLogoutAuthenticationSuccessHandler;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
@@ -46,7 +46,8 @@ public class AuthorizationServerSecurityConfig {
                         .authorizationConsentService(authorizationConsentService)
                         .authorizationServerSettings(authorizationServerSettings)
                         .authorizationEndpoint(endpoint -> endpoint.consentPage("/oauth2/consent"))
-                        .oidc(Customizer.withDefaults()))
+                        .oidc(oidc -> oidc.logoutEndpoint(endpoint -> endpoint
+                                .logoutResponseHandler(oidcLogoutHandler(rememberMeServices)))))
                 // RP-Initiated Logout starts from the relying party and may not
                 // carry a Hearth browser session. The endpoint validates the
                 // id_token_hint and post_logout_redirect_uri itself, so the
@@ -71,6 +72,17 @@ public class AuthorizationServerSecurityConfig {
 
     static String[] publicEndpoints() {
         return new String[]{"/connect/logout"};
+    }
+
+    private static org.springframework.security.web.authentication.AuthenticationSuccessHandler oidcLogoutHandler(
+            HearthRememberMeServices rememberMeServices) {
+        var delegate = new OidcLogoutAuthenticationSuccessHandler();
+        // The OIDC success handler has its own logout path; web LogoutConfigurer
+        // handlers (including Remember-Me) are not invoked by that path.
+        return (request, response, authentication) -> {
+            rememberMeServices.logout(request, response, authentication);
+            delegate.onAuthenticationSuccess(request, response, authentication);
+        };
     }
 
     static RequestMatcher oidcLogoutEndpointMatcher() {

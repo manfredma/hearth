@@ -17,7 +17,7 @@ staging 是唯一的跨进程验收环境；本机不能替代 MySQL、Redis、F
 
 发布前必须满足：
 
-- `CHANGELOG.md` 有非空、分类明确的 `## Unreleased` 或对应版本条目。
+- `CHANGELOG.md` 有非空、分类明确的 `## Unreleased`，且候选相对 main 基线有变更；已有版本条目不能替代该门禁。
 - Java 变更覆盖率、前端测试/lint、PMD 和配置契约全部通过。
 - staging 集成与 E2E 证据绑定待发布提交的完整 SHA。
 - staging 使用 native 部署、隔离 integration/E2E runner 和 SHA-bound evidence；生产只部署新 annotated SemVer Tag。唯一操作步骤见 `deploy/README.md`。

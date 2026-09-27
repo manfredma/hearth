@@ -8,6 +8,7 @@
 - 新 worktree 在任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`。
 - `mvn clean install` 不代表所有质量插件都已执行；覆盖率、PMD 和完整测试必须运行 `verify` 或统一质量入口。
 - 单元测试不得连接独立 MySQL、Redis、Docker、Flyway 或浏览器；这些验证属于 staging 集成验收。
+- `verify` 生成报告不等于执行覆盖率门禁。必须合并 reactor 的 JaCoCo 数据，再按 `origin/main` merge-base 到候选（含未提交/新增文件）检查每个变更类；报告缺失或未覆盖都失败，抽象接口和 package-info 无可执行代码除外。聚合报告的 exec 路径相对模块目录，不能漏掉 `target/`。本地质量输出也必须通过统一诊断扫描，不能仅看退出码；负向测试把预期诊断捕获到 fixture 日志，成功消息不要含告警级别词。
 
 ## 部署与数据
 
@@ -15,12 +16,19 @@
 - staging 和生产必须使用独立数据库目录、Redis namespace、Session Cookie 和 OIDC client；前端不得用 localStorage 保存私人身份或业务数据。
 - 已执行的 Flyway 迁移不可修改，schema 变化必须追加新迁移。
 - native 发布必须按 `deploy/README.md` 执行不可变 JAR 校验、systemd restart、版本检查和 Nginx reload；不能只替换文件或手工启动进程。
+- 生产重复部署的端口预检核对所有 listener PID 的 cgroup 与对应 active Hearth unit；只检查进程名或一律拒绝已占用端口都不正确。安装前备份 env/native/edge/systemd 文件及启用链接，恢复原内容与权限后 daemon-reload、恢复指针和服务；失败回滚不能只恢复 symlink。故障注入测试覆盖首次安装缺失文件和逐步安装失败。
+- 生产续期 hook 必须检查 Certbot 的精确 RENEWED_LINEAGE/RENEWED_DOMAINS、唯一精确 DNS SAN、至少 30 天有效期及公私钥一致；Nginx 成功退出但带告警也不能 reload。签发管道必须同时检查 Certbot 与 tee 状态。
+- 发布入口共享非空分类 Unreleased、候选 Changelog 差异门禁；staging 禁止 main 及其 SHA 别名。生产 Tag 必须 annotated 且精确等于已验收后合并的 main HEAD，不能仅验证属于 main 历史。候选新增提交后，旧 SHA 的两份 evidence 不能复用。
 
 ## 安全
 
 - OIDC `issuer + sub` 是跨应用身份稳定键；不能用 email 代替 subject。
 - Hearth 管理认证、身份目录和应用访问；业务系统管理功能权限、资源权限和数据权限。
 - session 只保存服务端身份引用，浏览器通过 HttpOnly、Secure、SameSite Cookie 持有 session 标识。
+- 自定义 `/api/login` 不经过框架认证 filter，显式 saveContext 之前必须调用 SessionAuthenticationStrategy；用进程内 SessionRepository 验证旧 ID 查不到新认证，不能只断言登录返回 200。
+- Remember-Me 服务必须返回匹配 RememberMeAuthenticationProvider 的 token；测试经过真实 filter/provider。OIDC logout 使用独立 success handler，普通 LogoutConfigurer 的 Cookie 清理不会自动生效，须显式委托 Remember-Me 清理并保留协议验证。
+- Claims 必须依据实际 authorized scopes；profile 控制 name/preferred_username，email 控制 email。目录没有邮箱验证状态时禁止推断 email_verified。授权页不得承诺尚未存在的撤销 UI。
+- SPA 回跳必须用浏览器 URL 解析并比较 origin；字符串以单个 `/` 开头不能排除反斜杠 authority 或控制字符。数据库查询的投影必须包含 RowMapper 读取的所有列，测试 fixture 不得提供 SELECT 中没有的列掩盖问题。
 - 放入 Redis HTTP Session 的 Spring Security principal 必须实现稳定的 `Serializable` 合约，并用 Java 序列化往返测试覆盖；否则登录请求虽然认证成功，提交 session 时仍会失败。
 - 跨站点 OIDC 回跳后的 SPA 登录不能只依赖 session 中的 CSRF token；统一使用非 HttpOnly 的 `XSRF-TOKEN` cookie，并让 `X-CSRF-TOKEN` 请求头与之匹配。
 - OIDC 登录入口必须显式保留原始相对授权 URL；不能只依赖 session saved request，否则 session fixation/回跳过程可能让登录后落到 Hearth 首页。
@@ -36,7 +44,8 @@
 - staging 主机对公网暴露 SSH 且持续有未认证探测；Hearth native 发布和 Docker→native 状态检查若为每条 SSH/SCP 命令分别建立连接，可能触发 sshd `MaxStartups` 并被远端无提示丢弃。两个脚本必须在上传/迁移前用同一 `ControlPath` 建立 SSH multiplex（`ControlMaster=auto`、短期 `ControlPersist`），并对 master 建立使用有限 5 次重试；不得通过调高/修改多项目主机的全局 sshd 参数规避。
 - staging E2E 的管理员凭据先经 stdin 传入 root runner，再由 `sudo` 降权给 ubuntu 启动 Playwright；`sudo` 默认清理环境变量，必须显式 `--preserve-env=HEARTH_E2E_ADMIN_USERNAME,HEARTH_E2E_ADMIN_PASSWORD`。只能保留变量名，禁止把密码放进命令参数；契约测试必须覆盖该降权边界，避免只有公开匿名用例通过而管理员 E2E 在登录前失败。
 - 登录 E2E 中，前端会消费 `/api/login` 响应 JSON 后立即导航；Playwright 若在导航后再读取同一 `Response` body，Chromium 会返回 `No resource with given identifier found`。应断言登录响应状态，再通过共享 Session Cookie 的 `/api/session` 验证登录态，不要将浏览器响应体重复读取当作认证结果。
-- Playwright 的 `BrowserContext.route` 在 OAuth 顶层跨域重定向的测试中没有稳定拦截 callback 导航；测试会超时，而非认证服务出错。对 callback 使用 `page.on('request')` 观察真实跳转，不再伪造 callback endpoint：Hearth 自测 client 使用同源 `/consent-preview` 作为安全回调地址并手动完成 token exchange，RP logout 也回到该公开预览页；Career client 则落到 staging Career 的真实 OIDC callback，再打开受保护日历页确认 Career 会话已建立。这样覆盖完整登录、跨系统回调和退出流程。
+- Playwright OAuth callback 必须观察真实请求。Hearth 自测 Client 可使用同源 `/consent-preview` 并手动换 token；Career 必须从受保护页面/授权发起端进入，捕获 Career 生成的 state、S256 challenge 和实际回调，再验证受保护页面身份及 Career 的退出按钮。测试自己生成 state/verifier 并直接请求 Career callback 会绕过 RP 会话关联，不能作为登录成功证据。
+- E2E runner 获得部署锁后立即作废旧 evidence，然后才检查缺失或非法凭据；执行级回归覆盖两种凭据失败，不能只单测删除文件 helper。
 - 被部署脚本直接执行的 Shell 文件必须在 Git 中保留可执行位；迁移门禁要对每个直接调用的入口使用 `test -x`，避免部署到远端后才因 `Permission denied` 中断。
 - Shell 中已经单引号包围的 `awk` 程序不要再把双引号写成 `\"`；反斜杠会被传入 awk 并造成语法错误。manifest 解析应有契约测试，避免静默退化成每次重装依赖。
 - 目标机 systemd 的 `systemd-run --pipe` 与 `--scope` 不兼容；需要接 stdin/stdout 时改用唯一名称的 transient service unit（`--unit --collect --wait --pipe`），并保留其 cgroup 内存限制。systemd-run 默认还会扩展 transient service ExecStart 中的 `$`/`%` 表达式；执行 Bash 脚本字符串时必须加 `--expand-environment=no`，否则脚本内参数展开可能被清空。

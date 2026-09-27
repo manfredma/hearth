@@ -18,6 +18,32 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 class HearthRememberMeServicesTest {
 
     @Test
+    void restoresAuthenticationThroughTheFilterAndProvider() throws Exception {
+        var user = User.withUsername("admin").password("password-hash").authorities(List.of()).build();
+        var services = new HearthRememberMeServices("test-key", username -> user, Clock.systemUTC(), false);
+        var issued = new MockHttpServletResponse();
+        services.onInteractiveLogin(new MockHttpServletRequest(), issued,
+                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()), true);
+        var request = new MockHttpServletRequest();
+        request.setCookies(issued.getCookie("hearth-remember-me"));
+        var manager = new org.springframework.security.authentication.ProviderManager(
+                new org.springframework.security.authentication.RememberMeAuthenticationProvider("test-key"));
+        var filter = new org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter(
+                manager, services);
+        try {
+            filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+                var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                assertThat(authentication).isInstanceOf(org.springframework.security.authentication.RememberMeAuthenticationToken.class);
+                assertThat(authentication.isAuthenticated()).isTrue();
+                assertThat(authentication.getName()).isEqualTo("admin");
+                assertThat(authentication.getAuthorities()).anyMatch(FactorGrantedAuthority.class::isInstance);
+            });
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void createsThirtyDayHttpOnlyLaxCookie() {
         HearthRememberMeServices services = new HearthRememberMeServices(
                 "test-key", username -> User.withUsername(username).password("password-hash").authorities(List.of()).build(),

@@ -43,12 +43,13 @@ public class OidcTokenCustomizerConfiguration {
             } else {
                 return;
             }
-            context.getClaims()
-                    .subject(userId.toString())
-                    .claim("preferred_username", username)
-                    .claim("name", displayName);
+            context.getClaims().subject(userId.toString());
+            if (context.getAuthorizedScopes().contains("profile")) {
+                context.getClaims().claim("preferred_username", username).claim("name", displayName);
+            }
             if (email != null && context.getAuthorizedScopes().contains("email")) {
-                context.getClaims().claim("email", email).claim("email_verified", true);
+                // The identity directory has no verified-email state.
+                context.getClaims().claim("email", email);
             }
         };
     }

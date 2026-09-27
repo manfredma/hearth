@@ -102,7 +102,7 @@
                     </execution>
                     <execution><id>aggregate-report</id><phase>verify</phase><goals><goal>report-aggregate</goal></goals>
                         <configuration><includeCurrentProject>true</includeCurrentProject>
-                            <dataFileIncludes><dataFileInclude>jacoco-merged.exec</dataFileInclude></dataFileIncludes>
+                            <dataFileIncludes><dataFileInclude>target/jacoco-merged.exec</dataFileInclude></dataFileIncludes>
                             <formats><format>XML</format><format>HTML</format></formats>
                         </configuration>
                     </execution>

@@ -62,4 +62,29 @@ hearth_production_release_rollback
 [[ "$unit_app" == inactive && "$unit_edge" == inactive && "$stop_count" -eq 1 ]]
 grep -Fxq -- '-Tf' "$HEARTH_ATOMIC_MV_LOG"
 
+# Fault injection after each installed file, including first-install absence.
+systemctl() { printf '%s\n' "$*" >> "$tmp/systemctl.log"; [[ "$1" != is-active ]]; }
+for fail_after in 1 2 3 4; do
+  mkdir -p "$tmp/config-$fail_after"
+  config="$tmp/config-$fail_after"
+  printf 'old-env\n' > "$config/env"
+  chmod 0600 "$config/env"
+  printf 'old-unit\n' > "$config/unit"
+  ln -s old-unit "$config/enabled"
+  hearth_production_config_begin "$config/backup" "$config/env" "$config/unit" "$config/edge" "$config/enabled"
+  changed=0
+  for file in env unit edge enabled; do
+    rm -f "$config/$file"
+    printf 'new\n' > "$config/$file"
+    changed=$((changed + 1))
+    (( changed < fail_after )) || break
+  done
+  hearth_production_config_rollback
+  [[ "$(<"$config/env")" == old-env && "$(<"$config/unit")" == old-unit ]]
+  [[ ! -e "$config/edge" && "$(readlink "$config/enabled")" == old-unit ]]
+  [[ "$(ls -l "$config/env" | cut -c1-10)" == '-rw-------' ]]
+  hearth_production_config_restore_units
+done
+grep -Fxq 'daemon-reload' "$tmp/systemctl.log"
+
 printf 'Hearth production release transaction tests passed.\n'

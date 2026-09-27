@@ -14,8 +14,8 @@ public class OidcIdentityMapper {
         Objects.requireNonNull(user, "user");
         String issuer = Objects.requireNonNull(user.getIssuer(), "OIDC issuer is required").toString();
         String subject = requiredClaim(user, "sub");
-        String displayName = firstNonBlank(user.getClaimAsString("name"),
-                user.getClaimAsString("preferred_username"), user.getEmail(), subject);
+        String displayName = firstNonBlank(subject, user.getClaimAsString("name"),
+                user.getClaimAsString("preferred_username"), user.getEmail());
         return new MappedIdentity(new IdentitySubject(issuer, subject),
                 new IdentityProfile(displayName, user.getEmail()));
     }
@@ -28,13 +28,13 @@ public class OidcIdentityMapper {
         return value;
     }
 
-    private String firstNonBlank(String... values) {
+    private String firstNonBlank(String fallback, String... values) {
         for (String value : values) {
             if (value != null && !value.isBlank()) {
                 return value;
             }
         }
-        throw new IllegalArgumentException("OIDC profile has no display name");
+        return fallback;
     }
 
     public record MappedIdentity(IdentitySubject subject, IdentityProfile profile) {

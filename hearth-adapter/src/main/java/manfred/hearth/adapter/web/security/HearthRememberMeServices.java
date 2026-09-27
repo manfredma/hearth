@@ -4,7 +4,7 @@ import java.time.Clock;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.RememberMeAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -48,7 +48,6 @@ public class HearthRememberMeServices extends TokenBasedRememberMeServices {
                 .password("")
                 .authorities(HearthAuthenticationFactors.password(clock))
                 .build();
-        return UsernamePasswordAuthenticationToken.authenticated(
-                principal, null, principal.getAuthorities());
+        return new RememberMeAuthenticationToken(getKey(), principal, principal.getAuthorities());
     }
 }

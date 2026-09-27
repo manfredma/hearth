@@ -173,7 +173,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
             <div className="consent-section-heading">
               <div><span className="section-kicker">权限范围</span><h2 className="consent-title-type" id="permissions-title">{application.name} 可访问</h2></div>
             </div>
-            <div className="consent-permission-helper"><LockKeyhole size={13} /><span>{application.name} 只能访问你选择的信息，登录凭据不会共享；授权后可随时在 Hearth 中撤销。</span></div>
+            <div className="consent-permission-helper"><LockKeyhole size={13} /><span>{application.name} 只能访问你选择的信息，登录凭据不会共享。</span></div>
             <div className="permission-list">
               {displayedPermissions.length === 0 && <p>未请求额外的个人资料权限</p>}
               {displayedPermissions.map(({ key, icon: Icon, title, description }) => (

@@ -8,6 +8,13 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class ApplicationRegistrationTest {
+    @Test
+    void rejectsEmptyAndMalformedRedirectSets() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new ApplicationRegistration(
+                new ApplicationKey("career"), "Career", Set.of()));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ApplicationRegistration(
+                new ApplicationKey("career"), "Career", Set.of("not a URI")));
+    }
 
     @Test
     void copiesAndValidatesRegistration() {

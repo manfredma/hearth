@@ -26,6 +26,30 @@ class PasswordLoginServiceTest {
             credentials, encoder, Clock.fixed(NOW, ZoneOffset.UTC), 3, Duration.ofMinutes(15));
 
     @Test
+    void rejectsNullCredentialsAndInvalidLockConfiguration() {
+        assertThatThrownBy(() -> service.authenticate(null, "secret")).isInstanceOf(PasswordLoginService.InvalidCredentialsException.class);
+        assertThatThrownBy(() -> service.authenticate("admin", null)).isInstanceOf(PasswordLoginService.InvalidCredentialsException.class);
+        assertThatThrownBy(() -> new PasswordLoginService(credentials, encoder, Clock.systemUTC(), 0, Duration.ofSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        for (Duration duration : new Duration[]{Duration.ZERO, Duration.ofSeconds(-1)}) {
+            assertThatThrownBy(() -> new PasswordLoginService(credentials, encoder, Clock.systemUTC(), 1, duration))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        for (String login : new String[]{null, " "}) {
+            assertThatThrownBy(() -> new PasswordLoginService.AuthenticatedIdentity(USER_ID, login))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void firstFailureDoesNotLockUntilThreshold() {
+        credentials.credential = credential(true, 0, null);
+        assertThatThrownBy(() -> service.authenticate("admin", "wrong")).isInstanceOf(PasswordLoginService.InvalidCredentialsException.class);
+        assertThat(credentials.failureUserId).isEqualTo(USER_ID);
+        assertThat(credentials.lockedUntil).isNull();
+    }
+
+    @Test
     void rejectsMissingLoginOrPasswordWithGenericError() {
         assertThatThrownBy(() -> service.authenticate(" ", "secret"))
                 .isInstanceOf(PasswordLoginService.InvalidCredentialsException.class)

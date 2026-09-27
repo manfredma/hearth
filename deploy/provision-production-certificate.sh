@@ -4,6 +4,9 @@ umask 077
 [[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
 [[ $# -eq 1 && $1 == production ]] || { printf 'Usage: %s production\n' "$0" >&2; exit 2; }
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$SOURCE_ROOT/deploy/renew-production-certificate.sh"
+source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
+source "$SOURCE_ROOT/deploy/lib/check-warning-log.sh"
 readonly DOMAIN=hearth.bytedepth.cn
 readonly CONFIG_FILE=/etc/hearth/hearth-native.conf
 readonly SOURCE_ACCOUNTS=/etc/letsencrypt/accounts/acme-v02.api.letsencrypt.org/directory
@@ -48,8 +51,7 @@ systemctl daemon-reload
 remove_acme_route() {
   if [[ -f "$ACME_ROUTE" && ! -L "$ACME_ROUTE" ]]; then
     rm -f -- "$ACME_ROUTE"
-    nginx -t -c "$NGINX_CONFIG"
-    systemctl reload "$NGINX_UNIT"
+    hearth_production_nginx_reload
   fi
 }
 trap remove_acme_route EXIT
@@ -69,8 +71,7 @@ server {
 EOF
   install -o ubuntu -g ubuntu -m 0644 "$acme_tmp" "$ACME_ROUTE"
   rm -f -- "$acme_tmp"
-  nginx -t -c "$NGINX_CONFIG"
-  systemctl reload "$NGINX_UNIT"
+  hearth_production_nginx_reload
   certbot_log="$(mktemp "$ROOT/letsencrypt-logs/.hearth-certbot.XXXXXX")"
   chown ubuntu:ubuntu "$certbot_log"
   chmod 0600 "$certbot_log"
@@ -82,20 +83,14 @@ EOF
     certonly --webroot --webroot-path "$WEBROOT" \
     --domain "$DOMAIN" --cert-name "$DOMAIN" --account "$account_id" \
     --non-interactive --agree-tos --quiet 2>&1 | tee "$certbot_log"
-  certbot_status="${PIPESTATUS[0]}"
+  certbot_statuses=("${PIPESTATUS[@]}")
   set -e
-  if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$certbot_log"; then
-    printf 'Certbot emitted WARNING; refusing production deployment.\n' >&2
-    exit 1
-  fi
-  (( certbot_status == 0 )) || exit "$certbot_status"
+  [[ ${#certbot_statuses[@]} -eq 2 ]]
+  hearth_require_successful_pipeline "${certbot_statuses[@]}" || { printf 'Certbot or log capture failed.\n' >&2; exit 1; }
+  hearth_assert_log_has_no_warning "$certbot_log"
   rm -f -- "$certbot_log"
 fi
-openssl x509 -checkend 2592000 -noout -in "$CERT" >/dev/null || { printf 'Hearth production TLS certificate expires within 30 days.\n' >&2; exit 1; }
-openssl x509 -checkhost "$DOMAIN" -noout -in "$CERT" >/dev/null || { printf 'Hearth production TLS hostname does not match.\n' >&2; exit 1; }
-certificate_key="$(openssl x509 -in "$CERT" -pubkey -noout | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | awk '{print $1}')"
-private_key="$(openssl pkey -in "$PRIVATE_KEY" -pubout -outform DER 2>/dev/null | sha256sum | awk '{print $1}')"
-[[ -n "$certificate_key" && "$certificate_key" == "$private_key" ]] || { printf 'Hearth production TLS certificate and key do not match.\n' >&2; exit 1; }
+hearth_validate_production_certificate "$CERTBOT_ROOT/live/$DOMAIN" || { printf 'Invalid production certificate lineage, SAN, validity or key.\n' >&2; exit 1; }
 chown -R ubuntu:ubuntu "$CERTBOT_ROOT" "$ROOT/letsencrypt-work" "$ROOT/letsencrypt-logs" "$WEBROOT"
 systemctl enable --now hearth-production-cert-renew.timer
 timer_link=/etc/systemd/system/timers.target.wants/hearth-production-cert-renew.timer

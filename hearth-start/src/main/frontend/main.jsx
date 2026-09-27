@@ -140,7 +140,16 @@ export function LoginPage({ navigate = redirectTo } = {}) {
 }
 
 function safeReturnTo(value) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+  if (!value) {
+    return '/';
+  }
+  try {
+    // Resolve exactly as the browser does, including backslashes and control characters.
+    const target = new URL(value, window.location.href);
+    return target.origin === window.location.origin ? target.pathname + target.search + target.hash : '/';
+  } catch {
+    return '/';
+  }
 }
 
 export function redirectTo(path, locationObject = window.location) {

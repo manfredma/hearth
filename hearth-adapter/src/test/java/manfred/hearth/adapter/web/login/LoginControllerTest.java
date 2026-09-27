@@ -88,6 +88,7 @@ class LoginControllerTest {
         MockHttpServletRequest authorizationRequest = new MockHttpServletRequest("GET", "/oauth2/authorize");
         authorizationRequest.setQueryString("client_id=daylilt&response_type=code");
         MockHttpSession session = (MockHttpSession) authorizationRequest.getSession(true);
+        String anonymousSessionId = session.getId();
         requestCache.saveRequest(authorizationRequest, new MockHttpServletResponse());
 
         mvc.perform(post("/api/login")
@@ -95,6 +96,8 @@ class LoginControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"admin\",\"password\":\"secret\"}"))
                 .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getRequest().getSession().getId())
+                        .isNotEqualTo(anonymousSessionId))
                 .andExpect(result -> assertThat(result.getResponse().getContentAsString())
                         .contains("\"redirectTo\":\"/oauth2/authorize?client_id=daylilt&response_type=code"));
     }

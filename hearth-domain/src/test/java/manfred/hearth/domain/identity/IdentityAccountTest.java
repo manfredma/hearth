@@ -21,6 +21,8 @@ class IdentityAccountTest {
 
     @Test
     void rejectsMissingIdentityFields() {
+        assertThatThrownBy(() -> new IdentityAccount(id, subject, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new IdentityAccount(null, subject, "name", null))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new IdentityAccount(id, null, "name", null))

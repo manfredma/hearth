@@ -6,9 +6,9 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
-- 真实 OAuth consent 页改从已登记 Client 读取应用名称与回调来源，只列出请求的可选权限；纯 OIDC 请求明确显示无额外个人资料权限并可继续授权；Career E2E 验证回调后的受保护页面与登录身份。本次代码提交使先前 staging evidence 失效，需按新 SHA 重新部署和验收。
+- 真实 OAuth consent 页改从已登记 Client 读取应用名称与回调来源，只列出请求的可选权限；纯 OIDC 请求明确显示无额外个人资料权限并可继续授权；移除尚未提供的授权撤销界面承诺。
 - 生产发布与证书脚本改用 175 当前共享 Nginx unit/config 和 MySQL 管理配置路径；共享服务快照在任一 unit 缺失或非 active 时立即失败。
-- Hearth OIDC E2E 改为观察真实浏览器 callback 请求，使用 Hearth `/consent-preview` 作为安全回跳落点完成授权码和 RP logout 检查，并让 Career staging callback 实际完成登录；同时断言首次 consent 页展示 Profile/Email 权限；不再依赖无法稳定拦截顶层跨域跳转的 Playwright route stub。
+- Career E2E 从其受保护日历页发起授权，关联 Career 实际生成的 state/PKCE 与 callback，断言 Career 登录会话并执行真实退出按钮；Hearth 自测 Client 单独验证 token/userinfo 与 RP logout。候选 SHA 变化后必须重新执行 staging integration/E2E；这些用例的本地静态检查不是 staging 通过证据。
 - Hearth staging TLS 改为由 129 本机 Certbot 自动续期；将现有证书纳入续期管理，不重新签发或从已退役的 124 同步；首次 dry-run 跳过随机等待，日常续期仍保留错峰，并明确区分 Hearth 自有命名与真实共享基础设施标识。
 - staging 发布先以最多 5 次尝试建立短期 SSH multiplex，再复用同一连接执行上传/迁移，规避公网 SSH 未认证探测触发 sshd `MaxStartups` 后随机丢连接；不更改共享 sshd 配置。
 - 修复 staging E2E 降权启动 Playwright 时管理员凭据环境变量被 `sudo` 清理的问题；仅保留变量名传递，不把凭据放入命令参数。
@@ -24,6 +24,10 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Fixed
 
+- 本地质量入口捕获每步输出并阻断 WARN/WARNING、非零退出和日志捕获失败；恢复对 PR 变更 Java 类的 100% 行、分支、方法覆盖率检查，合并各模块单元测试执行数据后逐模块检查实际报告。
+- 身份目录 upsert 后的查询补齐 RowMapper 读取的 issuer/subject 列，并补充 JDBC 边界回归测试。
+- 生产升级仅接受已有 active Hearth unit 的 loopback 端口监听者；部署安装前备份环境、native 配置、systemd unit/启用链接与 edge 配置，失败时恢复文件内容、权限及服务状态，回滚不完整时保留事务备份。
+- 本地、CI 和部署入口要求非空分类 Unreleased；候选需有 Changelog 差异，staging 拒绝 main，生产 annotated Tag 必须与 main HEAD 和两份 staging passed evidence 的完整 SHA 一致。
 - 用系统 `grep` 的共享 WARNING-log verifier 取代错误的 ripgrep 参数/远端工具依赖，并在所有 build/test pipelines 中同时检查产生命令与 `tee` 的退出状态，避免日志缺失时写 passed evidence。
 - 修复 staging runtime manifest 的 awk 双引号转义，确保依赖未变化时能够复用既有 Playwright/Chromium runtime。
 - 对 transient systemd service 显式关闭 ExecStart 环境变量扩展，使 runner 自己的 Bash 参数展开与 stdin 凭据解析正常工作。
@@ -32,6 +36,14 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 - staging Maven 预热新增依赖输入指纹复用；仅在 Maven 输入变化或既有离线验证不成立时才运行受内存门槛保护的预热。
 - 修复 Hearth E2E test-slot run-id 的日期格式，使浏览器测试能进入实际执行阶段。
 - 移除 test-slot 无文档依据的 640 MiB 主机可用内存预检；Maven/E2E 保留 cgroup 内存上限，但不单独限制 unit swap。
+
+### Security
+
+- JSON 密码登录在保存认证上下文前执行 session ID 轮换；进程内 Spring Session 测试验证旧匿名 ID 无法复用新认证会话。
+- OIDC 的 name/preferred_username 仅在授权 profile scope 时签发，email 仅在 email scope 时签发；没有邮箱验证状态时不签发 email_verified。
+- Remember-Me 恢复使用框架支持的 RememberMeAuthenticationToken；RP `/connect/logout` 同时清除中央 session 和持久 Cookie。
+- 登录回跳使用浏览器 URL 解析及 origin 比较，拒绝反斜杠 authority、控制字符及其他外部目的地。
+- 生产证书签发/续期要求精确 lineage/SAN、至少 30 天有效期与匹配私钥；Nginx 告警和 Certbot 日志捕获失败均阻断流程。
 
 ## 0.1.0 - 2026-09-26
 

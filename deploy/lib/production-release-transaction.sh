@@ -1,6 +1,57 @@
 #!/usr/bin/env bash
 
 HEARTH_PRODUCTION_TXN_ACTIVE=0
+HEARTH_PRODUCTION_CONFIG_ACTIVE=0
+
+hearth_production_config_begin() {
+  HEARTH_PRODUCTION_CONFIG_BACKUP="$1"
+  shift
+  mkdir -m 0700 "$HEARTH_PRODUCTION_CONFIG_BACKUP" || return 1
+  local file index=0 unit
+  HEARTH_PRODUCTION_CONFIG_FILES=("$@")
+  for file in "$@"; do
+    if [[ -e "$file" || -L "$file" ]]; then
+      [[ -f "$file" || -L "$file" ]] || return 1
+      cp -pP "$file" "$HEARTH_PRODUCTION_CONFIG_BACKUP/$index" || return 1
+    fi
+    index=$((index + 1))
+  done
+  HEARTH_PRODUCTION_CONFIG_UNITS=(hearth-production-native-app.service hearth-production-native-edge.service
+    hearth-production-native-edge-logrotate.timer hearth-production-cert-renew.timer)
+  HEARTH_PRODUCTION_CONFIG_ACTIVE_UNITS=()
+  for unit in "${HEARTH_PRODUCTION_CONFIG_UNITS[@]}"; do
+    if systemctl is-active --quiet "$unit"; then HEARTH_PRODUCTION_CONFIG_ACTIVE_UNITS+=("$unit"); fi
+  done
+  # No installation starts until every preimage and unit state is captured.
+  HEARTH_PRODUCTION_CONFIG_ACTIVE=1
+}
+
+hearth_production_config_rollback() {
+  (( HEARTH_PRODUCTION_CONFIG_ACTIVE == 1 )) || return 0
+  local file unit index=0 status=0
+  for unit in "${HEARTH_PRODUCTION_CONFIG_UNITS[@]}"; do
+    if systemctl is-active --quiet "$unit"; then systemctl stop "$unit" || status=1; fi
+  done
+  for file in "${HEARTH_PRODUCTION_CONFIG_FILES[@]}"; do
+    if [[ -e "$HEARTH_PRODUCTION_CONFIG_BACKUP/$index" || -L "$HEARTH_PRODUCTION_CONFIG_BACKUP/$index" ]]; then
+      rm -f -- "$file" && cp -pP "$HEARTH_PRODUCTION_CONFIG_BACKUP/$index" "$file" || status=1
+    else
+      rm -f -- "$file" || status=1
+    fi
+    index=$((index + 1))
+  done
+  systemctl daemon-reload || status=1
+  return "$status"
+}
+
+hearth_production_config_restore_units() {
+  (( HEARTH_PRODUCTION_CONFIG_ACTIVE == 1 )) || return 0
+  local unit status=0
+  for unit in "${HEARTH_PRODUCTION_CONFIG_ACTIVE_UNITS[@]+${HEARTH_PRODUCTION_CONFIG_ACTIVE_UNITS[@]}}"; do
+    systemctl start "$unit" || status=1
+  done
+  return "$status"
+}
 
 hearth_production_link() {
   local staged_link="${2}.new.$$.${RANDOM}"
