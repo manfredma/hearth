@@ -182,7 +182,7 @@ if [[ ! -f "$adoption_marker" || -L "$adoption_marker" ]]; then
   chown ubuntu:ubuntu "$certbot_log"; chmod 0600 "$certbot_log"
   set +e
   sudo -n -u ubuntu -- certbot --config-dir "$CERTBOT_ROOT" --work-dir "$ROOT/letsencrypt-work" \
-    --logs-dir "$ROOT/letsencrypt-logs" renew --cert-name "$DOMAIN" --dry-run 2>&1 | tee "$certbot_log"
+    --logs-dir "$ROOT/letsencrypt-logs" renew --cert-name "$DOMAIN" --dry-run --no-random-sleep-on-renew 2>&1 | tee "$certbot_log"
   certbot_statuses=("${PIPESTATUS[@]}")
   set -e
   [[ ${#certbot_statuses[@]} -eq 2 && ${certbot_statuses[0]} -eq 0 && ${certbot_statuses[1]} -eq 0 ]] || { printf 'Hearth staging Certbot dry-run or log capture failed.\n' >&2; exit 1; }
