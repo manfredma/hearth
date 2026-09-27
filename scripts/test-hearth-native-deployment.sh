@@ -20,6 +20,11 @@ grep -Fq 'hearth_production_release_begin' "$ROOT/deploy/deploy-native-productio
 grep -Fq 'systemctl restart' "$ROOT/deploy/lib/production-release-transaction.sh"
 grep -Fq 'mv -Tf' "$ROOT/deploy/lib/production-release-transaction.sh"
 grep -Fq 'hearth_production_release_rollback' "$ROOT/deploy/deploy-native-production-remote.sh"
+release_rollback_line="$(grep -nF 'hearth_production_release_rollback || rollback_status=1' "$ROOT/deploy/deploy-native-production-remote.sh" | head -1 | cut -d: -f1)"
+config_rollback_line="$(grep -nF 'hearth_production_config_rollback || rollback_status=1' "$ROOT/deploy/deploy-native-production-remote.sh" | head -1 | cut -d: -f1)"
+[[ -n "$release_rollback_line" && -n "$config_rollback_line" && "$release_rollback_line" -lt "$config_rollback_line" ]]
+grep -Fq 'hearth_wait_for_production_certificate' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'hearth_wait_for_production_certificate "$domain"' "$ROOT/deploy/deploy-native-production-remote.sh"
 shared_units=(
   bytedepth-production-app.service
   bytedepth-production-edge.service

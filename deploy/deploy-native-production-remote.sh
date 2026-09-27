@@ -202,8 +202,8 @@ cleanup_production_deployment() {
         rollback_status=1
       fi
     fi
-    if (( config_transaction_loaded == 1 )); then hearth_production_config_rollback || rollback_status=1; fi
     if (( release_transaction_loaded == 1 )); then hearth_production_release_rollback || rollback_status=1; fi
+    if (( config_transaction_loaded == 1 )); then hearth_production_config_rollback || rollback_status=1; fi
     if (( config_transaction_loaded == 1 && rollback_status == 0 )); then hearth_production_config_restore_units || rollback_status=1; fi
     if (( rollback_status == 0 )); then
       if (( artifacts_created == 1 )); then
@@ -281,6 +281,17 @@ if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$nginx_log"; th
 chown ubuntu:ubuntu "$nginx_log"
 chmod 0600 "$nginx_log"
 systemctl reload "$nginx_unit"
+hearth_wait_for_production_certificate() {
+  local host="$1" served_san
+  for attempt in $(seq 1 15); do
+    served_san="$(printf '' | openssl s_client -connect 127.0.0.1:443 -servername "$host" 2>/dev/null | openssl x509 -noout -ext subjectAltName 2>/dev/null || true)"
+    if grep -Fq "DNS:$host" <<< "$served_san"; then return 0; fi
+    sleep 1
+  done
+  printf 'Production Nginx did not serve the Hearth certificate for %s after reload.\n' "$host" >&2
+  return 1
+}
+hearth_wait_for_production_certificate "$domain"
 d="$(curl --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.0.0.1" "https://$domain/.well-known/openid-configuration")"
 jq -e --arg issuer "https://$domain" '.issuer == $issuer' <<< "$d" >/dev/null
 p="$(curl --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.0.0.1" "https://$domain/version")"
