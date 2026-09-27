@@ -7,7 +7,8 @@ readonly SSH_KEY="${HEARTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
 readonly KNOWN_HOSTS="${HEARTH_SSH_KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
 readonly DOMAIN=staging-hearth.bytedepth.cn
 readonly REMOTE_UPLOAD_DIR=/var/tmp/hearth-native-staging-uploads
-readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS" -o ConnectTimeout=30)
+readonly SSH_CONTROL_PATH="$HOME/.ssh/hearth-staging-%C"
+readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS" -o ConnectTimeout=30 -o ConnectionAttempts=3 -o ControlMaster=auto -o ControlPersist=2m -o ControlPath="$SSH_CONTROL_PATH")
 [[ -r "$SSH_KEY" && -r "$KNOWN_HOSTS" ]] || { printf 'SSH key and known_hosts required.\n' >&2; exit 1; }
 readonly HEARTH_COMMIT_ID="$(git rev-parse --verify "$REF^{commit}")"
 commit="$HEARTH_COMMIT_ID"

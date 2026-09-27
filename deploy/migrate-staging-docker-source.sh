@@ -19,7 +19,9 @@ remote_dump_tmp="$import_root/.hearth.sql.gz.$transfer_id.partial"
 remote_env_tmp="/etc/hearth/.staging.env.$transfer_id.partial"
 remote_state_helper="$import_root/.staging-dump-state.$transfer_id.sh"
 readonly SSH_OPTS=(-i "$ssh_key" -o IdentitiesOnly=yes -o BatchMode=yes \
-  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known_hosts" -o ConnectTimeout=30)
+  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known_hosts" -o ConnectTimeout=30 \
+  -o ConnectionAttempts=3 -o ControlMaster=auto -o ControlPersist=2m \
+  -o ControlPath="$HOME/.ssh/hearth-staging-%C")
 ssh_cmd() {
   ssh "${SSH_OPTS[@]}" "$@"
 }
