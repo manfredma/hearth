@@ -20,6 +20,27 @@ grep -Fq 'hearth_production_release_begin' "$ROOT/deploy/deploy-native-productio
 grep -Fq 'systemctl restart' "$ROOT/deploy/lib/production-release-transaction.sh"
 grep -Fq 'mv -Tf' "$ROOT/deploy/lib/production-release-transaction.sh"
 grep -Fq 'hearth_production_release_rollback' "$ROOT/deploy/deploy-native-production-remote.sh"
+shared_units=(
+  bytedepth-production-app.service
+  bytedepth-production-edge.service
+  bytedepth-production-meilisearch.service
+  bytedepth-production-mysql.service
+  bytedepth-production-public-nginx.service
+  bytedepth-production-redis.service
+)
+for unit in "${shared_units[@]}"; do
+  grep -Fq "$unit" "$ROOT/deploy/deploy-native-production-remote.sh"
+done
+for script in deploy-native-production-remote.sh provision-production-certificate.sh renew-production-certificate.sh; do
+  grep -Fq '/etc/bytedepth/production-public-nginx.conf' "$ROOT/deploy/$script"
+  grep -Fq 'bytedepth-production-public-nginx.service' "$ROOT/deploy/$script"
+done
+for script in deploy-native-production-remote.sh provision-production-certificate.sh renew-production-certificate.sh bootstrap-native-mysql.sh bootstrap-production-admin.sh; do
+  ! grep -Fq 'production-green-' "$ROOT/deploy/$script"
+done
+grep -Fq 'production-mysql.cnf' "$ROOT/deploy/bootstrap-native-mysql.sh"
+grep -Fq 'production-mysql.cnf' "$ROOT/deploy/bootstrap-production-admin.sh"
+grep -Fq 'Shared production unit is missing or inactive' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq './deploy/bootstrap-native-env.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
 grep -Fq './deploy/bootstrap-native-env.sh production' "$ROOT/deploy/deploy-native-production-remote.sh"
 grep -Fq './deploy/bootstrap-native-mysql.sh staging' "$ROOT/deploy/deploy-native-staging.sh"
@@ -117,8 +138,9 @@ done
 grep -Fq 'captureRequestUrl(page' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 ! grep -Fq '.route(' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq "url.hostname === 'staging-career.bytedepth.cn'" "$ROOT/tests/e2e/native-oidc.spec.mjs"
-grep -Fq '允许 ${client.clientId} 使用你的 Hearth 账号' "$ROOT/tests/e2e/native-oidc.spec.mjs"
+grep -Fq '允许 Hearth E2E 使用你的 Hearth 账号' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq 'sessionAfterLogout.status()).toBe(403)' "$ROOT/tests/e2e/native-oidc.spec.mjs"
+grep -Fq 'career-header__username' "$ROOT/tests/e2e/native-oidc.spec.mjs"
 grep -Fq '/version' "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/security/SecurityConfig.java"
 test -f "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/identity/BuildInfoController.java"
 grep -Fq 'proxy_pass http://127.0.0.1:18111' "$ROOT/deploy/nginx/hearth-native-staging.conf.template"

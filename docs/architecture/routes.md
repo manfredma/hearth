@@ -7,6 +7,7 @@
 | `/` | GET | React 管理端壳层。 |
 | `/api/health` | GET | 健康检查，不要求登录。 |
 | `/api/session` | GET | 返回当前服务端 Session 对应的身份摘要。 |
+| `/api/consent-client?client_id=…` | GET | 仅向已登录的授权页面返回 RegisteredClient 的名称和已登记回调来源，不返回 Client Secret；缺失或不安全的登记信息返回 404。 |
 | `/api/session/logout` | POST | 清理服务端 Session，受 CSRF 保护。 |
 | `/api/csrf` | GET | 返回当前服务端 CSRF token，供登录表单提交使用。 |
 | `/api/login` | POST | 使用 Hearth 本地账号建立服务端 Session。 |

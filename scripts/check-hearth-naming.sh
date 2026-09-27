@@ -39,14 +39,14 @@ for relative_file in "${files[@]}"; do
       line_content="$(printf '%s\n' "${line#*:}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')"
       case "$line_content" in
         bytedepth.cn|career.bytedepth.cn|daylilt.bytedepth.cn|toolbox.bytedepth.cn|\
-        bytedepth-production-green-app.service|bytedepth-production-green-edge.service|\
-        bytedepth-production-green-meilisearch.service|bytedepth-production-green-mysql.service|\
-        bytedepth-production-green-redis.service|bytedepth-production-green-public-nginx.service) continue ;;
+        bytedepth-production-app.service|bytedepth-production-edge.service|\
+        bytedepth-production-meilisearch.service|bytedepth-production-mysql.service|\
+        bytedepth-production-redis.service|bytedepth-production-public-nginx.service) continue ;;
       esac
       case "$line" in
         *'staging-hearth.bytedepth.cn'*|*'staging-career.bytedepth.cn'*|*'hearth.bytedepth.cn'*|\
         *'/data/bytedepth-native-staging/'*|*'/data/bytedepth-native-production/'*|\
-        *'/etc/bytedepth/'*|*'bytedepth-production-green-public-nginx.service'*|\
+        *'/etc/bytedepth/'*|*'bytedepth-production-public-nginx.service'*|\
         *'bytedepth-staging-e2e'*|\
         *'bytedepth_default'*) ;;
         *) printf '%s\n' "$line" ;;

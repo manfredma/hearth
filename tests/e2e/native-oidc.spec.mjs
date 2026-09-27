@@ -100,7 +100,9 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(loginResponse.status()).toBe(200);
     const sessionResponse = await page.request.get(path('/api/session'));
     expect(sessionResponse.status()).toBe(200);
-    expect((await sessionResponse.json()).authenticated).toBe(true);
+    const hearthSession = await sessionResponse.json();
+    expect(hearthSession.authenticated).toBe(true);
+    expect(hearthSession.displayName).toBeTruthy();
 
     const csrfResult = await page.request.get(path('/api/csrf'));
     expect(csrfResult.status()).toBe(200);
@@ -143,9 +145,10 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     }));
     await expect(page).toHaveURL(/\/oauth2\/consent(?:\?|$)/);
     await expect(page.getByRole('heading', {
-      name: new RegExp(`允许 ${client.clientId} 使用你的 Hearth 账号`),
+      name: '允许 Hearth E2E 使用你的 Hearth 账号？',
     })).toBeVisible();
-    await expect(page.getByText(`${client.clientId} 可访问`)).toBeVisible();
+    await expect(page.getByText('Hearth E2E 可访问')).toBeVisible();
+    await expect(page.getByText(`已登记回调来源：${new URL(callbackUri).origin}`)).toBeVisible();
     await expect(page.getByText('基本资料')).toBeVisible();
     await expect(page.getByText('查看你的显示名称和头像')).toBeVisible();
     await expect(page.getByText('邮箱地址')).toBeVisible();
@@ -200,9 +203,13 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(careerResult.searchParams.get('state')).toBe(careerState);
     expect(careerResult.searchParams.get('code')).toBeTruthy();
     await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn');
+    await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
     await page.goto('https://staging-career.bytedepth.cn/calendar');
     await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
       && url.pathname === '/calendar');
+    await expect(page.locator('.career-header__username')).toBeVisible();
+    await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
+    await expect(page.getByRole('button', {name: '退出登录'})).toBeVisible();
 
     let logoutCallbackUrl;
     const logoutCallbackObserved = captureRequestUrl(page, (url) =>

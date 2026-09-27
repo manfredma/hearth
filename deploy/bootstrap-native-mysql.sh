@@ -6,7 +6,7 @@ umask 077
 readonly ENVIRONMENT="$1"
 readonly NATIVE_ENV="/etc/hearth/$ENVIRONMENT-native.env"
 readonly CONFIG_FILE=/etc/hearth/hearth-native.conf
-readonly ADMIN_FILE="/etc/bytedepth/$([[ "$ENVIRONMENT" == staging ]] && printf staging-native-mysql-admin.cnf || printf production-green-mysql.cnf)"
+readonly ADMIN_FILE="/etc/bytedepth/$([[ "$ENVIRONMENT" == staging ]] && printf staging-native-mysql-admin.cnf || printf production-mysql.cnf)"
 source "$CONFIG_FILE"
 read_native_env() { awk -F= -v key="$1" '$1 == key {print substr($0, index($0, "=") + 1); exit}' "$NATIVE_ENV"; }
 datasource_password="$(read_native_env HEARTH_DATASOURCE_PASSWORD)"

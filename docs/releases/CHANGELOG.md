@@ -6,6 +6,8 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
+- 真实 OAuth consent 页改从已登记 Client 读取应用名称与回调来源，只列出请求的可选权限；纯 OIDC 请求明确显示无额外个人资料权限并可继续授权；Career E2E 验证回调后的受保护页面与登录身份。本次代码提交使先前 staging evidence 失效，需按新 SHA 重新部署和验收。
+- 生产发布与证书脚本改用 175 当前共享 Nginx unit/config 和 MySQL 管理配置路径；共享服务快照在任一 unit 缺失或非 active 时立即失败。
 - Hearth OIDC E2E 改为观察真实浏览器 callback 请求，使用 Hearth `/consent-preview` 作为安全回跳落点完成授权码和 RP logout 检查，并让 Career staging callback 实际完成登录；同时断言首次 consent 页展示 Profile/Email 权限；不再依赖无法稳定拦截顶层跨域跳转的 Playwright route stub。
 - Hearth staging TLS 改为由 129 本机 Certbot 自动续期；将现有证书纳入续期管理，不重新签发或从已退役的 124 同步；首次 dry-run 跳过随机等待，日常续期仍保留错峰，并明确区分 Hearth 自有命名与真实共享基础设施标识。
 - staging 发布先以最多 5 次尝试建立短期 SSH multiplex，再复用同一连接执行上传/迁移，规避公网 SSH 未认证探测触发 sshd `MaxStartups` 后随机丢连接；不更改共享 sshd 配置。

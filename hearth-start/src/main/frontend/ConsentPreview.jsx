@@ -6,27 +6,21 @@ const scopeDefinitions = [
   { key: 'email', icon: Mail, title: '邮箱地址', description: '查看与你的 Hearth 账号关联的邮箱' },
 ];
 
-const applications = {
-  'career-staging': { name: 'Career', description: '职业成长与工作台', domain: 'staging-career.bytedepth.cn', tone: 'sage' },
-};
-
 const previewApplication = { name: 'Career', description: '职业成长与工作台', domain: 'staging-career.bytedepth.cn', tone: 'sage' };
 const previewIdentity = { username: 'admin', displayName: '冯华杰' };
 
 export default function ConsentPreview({ preview = true, search = '' }) {
   const query = new URLSearchParams(preview ? '' : search || window.location.search);
-  const clientId = query.get('client_id') || 'career-staging';
-  const application = preview ? previewApplication : applications[clientId] || {
-    name: clientId,
-    description: '已接入 Hearth 的应用',
-    domain: '已验证来源',
-    tone: 'sage',
+  const clientId = query.get('client_id') || '';
+  const [registeredApplication, setRegisteredApplication] = useState(null);
+  const application = preview ? previewApplication : registeredApplication || {
+    name: '未知应用', description: '无法确认应用来源', domain: '未提供注册回调来源', tone: 'sage',
   };
   const requestedScopes = preview
     ? scopeDefinitions.map(({ key }) => key)
-    : (query.get('scope') || '').split(/\s+/).filter((scope) => scopeDefinitions.some((item) => item.key === scope));
+    : (query.get('scope') || '').split(/\s+/);
   const visiblePermissions = scopeDefinitions.filter(({ key }) => requestedScopes.includes(key));
-  const displayedPermissions = visiblePermissions.length > 0 ? visiblePermissions : scopeDefinitions;
+  const displayedPermissions = visiblePermissions;
   const [selected, setSelected] = useState(() => Object.fromEntries(displayedPermissions.map(({ key }) => [key, true])));
   const [identity, setIdentity] = useState(preview ? previewIdentity : null);
   const formRef = useRef(null);
@@ -41,6 +35,24 @@ export default function ConsentPreview({ preview = true, search = '' }) {
       .catch(() => setIdentity({ username: '当前账号', displayName: '当前账号' }));
     return undefined;
   }, [preview]);
+
+  useEffect(() => {
+    if (preview || !clientId) {
+      return undefined;
+    }
+    let active = true;
+    fetch(`/api/consent-client?client_id=${encodeURIComponent(clientId)}`, { headers: { Accept: 'application/json' } })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('client metadata unavailable')))
+      .then((metadata) => {
+        if (active && typeof metadata.clientName === 'string' && metadata.clientName.trim()
+            && Array.isArray(metadata.callbackOrigins) && metadata.callbackOrigins.length > 0) {
+          setRegisteredApplication({ name: metadata.clientName, description: '已登记的 OAuth 应用',
+            domain: metadata.callbackOrigins.join('、'), tone: 'sage' });
+        }
+      })
+      .catch(() => setRegisteredApplication(null));
+    return () => { active = false; };
+  }, [preview, clientId]);
 
   useEffect(() => {
     if (preview || !formRef.current) {
@@ -64,6 +76,9 @@ export default function ConsentPreview({ preview = true, search = '' }) {
   }
 
   function submitOAuthForm(form) {
+    if (!registeredApplication) {
+      return;
+    }
     const clientField = form.elements.namedItem('client_id');
     const stateField = form.elements.namedItem('state');
     const userCodeField = form.elements.namedItem('user_code');
@@ -85,6 +100,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
     event.preventDefault();
     formRef.current?.querySelectorAll('input[name="scope"]').forEach((input) => {
       input.checked = false;
+      input.disabled = true;
     });
     if (formRef.current) {
       submitOAuthForm(formRef.current);
@@ -107,7 +123,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
             <img className="brand-mark" src="/favicon.svg" alt="Hearth 标志" />
             <div><strong>hearth</strong><small>统一身份中心</small></div>
           </div>
-          <span className="consent-label"><ShieldCheck size={13} />Hearth 安全授权</span>
+          <span className="consent-label"><ShieldCheck size={13} />{preview ? '静态授权预览' : 'Hearth 授权请求'}</span>
         </header>
 
         <div className="consent-heading">
@@ -118,7 +134,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
         <section className="consent-connection consent-flat-surface" aria-label="授权来源">
           <div className="consent-connection-top">
             <span>来自 {application.name}</span>
-            <span className="consent-verified"><Check size={13} />已验证来源</span>
+            {preview && <span className="consent-verified"><Check size={13} />已验证来源</span>}
           </div>
           <div className="consent-context-body">
             <div className="consent-connection-main">
@@ -127,7 +143,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
                 <div className="consent-app-copy">
                   <strong>{application.name}</strong>
                   <span>{application.description}</span>
-                  <small className="consent-domain">{application.domain}</small>
+                  <small className="consent-domain">{preview ? application.domain : `已登记回调来源：${application.domain}`}</small>
                 </div>
               </div>
               <div className="consent-connection-arrow" aria-hidden="true">
@@ -150,6 +166,8 @@ export default function ConsentPreview({ preview = true, search = '' }) {
             <input type="hidden" name="client_id" value={clientId} readOnly />
             <input type="hidden" name="state" value={query.get('state') || ''} readOnly />
             {query.get('user_code') && <input type="hidden" name="user_code" value={query.get('user_code')} readOnly />}
+            {displayedPermissions.length === 0 && requestedScopes.includes('openid')
+              && <input type="hidden" name="scope" value="openid" readOnly />}
           </>}
           <section className="consent-permissions" aria-labelledby="permissions-title">
             <div className="consent-section-heading">
@@ -157,6 +175,7 @@ export default function ConsentPreview({ preview = true, search = '' }) {
             </div>
             <div className="consent-permission-helper"><LockKeyhole size={13} /><span>{application.name} 只能访问你选择的信息，登录凭据不会共享；授权后可随时在 Hearth 中撤销。</span></div>
             <div className="permission-list">
+              {displayedPermissions.length === 0 && <p>未请求额外的个人资料权限</p>}
               {displayedPermissions.map(({ key, icon: Icon, title, description }) => (
                 <label className={`permission-row${selected[key] ? ' is-selected' : ''}`} key={key} htmlFor={`permission-${key}`}>
                   <input id={`permission-${key}`} name={preview ? undefined : 'scope'} data-scope={key} value={key} type="checkbox" checked={selected[key]} onChange={() => togglePermission(key)} />
@@ -169,11 +188,11 @@ export default function ConsentPreview({ preview = true, search = '' }) {
 
           <div className="consent-actions">
             <button className="consent-cancel" type={preview ? 'button' : 'submit'} onClick={cancelConsent}>取消</button>
-            <button className="consent-submit" type={preview ? 'button' : 'submit'} disabled={selectedCount === 0}>同意并继续 <ChevronRight size={17} /></button>
+            <button className="consent-submit" type={preview ? 'button' : 'submit'} disabled={(preview && selectedCount === 0) || (!preview && (!registeredApplication || (displayedPermissions.length > 0 ? selectedCount === 0 : !requestedScopes.includes('openid'))))}>同意并继续 <ChevronRight size={17} /></button>
           </div>
         </form>
 
-        <p className="consent-footnote">只会分享你勾选的信息</p>
+        <p className="consent-footnote">{displayedPermissions.length > 0 ? '只会分享你勾选的信息' : '不会分享额外的个人资料'}</p>
       </section>
     </main>
   );

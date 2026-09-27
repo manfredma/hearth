@@ -4,7 +4,7 @@ umask 077
 [[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
 readonly CONFIG_FILE=/etc/hearth/hearth-native.conf
 readonly NATIVE_ENV=/etc/hearth/production-native.env
-readonly ADMIN_FILE=/etc/bytedepth/production-green-mysql.cnf
+readonly ADMIN_FILE=/etc/bytedepth/production-mysql.cnf
 source "$CONFIG_FILE"
 [[ -r "$NATIVE_ENV" && -r "$ADMIN_FILE" ]] || { printf 'Hearth production database configuration is missing.\n' >&2; exit 1; }
 IFS= read -r password_hash || { printf 'Existing Hearth admin password hash is required on stdin.\n' >&2; exit 1; }

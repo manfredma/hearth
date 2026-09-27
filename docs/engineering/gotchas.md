@@ -27,6 +27,8 @@
 - 未登录可访问的 SPA 原型入口必须同时加入前端路由和 `SecurityConfig.publicRequestMatchers()`，并用安全路由单元测试锁定白名单；否则页面会被统一认证规则返回 403。
 - Hearth 命名门禁禁止复制 bytedepth 的运行时标识，但允许明确登记的业务应用 staging 域名作为 OAuth 来源应用展示数据；新增来源域名时必须同步更新门禁测试，不能放宽为任意 bytedepth 字符串。
 - Native 多服务主机的生产安全检查需要引用真实的共享 systemd unit 与公开域名；命名门禁只允许这些完整标识作为独立行，并有混入 `bytedepth-app` 的负向测试，不能因同一行出现合法域名就忽略整行。
+- 175 的共享 Nginx unit 为 `bytedepth-production-public-nginx.service`，主配置为 `/etc/bytedepth/production-public-nginx.conf`，MySQL 管理配置为 `/etc/bytedepth/production-mysql.cnf`。共享 ByteDepth unit 使用 `bytedepth-production-{app,edge,meilisearch,mysql,public-nginx,redis}.service`；发布快照必须要求每个目标 active，缺失 unit 不能被当作前后状态未变化。
+- OAuth consent 的真实页面只能展示从 RegisteredClientRepository 读取的客户端名称和已登记回调来源；`client_id` 只用来查找，不可直接作为可信来源名称。没有已登记元数据时禁用授权提交；无可选 profile/email scope 的 OIDC 请求只提交原请求中的 `openid`，取消时不能提交它。
 - 更新运行服务使用的 current symlink 时，不能用 `ln -sfn` 直接覆盖；先在同一目录以服务拥有者创建临时 symlink，再通过同文件系统原子 rename 替换，并在失败时恢复旧指针。
 - staging 宿主机不保证安装 ripgrep；部署/测试运行脚本必须用系统 `grep` 或共享 warning-log helper，不能依赖本机工具。另，ripgrep 的 `-E` 是字符编码选项，不是 grep 的扩展正则开关，`rg -Eqi` 会因 `unknown encoding: qi` 报错。日志缺失、不可读、`tee` 失败或测试进程失败都必须阻止 passed evidence。
 - 恢复 MySQL 部分导入时，必须先把 mysqldump 中的 `CREATE DATABASE` 与 `USE` 明确重写到唯一临时 schema，并用测试断言重写后的 SQL；动态 schema 标识符统一经安全引用函数生成，避免 Shell 双引号中的反引号触发命令替换。只有导入管道所有步骤成功后才能写 `recovery-ready` 检查点；从旧版中断状态 adoption 时，必须显式指定唯一临时 schema，并在落盘检查点前重新验证表集、管理员、Flyway、日志和对象类型。

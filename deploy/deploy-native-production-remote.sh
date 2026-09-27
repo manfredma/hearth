@@ -95,7 +95,7 @@ admin_hash_file="${HEARTH_ADMIN_HASH_FILE:?production admin hash file required}"
 trap 'rm -f -- "$admin_hash_file" "$HEARTH_JAR" "$HEARTH_SOURCE"' EXIT
 src="/opt/hearth-native/source/$commit"
 rel="/opt/hearth-native/releases/$tag"
-nginx_unit=bytedepth-production-green-public-nginx.service
+nginx_unit=bytedepth-production-public-nginx.service
 app_unit=hearth-production-native-app.service
 edge_unit=hearth-production-native-edge.service
 release_history=/var/lib/hearth-deploy/release-history
@@ -117,12 +117,12 @@ fi
 [[ ! -e "$transaction_dir" && ! -L "$transaction_dir" ]] || { printf 'An unfinished transaction exists for this release tag.\n' >&2; exit 1; }
 
 shared_units=(
-  bytedepth-production-green-app.service
-  bytedepth-production-green-edge.service
-  bytedepth-production-green-meilisearch.service
-  bytedepth-production-green-mysql.service
-  bytedepth-production-green-redis.service
-  bytedepth-production-green-public-nginx.service
+  bytedepth-production-app.service
+  bytedepth-production-edge.service
+  bytedepth-production-meilisearch.service
+  bytedepth-production-mysql.service
+  bytedepth-production-redis.service
+  bytedepth-production-public-nginx.service
   career-production-blue-edge.service career-production-native-app.service career-production-native-edge.service
   daylilt-production-blue-edge.service daylilt-production-native-app.service daylilt-production-native-edge.service
   toolbox-production-blue-edge.service toolbox-production-native-app.service toolbox-production-native-edge.service
@@ -134,10 +134,13 @@ shared_route_hosts=(
   toolbox.bytedepth.cn
 )
 shared_service_snapshot() {
-  local unit state
+  local unit
   for unit in "${shared_units[@]}"; do
-    state="$(systemctl is-active "$unit" 2>/dev/null || true)"
-    printf '%s=%s\n' "$unit" "${state:-unknown}"
+    if ! systemctl is-active --quiet "$unit"; then
+      printf 'Shared production unit is missing or inactive: %s\n' "$unit" >&2
+      return 1
+    fi
+    printf '%s=active\n' "$unit"
   done
 }
 public_route_snapshot() {
@@ -194,7 +197,7 @@ cleanup_production_deployment() {
       fi
       nginx_log="$transaction_dir/nginx-rollback.log"
       install -o ubuntu -g ubuntu -m 0600 /dev/null "$nginx_log"
-      if nginx -t -c /etc/bytedepth/production-green-public-nginx.conf > "$nginx_log" 2>&1; then
+      if nginx -t -c /etc/bytedepth/production-public-nginx.conf > "$nginx_log" 2>&1; then
         if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$nginx_log"; then rollback_status=1; fi
         systemctl reload "$nginx_unit" || rollback_status=1
       else
@@ -260,7 +263,7 @@ route_changed=1
 install -o ubuntu -g ubuntu -m 0644 "$src/deploy/nginx/hearth-native-production.conf.template" "$route"
 nginx_log="$transaction_dir/nginx-test.log"
 install -o ubuntu -g ubuntu -m 0600 /dev/null "$nginx_log"
-nginx -t -c /etc/bytedepth/production-green-public-nginx.conf > "$nginx_log" 2>&1 || { cat "$nginx_log" >&2; exit 1; }
+nginx -t -c /etc/bytedepth/production-public-nginx.conf > "$nginx_log" 2>&1 || { cat "$nginx_log" >&2; exit 1; }
 if grep -n -E -i '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' "$nginx_log"; then printf 'Production Nginx configuration test emitted WARNING.\n' >&2; exit 1; fi
 chown ubuntu:ubuntu "$nginx_log"
 chmod 0600 "$nginx_log"

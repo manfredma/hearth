@@ -8,8 +8,8 @@ readonly DOMAIN=hearth.bytedepth.cn
 readonly CONFIG_FILE=/etc/hearth/hearth-native.conf
 readonly SOURCE_ACCOUNTS=/etc/letsencrypt/accounts/acme-v02.api.letsencrypt.org/directory
 readonly ACME_ROUTE=/etc/nginx/conf.d/hearth-production-acme.conf
-readonly NGINX_CONFIG=/etc/bytedepth/production-green-public-nginx.conf
-readonly NGINX_UNIT=bytedepth-production-green-public-nginx.service
+readonly NGINX_CONFIG=/etc/bytedepth/production-public-nginx.conf
+readonly NGINX_UNIT=bytedepth-production-public-nginx.service
 source "$CONFIG_FILE"
 readonly ROOT="$HEARTH_NATIVE_PRODUCTION_ROOT"
 readonly CERTBOT_ROOT="$ROOT/letsencrypt"
