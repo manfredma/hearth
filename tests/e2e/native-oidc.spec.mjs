@@ -105,8 +105,8 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const csrfResult = await page.request.get(path('/api/csrf'));
     expect(csrfResult.status()).toBe(200);
     const csrfToken = (await csrfResult.json()).token;
-    const callbackUri = new URL('/__hearth_e2e/callback', base).toString();
-    const logoutUri = new URL('/__hearth_e2e/logout', base).toString();
+    const callbackUri = path('/api/session');
+    const logoutUri = path('/api/session');
     const suffix = randomSuffix();
     const createClient = await page.request.post(path('/api/admin/oauth-clients'), {
       headers: {'X-CSRF-TOKEN': csrfToken},
@@ -126,7 +126,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const state = randomSuffix();
     let callbackUrl;
     const callbackObserved = captureRequestUrl(page, (url) =>
-      url.origin === new URL(base).origin && url.pathname === '/__hearth_e2e/callback');
+      url.origin === new URL(base).origin && url.pathname === '/api/session' && url.searchParams.has('code'));
     await page.goto(authorizationUrl({
       clientId: client.clientId,
       redirectUri: callbackUri,
@@ -134,6 +134,14 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       state,
       challenge,
     }));
+    await expect(page).toHaveURL(/\/oauth2\/consent(?:\?|$)/);
+    await expect(page.getByRole('heading', {name: /允许 Hearth E2E 使用你的 Hearth 账号/})).toBeVisible();
+    await expect(page.getByText('Hearth E2E 可访问')).toBeVisible();
+    await expect(page.getByText('基本资料')).toBeVisible();
+    await expect(page.getByText('查看你的显示名称和头像')).toBeVisible();
+    await expect(page.getByText('邮箱地址')).toBeVisible();
+    await expect(page.getByText('查看与你的 Hearth 账号关联的邮箱')).toBeVisible();
+    await expect(page.getByRole('button', {name: /同意并继续/})).toBeEnabled();
     await approveIfShown(page);
     callbackUrl = await callbackObserved;
     const callback = new URL(callbackUrl);
@@ -195,7 +203,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
 
     let logoutCallbackUrl;
     const logoutCallbackObserved = captureRequestUrl(page, (url) =>
-      url.origin === new URL(base).origin && url.pathname === '/__hearth_e2e/logout');
+      url.origin === new URL(base).origin && url.pathname === '/api/session' && url.searchParams.has('state'));
     const logoutState = randomSuffix();
     const logoutUrl = new URL('/connect/logout', base);
     logoutUrl.searchParams.set('id_token_hint', token.id_token);
@@ -204,4 +212,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await page.goto(logoutUrl.toString());
     logoutCallbackUrl = await logoutCallbackObserved;
     expect(new URL(logoutCallbackUrl).searchParams.get('state')).toBe(logoutState);
+    const sessionAfterLogout = await page.request.get(path('/api/session'));
+    expect(sessionAfterLogout.status()).toBe(200);
+    expect((await sessionAfterLogout.json()).authenticated).toBe(false);
 });
