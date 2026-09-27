@@ -94,7 +94,7 @@ run_maven_phase() {
   set +e
   systemd-run --expand-environment=no \
     --unit="$unit" --collect --quiet --wait --pipe \
-    --property=MemoryMax=384M --property=MemorySwapMax=0 \
+    --property=MemoryMax=384M \
     /usr/bin/bash -c '
       set -Eeuo pipefail
       source_root="$1"

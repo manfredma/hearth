@@ -43,7 +43,7 @@
 - [x] 将现有跨进程测试接入 `staging-test` profile 和 129 native Hearth test-slot。
 - [x] 增加真实 Maven Failsafe `NativeInfrastructureIT`，验证 MySQL 快照/Flyway/管理员和隔离 Redis 读写；runner 必须核对本轮非零 Failsafe summary 才允许写 evidence。
 - [x] 新增管理员登录、CSRF、OAuth consent、OIDC token/userinfo、RP logout 和 Career callback redirect E2E。
-- [x] 为 Maven integration 与 Playwright/Chromium 子进程设置 512 MiB `MemoryMax`、零 swap cgroup 限制，E2E Node heap 限为 256 MiB。
+- [x] 为 Maven integration 与 Playwright/Chromium transient unit 设置 512 MiB `MemoryMax`，由宿主机统一管理 swap，E2E Node heap 限为 256 MiB。
 - [x] Maven Failsafe 离线只读使用 `/opt/shared-maven/repository`，并持有全局共享仓库读锁。
 - [x] Integration/E2E 在写 passed evidence 前校验测试进程和 tee 日志两个 pipeline 的全部退出码，且对完整 WARNING 单词边界 fail-closed。
 - [x] 本机 staging/production candidate build 同样校验 npm/Maven 与 tee 全部状态；WARNING-log 缺失或不可读时拒绝制品。

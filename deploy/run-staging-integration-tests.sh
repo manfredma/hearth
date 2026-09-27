@@ -54,7 +54,7 @@ summary="$SOURCE_ROOT/hearth-start/target/failsafe-reports/failsafe-summary.xml"
 rm -f -- "$summary"
 set +e
 # Preserve Bash parameter expansion in the transient service's ExecStart command.
-systemd-run --expand-environment=no --unit="hearth-staging-integration-$run_id.service" --collect --quiet --wait --pipe --property=MemoryMax=512M --property=MemorySwapMax=0 \
+systemd-run --expand-environment=no --unit="hearth-staging-integration-$run_id.service" --collect --quiet --wait --pipe --property=MemoryMax=512M \
   /usr/bin/bash -c '
     set -Eeuo pipefail
     while IFS= read -r entry; do

@@ -21,8 +21,13 @@ fi
 grep -Fq 'MemoryMax=384M' "$ROOT/deploy/systemd/hearth-staging-native-test-slot.service.in"
 grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-integration-tests.sh"
 grep -Fq 'MemoryMax=512M' "$ROOT/deploy/run-staging-e2e-tests.sh"
-grep -Fq 'MemorySwapMax=0' "$ROOT/deploy/run-staging-integration-tests.sh"
-grep -Fq 'MemorySwapMax=0' "$ROOT/deploy/run-staging-e2e-tests.sh"
+if rg -n -- 'MemorySwapMax' \
+  "$ROOT/deploy/bootstrap-staging-maven-runtime.sh" \
+  "$ROOT/deploy/run-staging-integration-tests.sh" \
+  "$ROOT/deploy/run-staging-e2e-tests.sh"; then
+  printf 'Staging test cgroups must not impose a swap limit.\n' >&2
+  exit 1
+fi
 grep -Fq 'MemAvailable' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'readonly DATABASE="hearth_${SUITE}_${RUN_ID//t/_}"' "$ROOT/deploy/provision-staging-test-slot.sh"
 grep -Fq 'readonly DB_USER="h_${USER_SUITE}_${RUN_ID//t/_}"' "$ROOT/deploy/provision-staging-test-slot.sh"
