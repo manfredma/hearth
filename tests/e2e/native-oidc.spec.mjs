@@ -85,7 +85,9 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await page.getByRole('button', {name: '登录'}).click();
     const loginResponse = await loginWait;
     expect(loginResponse.status()).toBe(200);
-    expect((await loginResponse.json()).authenticated).toBe(true);
+    const sessionResponse = await page.request.get(path('/api/session'));
+    expect(sessionResponse.status()).toBe(200);
+    expect((await sessionResponse.json()).authenticated).toBe(true);
 
     const csrfResult = await page.request.get(path('/api/csrf'));
     expect(csrfResult.status()).toBe(200);

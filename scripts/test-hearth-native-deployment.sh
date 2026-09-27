@@ -111,7 +111,7 @@ grep -Fq 'printf '\''%s\n%s\n'\''' "$ROOT/deploy/run-staging-e2e-tests.sh"
 grep -Fq 'security find-generic-password -a admin -s bytedepth-staging-e2e -w' "$ROOT/deploy/README.md"
 grep -Fq 'sudo -n --preserve-env=HEARTH_STAGING_E2E_USERNAME,HEARTH_STAGING_E2E_PASSWORD' "$ROOT/deploy/README.md"
 grep -Fq "test.use({trace: 'off', screenshot: 'off', video: 'off'})" "$ROOT/tests/e2e/native-oidc.spec.mjs"
-for endpoint in '/api/admin/oauth-clients' '/oauth2/token' '/userinfo' '/connect/logout' 'career-staging'; do
+for endpoint in '/api/admin/oauth-clients' '/api/session' '/oauth2/token' '/userinfo' '/connect/logout' 'career-staging'; do
   grep -Fq "$endpoint" "$ROOT/tests/e2e/native-oidc.spec.mjs"
 done
 grep -Fq '/version' "$ROOT/hearth-adapter/src/main/java/manfred/hearth/adapter/web/security/SecurityConfig.java"
