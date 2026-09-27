@@ -28,6 +28,12 @@ if ! HEARTH_CHECK_ROOT="$fixture_dir" "$script_dir/check-hearth-naming.sh" >/dev
   exit 1
 fi
 
+printf '%s\n' 'hearth_service_unit: bytedepth-app.service' > "$fixture_dir/deploy/copied-path.yml"
+if HEARTH_CHECK_ROOT="$fixture_dir" "$script_dir/check-hearth-naming.sh" >/dev/null 2>&1; then
+  printf 'Expected a copied ByteDepth Hearth service unit to fail the naming guard.\n' >&2
+  exit 1
+fi
+
 printf '%s\n' 'bytedepth-app bytedepth.cn' > "$fixture_dir/deploy/mixed-illegal.yml"
 if HEARTH_CHECK_ROOT="$fixture_dir" "$script_dir/check-hearth-naming.sh" >/dev/null 2>&1; then
   printf 'Expected an unrelated bytedepth identifier next to an allowed host to fail the naming guard.\n' >&2

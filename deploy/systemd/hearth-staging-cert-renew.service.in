@@ -1,0 +1,10 @@
+[Unit]
+Description=Hearth staging Let’s Encrypt certificate renewal
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+ExecStart=/usr/bin/certbot --config-dir /data/hearth-native-staging/letsencrypt --work-dir /data/hearth-native-staging/letsencrypt-work --logs-dir /data/hearth-native-staging/letsencrypt-logs renew --quiet

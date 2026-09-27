@@ -1,7 +1,12 @@
 server {
     listen 80;
     server_name staging-hearth.bytedepth.cn;
-    return 301 https://$host$request_uri;
+    location ^~ /.well-known/acme-challenge/ {
+        root /data/hearth-native-staging/acme-webroot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+    location / { return 301 https://$host$request_uri; }
 }
 
 server {

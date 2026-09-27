@@ -6,6 +6,8 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
+- Hearth staging TLS 改为由 129 本机 Certbot 自动续期；将现有证书纳入续期管理，不重新签发或从已退役的 124 同步，并明确区分 Hearth 自有命名与真实共享基础设施标识。
+
 - `v0.1.0` staging candidate 使用资源门槛与 cgroup 限额保护的 Maven dependency bootstrap，按共享缓存的现有权限安全补齐 artifacts，并只恢复 Hearth 构建目录的 ubuntu 所有权；同时清理未使用的 ByteDepth 模板依赖并校正 Hearth 模块/数据库/路由说明；integration 继续离线只读。
 - staging Docker→native 数据迁移可恢复已开始但未完成的 Hearth 导入：保留原始 dump，将数据先导入唯一临时 schema，校验后原子备份部分表并切换完整表集。
 - staging 发布制品上传使用工程专属 `/var/tmp/hearth-native-staging-uploads`，避免大型 JAR 与其他服务竞争共享 tmpfs。

@@ -98,4 +98,7 @@ private_key="$(openssl pkey -in "$PRIVATE_KEY" -pubout -outform DER 2>/dev/null 
 [[ -n "$certificate_key" && "$certificate_key" == "$private_key" ]] || { printf 'Hearth production TLS certificate and key do not match.\n' >&2; exit 1; }
 chown -R ubuntu:ubuntu "$CERTBOT_ROOT" "$ROOT/letsencrypt-work" "$ROOT/letsencrypt-logs" "$WEBROOT"
 systemctl enable --now hearth-production-cert-renew.timer
+timer_link=/etc/systemd/system/timers.target.wants/hearth-production-cert-renew.timer
+[[ -L "$timer_link" ]] || { printf 'Hearth production certificate timer link was not created.\n' >&2; exit 1; }
+chown -h ubuntu:ubuntu "$timer_link"
 printf 'Hearth production TLS certificate is valid and auto-renewal is enabled.\n'

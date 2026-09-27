@@ -53,9 +53,6 @@ ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "sudo -n install -d -o ubuntu -g ubuntu -m 0
 scp "${SSH_OPTS[@]}" "$jar_file" "ubuntu@$HOST:$remote_jar"
 scp "${SSH_OPTS[@]}" "$archive" "ubuntu@$HOST:$remote_src"
 HEARTH_STAGING_HOST="$HOST" HEARTH_SSH_KEY="$SSH_KEY" HEARTH_SSH_KNOWN_HOSTS="$KNOWN_HOSTS" "$build_root/deploy/migrate-staging-docker-source.sh"
-HEARTH_STAGING_SOURCE_HOST="${HEARTH_STAGING_SOURCE_HOST:-124.221.143.25}" HEARTH_STAGING_HOST="$HOST" \
-  HEARTH_SSH_KEY="$SSH_KEY" HEARTH_SSH_KNOWN_HOSTS="$KNOWN_HOSTS" \
-  "$build_root/deploy/sync-staging-certificate-to-native.sh"
 ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" 'sudo -n install -d -o ubuntu -g ubuntu -m 0700 /var/lib/hearth-staging'
 ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" 'sudo -n touch /var/lib/hearth-staging/deployment-test.lock && sudo -n chown ubuntu:ubuntu /var/lib/hearth-staging/deployment-test.lock && sudo -n chmod 0600 /var/lib/hearth-staging/deployment-test.lock'
 ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "sudo -n env HEARTH_COMMIT='$commit' HEARTH_JAR_SHA='$jar_sha' HEARTH_JAR='$remote_jar' HEARTH_SOURCE='$remote_src' HEARTH_DOMAIN='$DOMAIN' HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA='$adopt_schema' flock -x /var/lib/hearth-staging/deployment-test.lock bash -s" <<'REMOTE'
@@ -103,8 +100,15 @@ v="$(curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18110/vers
 jq -e --arg commit "$c" '.commitId == $commit' <<< "$v" >/dev/null
 install -d -o ubuntu -g ubuntu -m 0700 "$state/test-history"
 install -o ubuntu -g ubuntu -m 0644 "$s/deploy/nginx/hearth-native-staging.conf.template" /etc/nginx/conf.d/hearth-staging.conf
-nginx -t
+nginx_check="$(nginx -t 2>&1)"
+printf '%s\n' "$nginx_check"
+if grep -Eiq '(^|[^[:alnum:]_])WARN(ING)?([^[:alnum:]_]|$)' <<< "$nginx_check"; then
+  printf 'Shared Nginx emitted WARNING while validating Hearth staging route.\n' >&2
+  exit 1
+fi
 systemctl reload nginx.service
+./deploy/provision-staging-certificate.sh staging
+systemctl is-enabled --quiet hearth-staging-cert-renew.timer
 d="$(curl --fail --silent --show-error --max-time 15 --resolve "$HEARTH_DOMAIN:443:127.0.0.1" "https://$HEARTH_DOMAIN/.well-known/openid-configuration")"
 jq -e --arg issuer "https://$HEARTH_DOMAIN" '.issuer == $issuer' <<< "$d" >/dev/null
 printf 'commit=%s\ndeployed_at=%s\n---\n' "$c" "$(date -u +%FT%TZ)" >> "$state/deploy-history"

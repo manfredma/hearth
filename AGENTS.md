@@ -15,6 +15,7 @@ Spring Boot 多模块统一身份服务（DDD 分层）+ React/Vite 管理端。
 - Hearth 只保存自己的本地登录凭据哈希，不接收业务系统密码。身份主键必须是经过验证的 `issuer + subject`，不能用用户名或邮箱自动合并身份。
 - 生产与 staging 必须隔离 MySQL 数据目录、Redis namespace、Session Cookie、OIDC client、签名密钥和回调地址。
 - ByteDepth、Career、Daylilt、Toolbox 与 Hearth 共用宿主机基础设施（MySQL、Redis、公共 Nginx、Java/Maven/Node/Chromium 及实际需要的中间件），但 Hearth 的 logical database/user、Redis DB/namespace、端口、目录、systemd unit、route、凭据和 evidence 必须独立。
+- Hearth 自有代码、制品、数据目录、配置、systemd unit 和发布脚本必须使用 Hearth 标识；真实共享基础设施路径/unit、公司域名和其他业务应用/OIDC 回调域名保留其实际名称，不通过全局替换伪装成 Hearth 资源。
 - Hearth native staging 使用 app/edge 18110/18111，production 使用 18112/18113；不得绑定公网 80/443，不得修改其他项目的服务、数据或路由。
 - native 项目文件、配置、制品、日志和测试资源由 ubuntu 持有；服务用户 hearth 只通过服务组写入专属数据目录。
 - 当前 staging/production 发布采用宿主机 native runtime，唯一流程见 `deploy/README.md`；旧 Docker/Compose 文件不代表当前发布拓扑。若用于本地或数据迁移，服务名仍必须带 `hearth-` 前缀，避免与共享 Docker 网络别名冲突。

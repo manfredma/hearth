@@ -1,5 +1,7 @@
 # Hearth native 共享基础设施改造设计
 
+> 历史方案：其中“staging 证书由 124 管理”的设计已被 [ADR-0015](../../architecture/decisions/0015-staging-certificate-renewal-on-staging-host.md) 替代。129 是 Hearth staging 和证书续期主机，124 仅是历史 MySQL 数据来源。
+
 - **状态**：Accepted（ADR-0014）；staging/production 发布验收仍按实施计划跟踪。
 - **日期**：2026-09-26
 

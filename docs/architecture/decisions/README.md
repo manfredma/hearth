@@ -33,6 +33,7 @@
 | [ADR-0012](0012-framework-principal-for-oauth-persistence.md) | OAuth 持久化使用框架标准安全主体 | Accepted | 2026-09-24 |
 | [ADR-0013](0013-agent-validation-and-owner-acceptance-boundary.md) | Agent 技术验收与项目所有者最终验收的职责边界 | Accepted | 2026-09-24 |
 | [ADR-0014](0014-native-shared-host-deployment.md) | Hearth 复用共享宿主机 native 基础设施 | Accepted | 2026-09-26 |
+| [ADR-0015](0015-staging-certificate-renewal-on-staging-host.md) | Staging TLS 证书由 staging 宿主机本地续期 | Accepted | 2026-09-27 |
 
 ## 维护边界
 

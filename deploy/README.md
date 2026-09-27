@@ -25,7 +25,7 @@ staging 原 Hearth MySQL 数据源位于 124（`124.221.143.25`），仅迁移 `
 
 部分导入恢复保留原始 dump 和目标 schema 中的部分表；完整 dump 先导入唯一 `hearth_recovery_*` schema，只有管道状态、日志、表集、启用管理员、Flyway 及对象类型校验全部通过后才允许原子交换。旧版中断且没有 `recovery-ready` 标记时，默认拒绝续跑；仅在已独立确认某个恢复 schema 对应的完整成功导入后，才显式设置 `HEARTH_STAGING_RECOVERY_ADOPT_SCHEMA=hearth_recovery_<run-id>`。部署脚本会再次核对 schema 唯一性、数据不变量和日志后写入 ready marker，然后执行同一套续跑校验。该选项不能用于跳过校验或清理任何 schema。
 
-staging TLS 源证书由 124 的 Let’s Encrypt 管理。部署前运行 `deploy/sync-staging-certificate-to-native.sh`；它会校验精确 SAN、有效期和证书/私钥匹配，写入 129 的版本化 `/etc/hearth/staging-tls/releases/`，再在部署/test-slot 共用锁内原子切换 ubuntu 所有的 `current` symlink，避免逐文件更新形成混合证书对。若仍发现旧式真实 current 目录且 Hearth 公网 route 已安装，脚本会 fail-closed。124 续期证书后，必须重新运行此同步脚本，再 reload 129 的共享 Nginx。证书同步不会代理或改变其他域名。
+staging TLS 证书由 129 本机 Certbot 管理，124 不再是 staging 或证书来源。Nginx route 为 HTTP-01 challenge 保留专属 webroot；`hearth-staging-cert-renew.timer` 每日两次检查续期。续期 hook 校验精确 SAN、有效期和证书/私钥匹配，将 bundle 写入版本化 `/etc/hearth/staging-tls/releases/`，原子切换 ubuntu 所有的 `current` symlink，然后检查并 graceful reload 共享 `nginx.service`。每次部署只验证证书和 timer 配置，不跨主机传输证书；任何证书或续期配置异常都会 fail-closed，不影响其他项目。
 
 production 首次发布在 175 使用既有 Certbot ACME account，为 `hearth.bytedepth.cn` 签发独立证书；account 副本、renewal 配置、private key 和 challenge root 全部归 `ubuntu`，存放在 `/data/hearth-native-production/letsencrypt`。签发时只临时加载 Hearth HTTP-01 challenge server，申请后删除并 reload；production Hearth route 保留专属 challenge location。`hearth-production-cert-renew.timer` 每日两次检查续期，续期 hook 先 `nginx -t` 再 graceful reload production shared Nginx，不停止其他项目。
 
@@ -87,7 +87,7 @@ Runner 将凭据通过管道交给以 `ubuntu` 身份运行的 Playwright 进程
    bash deploy/deploy-native-staging.sh <candidate-ref>
    ```
 
-4. 在 129 运行全部 integration/E2E runner；检查两个 evidence 的完整 SHA 与 staging `/version` 一致，并检查服务日志无 WARNING。随后由项目所有者在 staging 验收。
+4. 确认 129 的 Hearth staging Certbot renewal timer 已启用，在 129 运行全部 integration/E2E runner；检查两个 evidence 的完整 SHA 与 staging `/version` 一致，并检查服务日志无 WARNING。随后由项目所有者在 staging 验收。
 5. 验收通过后 fast-forward 合并同一候选 SHA 到 `main`；不得在验收与合并之间追加提交。
 6. 生产只接收已合并 `main` 历史上的新 annotated SemVer tag。执行 `deploy/deploy-native-production-remote.sh vX.Y.Z`；脚本校验 Tag 与 POM 版本相同、未出现在生产 release history、两份 staging passed evidence 绑定 Tag 完整 SHA，并在 175 的独占部署锁内完成部署。切换后必须做 systemd restart、`/version`、health、OIDC discovery、TLS/Nginx 检查，以及其他项目服务状态、HTTPS 路由、监听端口和 Hearth journal WARNING 核对。失败时恢复旧 route/current symlink 与服务状态；初次部署失败则停止 Hearth units 并移除 Hearth route，不影响其他项目。
 
