@@ -5,6 +5,7 @@ umask 077
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SOURCE_ROOT/deploy/lib/staging-dump-state.sh"
 source "$SOURCE_ROOT/deploy/lib/staging-import-recovery.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-ssh-master.sh"
 source_host="${HEARTH_STAGING_SOURCE_HOST:-124.221.143.25}"
 target_host="${HEARTH_STAGING_HOST:-129.211.6.82}"
 ssh_key="${HEARTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
@@ -26,6 +27,7 @@ ssh_cmd() {
   ssh "${SSH_OPTS[@]}" "$@"
 }
 
+hearth_ensure_staging_ssh_master "ubuntu@$target_host" "${SSH_OPTS[@]}"
 ssh_cmd "ubuntu@$target_host" "sudo -n install -d -o ubuntu -g ubuntu -m 0700 $import_root $state_root /etc/hearth /var/lib/hearth-staging"
 ssh_cmd "ubuntu@$target_host" "sudo -n getent group hearth >/dev/null || sudo -n groupadd --system hearth"
 ssh_cmd "ubuntu@$target_host" "sudo -n touch $lock_file && sudo -n chown ubuntu:ubuntu $lock_file && sudo -n chmod 0600 $lock_file"
