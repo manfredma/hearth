@@ -28,8 +28,15 @@ done
 [[ "$account_id" =~ ^[a-f0-9]{32}$ && -d "$SOURCE_ACCOUNTS/$account_id" ]] || { printf 'Existing staging ACME account cannot be identified.\n' >&2; exit 1; }
 
 install -d -o ubuntu -g ubuntu -m 0755 "$ROOT" "$WEBROOT"
-install -d -o ubuntu -g ubuntu -m 0700 "$CERTBOT_ROOT" \
+install -d -o ubuntu -g ubuntu -m 0700 \
+  "$CERTBOT_ROOT" \
+  "$CERTBOT_ROOT/accounts" \
+  "$CERTBOT_ROOT/accounts/acme-v02.api.letsencrypt.org" \
+  "$CERTBOT_ROOT/accounts/acme-v02.api.letsencrypt.org/directory" \
   "$CERTBOT_ROOT/accounts/acme-v02.api.letsencrypt.org/directory/$account_id" \
+  "$CERTBOT_ROOT/archive" \
+  "$CERTBOT_ROOT/live" \
+  "$CERTBOT_ROOT/renewal-hooks" \
   "$CERTBOT_ROOT/renewal-hooks/deploy"
 install -d -o ubuntu -g ubuntu -m 0750 "$ROOT/letsencrypt-work" "$ROOT/letsencrypt-logs"
 account_target="$CERTBOT_ROOT/accounts/acme-v02.api.letsencrypt.org/directory/$account_id"
@@ -69,7 +76,7 @@ if [[ ! -e "$renewal_conf" && ! -L "$renewal_conf" ]]; then
   current_private_key="$(openssl pkey -in "$key_source" -pubout -outform DER 2>/dev/null | sha256sum | awk '{print $1}')"
   [[ -n "$current_cert_key" && "$current_cert_key" == "$current_private_key" ]] || { printf 'Existing Hearth staging certificate and key do not match.\n' >&2; exit 1; }
 
-  install -d -o ubuntu -g ubuntu -m 0700 "$CERTBOT_ROOT/archive" "$CERTBOT_ROOT/renewal" "$archive_root" "$live_root"
+  install -d -o ubuntu -g ubuntu -m 0700 "$CERTBOT_ROOT/renewal" "$archive_root" "$live_root"
   cert_tmp="$archive_root/.cert1.pem.$$"
   chain_tmp="$archive_root/.chain1.pem.$$"
   fullchain_tmp="$archive_root/.fullchain1.pem.$$"

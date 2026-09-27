@@ -72,6 +72,8 @@ grep -Fq 'systemctl enable --now hearth-production-cert-renew.timer' "$ROOT/depl
 grep -Fq 'User=ubuntu' "$ROOT/deploy/systemd/hearth-production-cert-renew.service.in"
 grep -Fq 'for renewal in /etc/letsencrypt/renewal/*.conf' "$ROOT/deploy/provision-production-certificate.sh"
 grep -Fq 'for renewal in /etc/letsencrypt/renewal/*.conf' "$ROOT/deploy/provision-staging-certificate.sh"
+grep -Fq '"$CERTBOT_ROOT/live"' "$ROOT/deploy/provision-staging-certificate.sh"
+grep -Fq '"$CERTBOT_ROOT/accounts/acme-v02.api.letsencrypt.org/directory"' "$ROOT/deploy/provision-staging-certificate.sh"
 grep -Fq 'renew --cert-name "$DOMAIN" --dry-run' "$ROOT/deploy/provision-staging-certificate.sh"
 ! grep -Fq 'certonly --webroot' "$ROOT/deploy/provision-staging-certificate.sh"
 grep -Fq 'certificates)' "$ROOT/deploy/provision-staging-certificate.sh"
