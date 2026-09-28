@@ -4,6 +4,10 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
+### Added
+
+- 登记 `TD-HEARTH-002`：Hearth 当前退出只清理中央 Session，不会主动失效 Career、release-platform/devops 等业务系统的本地 Session；后续评估 OIDC Back-Channel/Front-Channel Logout 或 Session introspection。
+
 ### Changed
 
 - 真实 OAuth consent 页改从已登记 Client 读取应用名称与回调来源，只列出请求的可选权限；纯 OIDC 请求明确显示无额外个人资料权限并可继续授权；移除尚未提供的授权撤销界面承诺。
