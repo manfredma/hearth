@@ -157,6 +157,8 @@ grep -Fq 'systemctl reload "$NGINX_UNIT"' "$ROOT/deploy/renew-staging-certificat
 grep -Fq 'Shared Nginx emitted WARNING' "$ROOT/deploy/renew-staging-certificate.sh"
 grep -Fq 'Shared Nginx emitted WARNING' "$ROOT/deploy/deploy-native-staging.sh"
 grep -Fq 'proxy_pass http://127.0.0.1:18113' "$ROOT/deploy/nginx/hearth-native-production.conf.template"
+grep -Fq 'Hearth public JavaScript asset was incomplete.' "$ROOT/deploy/deploy-native-production-remote.sh"
+grep -Fq 'asset_bytes="$(wc -c < "$asset_file")"' "$ROOT/deploy/deploy-native-production-remote.sh"
 valid_tag_output="$(HEARTH_PRODUCTION_SSH_KEY=/missing/key HEARTH_PRODUCTION_SSH_KNOWN_HOSTS=/missing/known_hosts bash "$ROOT/deploy/deploy-native-production-remote.sh" v1.2.3 2>&1 || true)"
 grep -Fq 'Production SSH key/known_hosts required.' <<< "$valid_tag_output"
 invalid_tag_status=0
