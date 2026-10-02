@@ -298,6 +298,15 @@ d="$(curl --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.
 jq -e --arg issuer "https://$domain" '.issuer == $issuer' <<< "$d" >/dev/null
 p="$(curl --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.0.0.1" "https://$domain/version")"
 jq -e --arg commit "$commit" '.commitId == $commit' <<< "$p" >/dev/null
+homepage="$(curl --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.0.0.1" "https://$domain/")"
+asset_path="$(grep -oE 'src="/assets/[A-Za-z0-9._-]+\.js"' <<< "$homepage" | head -n 1 | sed -E 's/^src="([^"]+)"$/\1/')"
+[[ "$asset_path" =~ ^/assets/[A-Za-z0-9._-]+\.js$ ]] || { printf 'Hearth public homepage did not reference a fingerprinted JavaScript asset.\n' >&2; exit 1; }
+asset_headers="$transaction_dir/public-asset.headers"
+asset_file="$transaction_dir/public-asset.js"
+curl --fail --silent --show-error --max-time 30 --resolve "$domain:443:127.0.0.1" -D "$asset_headers" -o "$asset_file" "https://$domain$asset_path"
+asset_content_length="$(awk 'BEGIN { IGNORECASE=1 } /^Content-Length:/ { gsub(/\r/, ""); print $2 }' "$asset_headers" | tail -n 1)"
+asset_bytes="$(wc -c < "$asset_file")"
+[[ "$asset_content_length" =~ ^[0-9]+$ && "$asset_bytes" == "$asset_content_length" ]] || { printf 'Hearth public JavaScript asset was incomplete.\n' >&2; exit 1; }
 shared_services_after="$(shared_service_snapshot)"
 [[ "$shared_services_after" == "$shared_services_before" ]] || { printf 'A shared project systemd unit changed state during Hearth deployment.\n' >&2; diff -u <(printf '%s\n' "$shared_services_before") <(printf '%s\n' "$shared_services_after") >&2 || true; exit 1; }
 routes_after="$(public_route_snapshot)"
