@@ -9,4 +9,5 @@ grep -Fq '/etc/hearth/staging-tls/current/fullchain.pem' "$ROOT/deploy/nginx/hea
 grep -Fq '/etc/hearth/staging-tls/current/privkey.pem' "$ROOT/deploy/nginx/hearth-native-staging.conf.template"
 grep -Fq '/data/hearth-native-production/letsencrypt/live/hearth.bytedepth.cn/fullchain.pem' "$ROOT/deploy/nginx/hearth-native-production.conf.template"
 grep -Fq '/data/hearth-native-production/acme-webroot' "$ROOT/deploy/nginx/hearth-native-production.conf.template"
+grep -Fq 'proxy_buffering off;' "$ROOT/deploy/nginx/hearth-native-production.conf.template"
 printf 'Hearth native Nginx contract passed.\n'
