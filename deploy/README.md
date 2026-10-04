@@ -69,26 +69,12 @@ unset staging_e2e_username staging_e2e_password
 
 Runner 将凭据通过管道交给以 `ubuntu` 身份运行的 Playwright 进程，不放入进程参数；含真实凭据的浏览器 trace、截图和视频关闭。E2E 使用测试槽位中的 staging 数据库副本，密码错误或账号缺失时失败，不创建或重置管理员。
 
-## 发布顺序
+## 通过 release-platform 发布
 
-1. 在指定 Hearth feature worktree 实现、测试并更新 `docs/releases/CHANGELOG.md`。
-2. 候选 SHA 冻结后运行本机质量门禁：
+Hearth 的 AI Agent 只在项目仓库内修改代码、创建分支、运行本地质量检查并提交 PR；发布主机上的 Host Agent 只执行 release-platform 下发的固定任务。项目仓库不再提供 staging/production 发布、回滚或远程 SSH 入口。
 
-   ```bash
-   bash scripts/run-local-quality.sh
-   ```
+统一流程：
 
-3. 从本机部署该候选 ref 到 staging（外部构建固定 SHA 的 JAR，不在目标主机编译）：
+`分支/PR + 完整 commit SHA → release-platform QUALITY → BUILD → staging → 页面验收 → 同一制品提升 production`
 
-   ```bash
-   HEARTH_STAGING_HOST=129.211.6.82 \
-   HEARTH_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
-   HEARTH_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
-   bash deploy/deploy-native-staging.sh <candidate-ref>
-   ```
-
-4. 确认 129 的 Hearth staging Certbot renewal timer 已启用，在 129 运行全部 integration/E2E runner；检查两个 evidence 的完整 SHA 与 staging `/version` 一致，并检查服务日志无 WARNING。随后由项目所有者在 staging 验收。
-5. 验收通过后 fast-forward 合并同一候选 SHA 到 `main`；不得在验收与合并之间追加提交。
-6. 生产只接收已合并 `main` 历史上的新 annotated SemVer tag。执行 `deploy/deploy-native-production-remote.sh vX.Y.Z`；脚本校验 Tag 与 POM 版本相同、未出现在生产 release history、两份 staging passed evidence 绑定 Tag 完整 SHA，并在 175 的独占部署锁内完成部署。切换后必须做 systemd restart、`/version`、health、OIDC discovery、TLS/Nginx 检查，以及其他项目服务状态、HTTPS 路由、监听端口和 Hearth journal WARNING 核对。失败时恢复旧 route/current symlink 与服务状态；初次部署失败则停止 Hearth units 并移除 Hearth route，不影响其他项目。
-
-生产没有旧 Hearth Docker 流量需要切换。生产初始化失败时保持 Hearth route 无流量，不停止、覆盖或迁移其他项目服务。
+在 release-platform 的项目配置中绑定 `manfredma/hearth`、既有 staging/production 主机和对应环境。平台按 `bytedepth-java-v1` 通用脚本构建 JAR，生成标准 `META-INF/build-info.properties`，部署后通过 `/version` 校验 commit、版本和构建时间。发布、日志、重试、验收和回滚均以 release-platform 页面及审计记录为准。

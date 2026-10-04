@@ -18,8 +18,8 @@ Spring Boot 多模块统一身份服务（DDD 分层）+ React/Vite 管理端。
 - Hearth 自有代码、制品、数据目录、配置、systemd unit 和发布脚本必须使用 Hearth 标识；真实共享基础设施路径/unit、公司域名和其他业务应用/OIDC 回调域名保留其实际名称，不通过全局替换伪装成 Hearth 资源。
 - Hearth native staging 使用 app/edge 18110/18111，production 使用 18112/18113；不得绑定公网 80/443，不得修改其他项目的服务、数据或路由。
 - native 项目文件、配置、制品、日志和测试资源由 ubuntu 持有；服务用户 hearth 只通过服务组写入专属数据目录。
-- 当前 staging/production 发布采用宿主机 native runtime，唯一流程见 `deploy/README.md`；旧 Docker/Compose 文件不代表当前发布拓扑。若用于本地或数据迁移，服务名仍必须带 `hearth-` 前缀，避免与共享 Docker 网络别名冲突。
-- 任何用户可见、运行时、配置或部署变更，首次 staging 前必须先写入 `docs/releases/CHANGELOG.md` 的非空分类 `## Unreleased`。
+- 当前 staging/production 发布唯一由 release-platform 页面和 Host Agent 编排；本仓库不执行发布、回滚或远程 SSH。旧 Docker/Compose 和历史部署脚本不代表当前发布拓扑。数据迁移、证书和运行时初始化脚本仅用于一次性基础设施维护。
+- 任何用户可见、运行时或配置变更，首次提交 PR 前必须写入 `docs/releases/CHANGELOG.md` 的非空分类 `## Unreleased`；发布记录由 release-platform 管理。
 - 涉及模块边界、外部接口、OIDC、身份主键或长期约束的设计，必须先写 ADR（`docs/architecture/decisions/`），再写 spec 和代码。
 
 ## 质量入口

@@ -13,9 +13,9 @@ public class BuildInfoController {
     private final String commitId;
     private final String builtAt;
 
-    public BuildInfoController(@Value("${hearth.build.version:unknown}") String version,
-                               @Value("${hearth.build.commit-id:unknown}") String commitId,
-                               @Value("${hearth.build.built-at:unknown}") String builtAt) {
+    public BuildInfoController(@Value("${build.version:unknown}") String version,
+                               @Value("${build.commitId:unknown}") String commitId,
+                               @Value("${build.time:unknown}") String builtAt) {
         this.version = version;
         this.commitId = commitId;
         this.builtAt = builtAt;
