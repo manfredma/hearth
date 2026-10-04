@@ -1,6 +1,6 @@
 spring:
   config:
-    import: optional:classpath:hearth-build.properties
+    import: optional:classpath:META-INF/build-info.properties
   application:
     name: hearth
   datasource:

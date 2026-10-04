@@ -10,6 +10,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Changed
 
+- Hearth 构建、staging/production 发布和回滚改由 release-platform 统一编排；项目仓库不再提供发布脚本，平台构建写入标准 `/version` 元数据。
 - 真实 OAuth consent 页改从已登记 Client 读取应用名称与回调来源，只列出请求的可选权限；纯 OIDC 请求明确显示无额外个人资料权限并可继续授权；移除尚未提供的授权撤销界面承诺。
 - 生产发布与证书脚本改用 175 当前共享 Nginx unit/config 和 MySQL 管理配置路径；共享服务快照在任一 unit 缺失或非 active 时立即失败。
 - Career E2E 从其受保护日历页发起授权，关联 Career 实际生成的 state/PKCE 与 callback，断言 Career 登录会话并执行真实退出按钮；Hearth 自测 Client 单独验证 token/userinfo 与 RP logout。候选 SHA 变化后必须重新执行 staging integration/E2E；这些用例的本地静态检查不是 staging 通过证据。
@@ -28,6 +29,7 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Fixed
 
+- 生产共享公网 Nginx 的临时代理目录发生所有权漂移时，会在已发送 `Content-Length` 后截断 Hearth 前端 JS；Hearth production route 现在直接流式转发，不依赖共享 `proxy_temp`，后续发布还会校验公网首页引用的 JS 实际字节数与 `Content-Length` 一致。
 - 生产监听端口验收统一 IPv4 loopback 与 IPv4-mapped IPv6 loopback 表示，避免 Java 双栈监听被误判为超出 Hearth 端口范围。
 - 生产部署等待共享 Nginx 完成 reload 后再校验证书，并在失败回滚时先恢复 Hearth release 指针与服务，再恢复配置文件，避免留下半发布状态。
 - 本地质量入口捕获每步输出并阻断 WARN/WARNING、非零退出和日志捕获失败；恢复对 PR 变更 Java 类的 100% 行、分支、方法覆盖率检查，合并各模块单元测试执行数据后逐模块检查实际报告。
