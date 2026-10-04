@@ -4,8 +4,13 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
+### Added
+
+- 登记 `TD-HEARTH-002`：Hearth 当前退出只清理中央 Session，不会主动失效 Career、release-platform/devops 等业务系统的本地 Session；后续评估 OIDC Back-Channel/Front-Channel Logout 或 Session introspection。
+
 ### Changed
 
+- Hearth 构建、staging/production 发布和回滚改由 release-platform 统一编排；项目仓库不再提供发布脚本，平台构建写入标准 `/version` 元数据。
 - 真实 OAuth consent 页改从已登记 Client 读取应用名称与回调来源，只列出请求的可选权限；纯 OIDC 请求明确显示无额外个人资料权限并可继续授权；移除尚未提供的授权撤销界面承诺。
 - 生产发布与证书脚本改用 175 当前共享 Nginx unit/config 和 MySQL 管理配置路径；共享服务快照在任一 unit 缺失或非 active 时立即失败。
 - Career E2E 从其受保护日历页发起授权，关联 Career 实际生成的 state/PKCE 与 callback，断言 Career 登录会话并执行真实退出按钮；Hearth 自测 Client 单独验证 token/userinfo 与 RP logout。候选 SHA 变化后必须重新执行 staging integration/E2E；这些用例的本地静态检查不是 staging 通过证据。
