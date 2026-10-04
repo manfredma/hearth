@@ -46,28 +46,28 @@ command -v logrotate >/dev/null || { printf 'logrotate is required.\n' >&2; exit
 install -d -o ubuntu -g ubuntu -m 0755 "$NATIVE_ROOT" "$NATIVE_ROOT/releases" "$NATIVE_ROOT/source" "$ROOT_DIR" "$ROOT_DIR/data" "$ROOT_DIR/edge" "$ROOT_DIR/edge/client_body_temp" "$ROOT_DIR/edge/proxy_temp"
 chown ubuntu:hearth "$ROOT_DIR/data"
 chmod 0770 "$ROOT_DIR/data"
-chown -R ubuntu:hearth "$ROOT_DIR/edge"
+chown -R ubuntu:ubuntu "$ROOT_DIR/edge"
 chmod -R g+rwX "$ROOT_DIR/edge"
-install -d -o ubuntu -g hearth -m 0750 "$ROOT_DIR/edge/logs"
+install -d -o ubuntu -g ubuntu -m 0750 "$ROOT_DIR/edge/logs"
 for log_name in access.log error.log; do
     log_path="$ROOT_DIR/edge/logs/$log_name"
     [[ ! -L "$log_path" ]] || { printf 'Refusing symlinked Hearth edge log: %s\n' "$log_path" >&2; exit 1; }
     if [[ ! -e "$log_path" ]]; then
-        install -o ubuntu -g hearth -m 0660 /dev/null "$log_path"
+        install -o ubuntu -g ubuntu -m 0660 /dev/null "$log_path"
     else
         [[ -f "$log_path" ]] || { printf 'Hearth edge log path is not a regular file: %s\n' "$log_path" >&2; exit 1; }
-        chown ubuntu:hearth "$log_path"
+        chown ubuntu:ubuntu "$log_path"
         chmod 0660 "$log_path"
     fi
 done
 for legacy_log in "$ROOT_DIR/edge/access.log" "$ROOT_DIR/edge/error.log"; do
     if [[ -f "$legacy_log" && ! -L "$legacy_log" ]]; then
-        chown ubuntu:hearth "$legacy_log"
+        chown ubuntu:ubuntu "$legacy_log"
         chmod 0660 "$legacy_log"
     fi
 done
-install -d -o ubuntu -g hearth -m 0750 "$ENV_DIR"
-chown ubuntu:hearth "$ENV_FILE"
+install -d -o ubuntu -g ubuntu -m 0750 "$ENV_DIR"
+chown ubuntu:ubuntu "$ENV_FILE"
 chmod 0640 "$ENV_FILE"
 
 edge_conf_tmp="$(mktemp "$ENV_DIR/.native-edge.XXXXXX")"
@@ -78,6 +78,7 @@ trap 'rm -f -- "$edge_conf_tmp" "$logrotate_tmp" "$logrotate_service_tmp" "$logr
 edge_port="$([[ "$ENVIRONMENT" == staging ]] && printf '%s' "$HEARTH_NATIVE_STAGING_EDGE_PORT" || printf '%s' "$HEARTH_NATIVE_PRODUCTION_EDGE_PORT")"
 app_port="$([[ "$ENVIRONMENT" == staging ]] && printf '%s' "$HEARTH_NATIVE_STAGING_APP_PORT" || printf '%s' "$HEARTH_NATIVE_PRODUCTION_APP_PORT")"
 cat > "$edge_conf_tmp" <<EOF
+user ubuntu;
 events { worker_connections 1024; }
 pid $ROOT_DIR/edge/nginx.pid;
 http {
@@ -98,7 +99,7 @@ http {
     }
 }
 EOF
-install -o ubuntu -g hearth -m 0640 "$edge_conf_tmp" "$ENV_DIR/$ENVIRONMENT-native-edge.conf"
+install -o ubuntu -g ubuntu -m 0640 "$edge_conf_tmp" "$ENV_DIR/$ENVIRONMENT-native-edge.conf"
 sed \
     -e "s#__EDGE_LOG_DIR__#$ROOT_DIR/edge/logs#g" \
     "$SOURCE_ROOT/deploy/logrotate/hearth-native-edge.conf.template" > "$logrotate_tmp"

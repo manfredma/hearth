@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=forking
-User=hearth
-Group=hearth
+User=ubuntu
+Group=ubuntu
 ExecStartPre=/usr/sbin/nginx -t -c /etc/hearth/production-native-edge.conf
 ExecStart=/usr/sbin/nginx -c /etc/hearth/production-native-edge.conf -g 'daemon on; master_process on;'
 ExecReload=/usr/sbin/nginx -c /etc/hearth/production-native-edge.conf -s reload
