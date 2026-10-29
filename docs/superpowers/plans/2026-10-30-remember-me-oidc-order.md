@@ -46,3 +46,7 @@
 发布前置已通过 canonical API 补齐 Hearth staging→129 的绑定，并将 GitHub 历史默认分支校正为 main、刷新 source binding。准备 v0.1.3，第二次审查发现的前导零 SemVer 问题已用失败回归修复。GitHub connector 创建 PR 权限不足，使用已有 gh 认证创建 #6。
 
 首次平台候选 `8bf5ab8a-c9eb-41e1-b562-1b676417d012` / SHA `ac86e65e2339b9573d3ac0ce99e2c87538d92411` 的 QUALITY task `72544c48-e8c3-49ac-a725-19f454bdf4b6` 真实失败：CONFIGURATION_MISSING，Host Agent 未适配 Hearth 元数据，未构建/部署。必要修复分为平台声明式元数据条目与 Hearth immutable snapshot/attempt runner 兼容，不降低原用例或证据要求。
+
+当前候选 `e386c5d3-071b-48cc-96ad-62a148710450` / `a683ae809e97f823883b9997920f8714ae1b2094` 已通过 QUALITY、BUILD、DEPLOY_STAGING。元数据在 release-platform #370/#371 合并，正式会话加载后校正了 staging 当前 release 的服务组；所有者/权限/manifest/JAR 摘要保持不变。正式 retry `8e9a9219-0e2d-44c0-997f-f5d3b775f4d6` 真实集成 1 项通过，日志无告警。
+
+E2E task `a14d0cce-24a8-4077-b658-da9848ce9bf6` 为 5 passed / 1 failed：桌面 Career 首次回调在默认 5 秒 URL 断言超时后由客户端中止（499），同次 Token 交换已返回 200，移动端随后完整通过。调整首个跨站回调等待至有界 15 秒，保留 30 秒总测试预算及全部断言；使用布尔路由/state/PKCE 断言避免失败日志暴露授权参数。修改后必须以新完整 SHA 创建新候选，不能修改已部署 snapshot 或覆盖旧制品。

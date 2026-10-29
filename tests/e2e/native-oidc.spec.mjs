@@ -26,6 +26,21 @@ function authorizationUrl({clientId, redirectUri, scope, state, challenge}) {
   return url.toString();
 }
 
+// Poll only a boolean so failed route assertions cannot print OAuth query values.
+async function expectPrivateRoute(page, matches, options = {}) {
+  await expect.poll(() => matches(new URL(page.url())), {
+    message: 'Expected authentication route was not reached', ...options,
+  }).toBe(true);
+}
+
+async function gotoPrivateAuthorization(page, target) {
+  try {
+    return await page.goto(target);
+  } catch {
+    throw new Error('Authentication navigation failed');
+  }
+}
+
 async function approveIfShown(page) {
   if (new URL(page.url()).pathname === '/oauth2/consent') {
     await page.getByRole('button', {name: /同意并继续/}).click();
@@ -102,7 +117,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const careerAuthorization = new URL((await careerAuthorizationObserved).url());
     expect(careerAuthorization.searchParams.get('state')).toBeTruthy();
     expect(careerAuthorization.searchParams.get('code_challenge_method')).toBe('S256');
-    expect(careerAuthorization.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(/^[A-Za-z0-9_-]{43}$/.test(careerAuthorization.searchParams.get('code_challenge'))).toBe(true);
     const csrfResponse = await csrfWait;
     expect(csrfResponse.status()).toBe(200);
     expect((await csrfResponse.json()).token).toBeTruthy();
@@ -113,15 +128,17 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await page.getByRole('button', {name: '登录'}).click();
     const loginResponse = await loginWait;
     expect(loginResponse.status()).toBe(200);
-    await expect(page).toHaveURL((url) => url.pathname === '/oauth2/consent'
-      || url.hostname === 'staging-career.bytedepth.cn');
+    // A cold Career callback can still be exchanging tokens after the default 5s.
+    // Keep the whole-test 30s budget and all callback/session assertions below.
+    await expectPrivateRoute(page, (url) => url.pathname === '/oauth2/consent'
+      || url.hostname === 'staging-career.bytedepth.cn', {timeout: 15_000});
     await approveIfShown(page);
     const careerResult = new URL((await careerCallbackObserved).url());
     expect(careerResult.origin + careerResult.pathname).toBe(careerAuthorization.searchParams.get('redirect_uri'));
-    expect(careerResult.searchParams.get('state')).toBe(careerAuthorization.searchParams.get('state'));
+    expect(careerResult.searchParams.get('state') === careerAuthorization.searchParams.get('state')).toBe(true);
     expect(careerResult.searchParams.get('code')).toBeTruthy();
     expect(careerResult.searchParams.has('error')).toBe(false);
-    await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
+    await expectPrivateRoute(page, (url) => url.hostname === 'staging-career.bytedepth.cn'
       && url.pathname === '/calendar');
     const sessionResponse = await page.request.get(path('/api/session'));
     expect(sessionResponse.status()).toBe(200);
@@ -162,14 +179,14 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     let callbackUrl;
     const callbackObserved = captureRequestUrl(page, (url) =>
       url.origin === new URL(base).origin && url.pathname === '/consent-preview' && url.searchParams.has('code'));
-    await page.goto(authorizationUrl({
+    await gotoPrivateAuthorization(page, authorizationUrl({
       clientId: client.clientId,
       redirectUri: callbackUri,
       scope: 'openid profile email',
       state,
       challenge,
     }));
-    await expect(page).toHaveURL(/\/oauth2\/consent(?:\?|$)/);
+    await expectPrivateRoute(page, (url) => url.pathname === '/oauth2/consent');
     await expect(page.getByRole('heading', {
       name: '允许 Hearth E2E 使用你的 Hearth 账号？',
     })).toBeVisible();
@@ -183,7 +200,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     await approveIfShown(page);
     callbackUrl = await callbackObserved;
     const callback = new URL(callbackUrl);
-    expect(callback.searchParams.get('state')).toBe(state);
+    expect(callback.searchParams.get('state') === state).toBe(true);
     const code = callback.searchParams.get('code');
     expect(code).toBeTruthy();
 
@@ -231,7 +248,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       // Existing consent lets this first authorization go directly to the callback.
       const firstCallback = captureRequestUrl(restoredPage, (url) =>
         url.origin === new URL(base).origin && url.pathname === '/consent-preview');
-      await restoredPage.goto(restoredUrl.toString());
+      await gotoPrivateAuthorization(restoredPage, restoredUrl.toString());
       const restoredCallback = new URL(await firstCallback);
       // Boolean assertions avoid printing OAuth artifacts on failure.
       expect(restoredCallback.searchParams.has('error')).toBe(false);
@@ -260,7 +277,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
 
     expect(careerAuthorization.searchParams.get('redirect_uri')).toBe(careerCallback);
     await page.goto('https://staging-career.bytedepth.cn/calendar');
-    await expect(page).toHaveURL((url) => url.hostname === 'staging-career.bytedepth.cn'
+    await expectPrivateRoute(page, (url) => url.hostname === 'staging-career.bytedepth.cn'
       && url.pathname === '/calendar');
     await expect(page.locator('.career-header__username')).toHaveText(hearthSession.displayName);
     const logoutButton = page.getByRole('button', {name: '退出登录'});
@@ -274,9 +291,9 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     logoutUrl.searchParams.set('id_token_hint', token.id_token);
     logoutUrl.searchParams.set('post_logout_redirect_uri', logoutUri);
     logoutUrl.searchParams.set('state', logoutState);
-    await page.goto(logoutUrl.toString());
+    await gotoPrivateAuthorization(page, logoutUrl.toString());
     logoutCallbackUrl = await logoutCallbackObserved;
-    expect(new URL(logoutCallbackUrl).searchParams.get('state')).toBe(logoutState);
+    expect(new URL(logoutCallbackUrl).searchParams.get('state') === logoutState).toBe(true);
     const sessionAfterLogout = await page.request.get(path('/api/session'));
     expect(sessionAfterLogout.status()).toBe(403);
     // Hearth logout alone does not invalidate Career's local session. Exercise
@@ -290,7 +307,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
       await logoutForm.evaluate((form) => form.requestSubmit());
     }
     expect(new URL((await rpLogout).url()).searchParams.get('id_token_hint')).toBeTruthy();
-    await expect(page).toHaveURL((url) => url.origin === new URL(base).origin && url.pathname === '/login');
+    await expectPrivateRoute(page, (url) => url.origin === new URL(base).origin && url.pathname === '/login');
     const careerAfterLogout = await page.request.get('https://staging-career.bytedepth.cn/calendar', {
       headers: {Accept: 'text/html'}, maxRedirects: 0,
     });

@@ -8,6 +8,8 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ### Fixed
 
+- staging OIDC E2E 为首次跨站回调设置有界等待，并使用不打印 OAuth 参数的路由及 state/PKCE 断言；保留全部流程与总超时。
+
 - staging runner 接入 release-platform 的不可变源码快照和签名 attempt evidence，沿用既有 MySQL/Redis 隔离测试槽；复用平台锁、共享 E2E 账号并记录真实执行用例数，拒绝旧 SHA/摘要/nonce。
 
 ### Added
