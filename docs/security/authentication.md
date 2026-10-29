@@ -27,3 +27,11 @@ Hearth 自己提供 OIDC，Spring Security 7 Authorization Server 负责协议�
 登录页默认不勾选“保持登录 30 天”。勾选后创建 `hearth-remember-me` Cookie，有效期为 30 天。Cookie 使用 `HttpOnly`、HTTPS 环境 `Secure` 和 `SameSite=Lax`，签名密钥由环境变量 `HEARTH_REMEMBER_ME_KEY` 注入；生产与 staging 必须使用不同的高熵密钥。
 
 该方案参考 bytedepth 的已验证实现，避免 JDBC `persistent_logins` 的 Token 轮换并发竞态。代价是无法只撤销某一台设备；轮换签名密钥会整体使既有 Remember-Me Cookie 失效。
+
+## Remember-Me 与首次 OIDC 授权
+
+Spring Security 7.1.0 会在默认 Remember-Me 过滤器之前预校验授权请求，并将包含 principal 的 token 缓存到 request attribute。授权链必须在该预校验之前完成持久 Cookie 身份恢复，否则同一请求虽已恢复 Session，授权端仍可能使用匿名 principal 返回 `invalid_request / principal`。一次失败后重试成功并不能证明生命周期正确。
+
+授权服务器链使用 `AuthorizationServerRememberMeConfigurer` 将单个框架恢复过滤器放在 LogoutFilter 之后；保留 provider 验证、共享 SecurityContextRepository 和 SessionAuthenticationStrategy，包括会话持久化与 session ID 轮换。普通 Web 链仍使用默认 Remember-Me 配置。设计依据见 [ADR-0016](../architecture/decisions/0016-remember-me-before-authorization-validation.md)。
+
+防复发入口为 `RememberMeAuthorizationFilterChainTest`：加载真实 Hearth 安全配置及 Spring FilterChainProxy，以 mock servlet 和内存授权仓储验证首次授权、无/无效/过期 Cookie、已有 Session 优先、Session 复用、PKCE 及 CSRF 保护的退出。`OidcLogoutFilterChainTest` 覆盖 RP logout。staging 的 `tests/e2e/native-oidc.spec.mjs` 使用只保留持久 Cookie 的新浏览器上下文，第一跳直接授权，再验证 code exchange、nonce、auth_time 和 userinfo；不得先访问 `/api/session` 掩盖时序问题。本机不执行跨进程 OIDC 验收。

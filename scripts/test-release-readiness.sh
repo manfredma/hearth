@@ -4,7 +4,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 mkdir -p "$tmp/scripts/lib" "$tmp/deploy/lib" "$tmp/docs/releases"
-cp "$ROOT/scripts/check-release-readiness.sh" "$tmp/scripts/"
+cp "$ROOT/scripts/check-release-readiness.sh" "$ROOT/scripts/prepare-release.py" "$tmp/scripts/"
 cp "$ROOT/scripts/lib/"*.sh "$tmp/scripts/lib/"
 cp "$ROOT/deploy/lib/"*.sh "$tmp/deploy/lib/"
 printf '#!/bin/bash\nexit 0\n' > "$tmp/scripts/check-hearth-naming.sh"
@@ -44,4 +44,20 @@ git add other
 git commit -qm newer
 git update-ref refs/remotes/origin/main HEAD
 reject --production v1.0.1
+# Preparation is local-only, preserves categories and rejects invalid or repeated versions.
+printf '# Changelog\n\n## Unreleased\n\n### Fixed\n\n- Prepared fix.\n' > docs/releases/CHANGELOG.md
+if python3 scripts/prepare-release.py --version nope > /dev/null 2>&1; then exit 1; fi
+python3 scripts/prepare-release.py --version v1.0.2
+bash scripts/check-release-readiness.sh > /dev/null
+if python3 scripts/prepare-release.py --version v1.0.2 > /dev/null 2>&1; then exit 1; fi
+if python3 scripts/prepare-release.py --version v1.0.3 > /dev/null 2>&1; then exit 1; fi
+# Platform-prepared candidates retain an empty Unreleased and a categorized release.
+printf '# Changelog\n\n## Unreleased\n\n## [1.0.2] - 2026-10-30\n\n### Fixed\n\n- Prepared fix.\n' > docs/releases/CHANGELOG.md
+bash scripts/check-release-readiness.sh > /dev/null
+printf '# Changelog\n\n## Unreleased\n\n## [1.0.2] - 2026-10-30\n\n### Fixed\n' > docs/releases/CHANGELOG.md
+reject
+printf '# Changelog\n\n## Unreleased\n\n## [1.0.2] - 2026-10-30\n\n### Whatever\n- Invalid category.\n' > docs/releases/CHANGELOG.md
+reject
+printf '# Changelog\n\n## Unreleased\n\n### Fixed\n\n## [1.0.2] - 2026-10-30\n### Fixed\n- Prepared fix.\n' > docs/releases/CHANGELOG.md
+reject
 printf 'Hearth release readiness tests passed.\n'

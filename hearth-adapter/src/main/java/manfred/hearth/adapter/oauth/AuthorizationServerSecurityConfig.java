@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.oauth2.server.authorization.oidc.web.authentication.OidcLogoutAuthenticationSuccessHandler;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -59,7 +60,7 @@ public class AuthorizationServerSecurityConfig {
                 // POST. Exclude the dedicated Authorization Server endpoints
                 // from the generic web CSRF filter as the framework requires.
                 .csrf(csrf -> configureCsrf(csrf, authorizationServer.getEndpointsMatcher()))
-                .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
+                .with(new AuthorizationServerRememberMeConfigurer(rememberMeServices), Customizer.withDefaults())
                 .requestCache(cache -> cache.requestCache(requestCache))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HearthLoginAuthenticationEntryPoint()));

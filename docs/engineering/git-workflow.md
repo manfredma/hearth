@@ -7,8 +7,8 @@ Hearth 使用 GitHub Flow：`main` 只用于集成和受控发布，开发必须
 1. 从最新 `main` 创建 worktree 和短生命周期分支。
 2. 先写测试，再实现；所有生产 Java 业务分支达到 100% 变更覆盖率。
 3. 更新 `docs/releases/CHANGELOG.md` 的 `## Unreleased`，运行 `bash scripts/run-local-quality.sh`。
-4. 通过 PR 合并后，将分支/PR 和完整 SHA 交给 release-platform；平台完成 staging、集成测试、E2E 和项目所有者验收。
-5. 验收通过后由平台将同一不可变制品提升 production；合并后的 worktree 和分支立即清理。
+4. 将 PR head 完整 SHA 与 `refs/pull/<编号>/head` 交给 canonical release-platform；平台先完成 staging、集成测试、E2E 和项目所有者验收。
+5. 验收通过后由平台将同一 SHA fast-forward 合并并将同一不可变制品提升 production；合并后的 worktree 和分支立即清理。
 
 ## 常用命令
 

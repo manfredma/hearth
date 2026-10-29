@@ -5,10 +5,17 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 cd "$SOURCE_ROOT"
 changelog=docs/releases/CHANGELOG.md
+# Accept development changes or a platform-prepared, categorized release.
 check_changelog() {
   awk '
     /^## Unreleased$/ {inside=1; sections++; next}
-    /^## / {inside=0}
+    /^## / {
+      if (inside == 1 && !unreleasedContent && $0 ~ /^## \[v?[0-9]+\.[0-9]+\.[0-9]+\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) {
+        inside=2; category=0; next
+      }
+      inside=0
+    }
+    inside == 1 && NF && $0 !~ /^<!--.*-->$/ {unreleasedContent=1}
     inside && /^### / {category=($0 ~ /^### (Added|Changed|Deprecated|Removed|Fixed|Security)$/); next}
     inside && /^[*-][[:space:]]+[^[:space:]]/ {if (!category) invalid=1; else entries++}
     END {exit(sections == 1 && entries > 0 && !invalid ? 0 : 1)}

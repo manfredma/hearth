@@ -35,6 +35,8 @@
 | [ADR-0014](0014-native-shared-host-deployment.md) | Hearth 复用共享宿主机 native 基础设施 | Accepted | 2026-09-26 |
 | [ADR-0015](0015-staging-certificate-renewal-on-staging-host.md) | Staging TLS 证书由 staging 宿主机本地续期 | Accepted | 2026-09-27 |
 
+| [ADR-0016](0016-remember-me-before-authorization-validation.md) | 授权预校验前恢复 Remember-Me 身份 | Accepted | 2026-10-30 |
+
 ## 维护边界
 
 ADR 只记录 Hearth 的长期架构事实，不记录临时部署日志、个人记忆或业务应用内部权限规则。已经不适用于 Hearth 的模板内容应删除或重写，而不是继续作为隐含约束。

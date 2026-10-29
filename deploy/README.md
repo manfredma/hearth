@@ -75,6 +75,8 @@ Hearth 的 AI Agent 只在项目仓库内修改代码、创建分支、运行本
 
 统一流程：
 
-`分支/PR + 完整 commit SHA → release-platform QUALITY → BUILD → staging → 页面验收 → 同一制品提升 production`
+`PR head 完整 commit SHA → release-platform QUALITY → BUILD → staging → integration/E2E → 项目所有者验收 → 平台合并同一 SHA → 同一制品 production`
 
-在 release-platform 的项目配置中绑定 `manfredma/hearth`、既有 staging/production 主机和对应环境。平台按 `bytedepth-java-v1` 通用脚本构建 JAR，生成标准 `META-INF/build-info.properties`，部署后通过 `/version` 校验 commit、版本和构建时间。发布、日志、重试、验收和回滚均以 release-platform 页面及审计记录为准。
+在 release-platform 的项目配置中绑定 `manfredma/hearth`、既有 staging/production 主机和对应环境。平台按已登记的 `hearth-v1` 适配器构建 JAR，生成标准 `META-INF/build-info.properties`，部署后通过 `/version` 校验 commit、版本和构建时间。发布、日志、重试、验收和回滚均以 release-platform 页面及审计记录为准。
+
+当前接入及 Agent API 入口见 [平台发布流程](../docs/engineering/unified-release-pipeline.md)。本页前文保留的一次性维护和历史测试命令不是本次发布入口；候选验证只由 canonical 平台和 Host Agent 编排。

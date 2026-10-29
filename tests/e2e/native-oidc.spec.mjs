@@ -81,7 +81,7 @@ test('login form obtains CSRF and rejects invalid credentials', async ({page}) =
   await expect(page.getByRole('alert')).toHaveText('登录失败，请检查账号或密码');
 });
 
-test('admin login, consent, token exchange, RP logout, and Career callback', async ({page}) => {
+test('admin login, consent, token exchange, RP logout, and Career callback', async ({page, browser}) => {
     const username = process.env.HEARTH_E2E_ADMIN_USERNAME;
     const password = process.env.HEARTH_E2E_ADMIN_PASSWORD;
     expect(username).toBeTruthy();
@@ -109,6 +109,7 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     const loginWait = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/login');
     await page.getByLabel('账号').fill(username);
     await page.getByLabel('密码').fill(password);
+    await page.getByRole('checkbox', {name: '保持登录 30 天'}).check();
     await page.getByRole('button', {name: '登录'}).click();
     const loginResponse = await loginWait;
     expect(loginResponse.status()).toBe(200);
@@ -208,6 +209,54 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     });
     expect(userInfoResponse.status()).toBe(200);
     expect((await userInfoResponse.json()).sub).toBe(idClaims.sub);
+
+    // A separate browser context models expiration of both sites' short sessions.
+    // Its first network request is authorization: no /api/session prewarming.
+    const rememberCookies = (await page.context().cookies(base))
+      .filter((cookie) => cookie.name === 'hearth-remember-me');
+    expect(rememberCookies.length).toBe(1);
+    expect(rememberCookies[0].httpOnly).toBe(true);
+    const restoredContext = await browser.newContext();
+    try {
+      await restoredContext.addCookies(rememberCookies);
+      const restoredPage = await restoredContext.newPage();
+      const restoredPkce = pkcePair();
+      const restoredState = randomSuffix();
+      const restoredUrl = new URL(authorizationUrl({
+        clientId: client.clientId, redirectUri: callbackUri, scope: 'openid profile email',
+        state: restoredState, challenge: restoredPkce.challenge,
+      }));
+      const restoredNonce = randomSuffix();
+      restoredUrl.searchParams.set('nonce', restoredNonce);
+      // Existing consent lets this first authorization go directly to the callback.
+      const firstCallback = captureRequestUrl(restoredPage, (url) =>
+        url.origin === new URL(base).origin && url.pathname === '/consent-preview');
+      await restoredPage.goto(restoredUrl.toString());
+      const restoredCallback = new URL(await firstCallback);
+      // Boolean assertions avoid printing OAuth artifacts on failure.
+      expect(restoredCallback.searchParams.has('error')).toBe(false);
+      expect(Boolean(restoredCallback.searchParams.get('code'))).toBe(true);
+      expect(restoredCallback.searchParams.get('state') === restoredState).toBe(true);
+      const restoredTokenResponse = await restoredContext.request.post(path('/oauth2/token'), {
+        headers: {Authorization: 'Basic ' + basic},
+        form: {grant_type: 'authorization_code', code: restoredCallback.searchParams.get('code'),
+          redirect_uri: callbackUri, code_verifier: restoredPkce.verifier},
+      });
+      expect(restoredTokenResponse.status()).toBe(200);
+      const restoredToken = await restoredTokenResponse.json();
+      const restoredClaims = JSON.parse(Buffer.from(restoredToken.id_token.split('.')[1], 'base64url').toString());
+      expect(restoredClaims.iss === expectedIssuer).toBe(true);
+      expect(restoredClaims.sub === idClaims.sub).toBe(true);
+      expect(restoredClaims.nonce === restoredNonce).toBe(true);
+      expect(Number.isFinite(restoredClaims.auth_time)).toBe(true);
+      const restoredInfo = await restoredContext.request.get(path('/userinfo'), {
+        headers: {Authorization: 'Bearer ' + restoredToken.access_token},
+      });
+      expect(restoredInfo.status()).toBe(200);
+      expect((await restoredInfo.json()).sub === idClaims.sub).toBe(true);
+    } finally {
+      await restoredContext.close();
+    }
 
     expect(careerAuthorization.searchParams.get('redirect_uri')).toBe(careerCallback);
     await page.goto('https://staging-career.bytedepth.cn/calendar');
