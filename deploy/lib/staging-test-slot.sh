@@ -44,7 +44,7 @@ hearth_test_slot_begin() {
   manifest="$HEARTH_TEST_SLOT_STATE_ROOT/$run_id/$suite.manifest"
   env_file="$HEARTH_TEST_SLOT_STATE_ROOT/$run_id/$suite.env"
   HEARTH_TEST_SLOT_MANIFEST="$manifest"
-  HEARTH_TEST_SLOT_LOCK_HELD=1 /opt/hearth-native/source/current/deploy/provision-staging-test-slot.sh --run-id "$run_id" "$suite"
+  HEARTH_TEST_SLOT_LOCK_HELD=1 "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh" --run-id "$run_id" "$suite"
   install -d -o ubuntu -g hearth -m 0750 /run/hearth
   install -o ubuntu -g hearth -m 0640 "$env_file" "$HEARTH_TEST_SLOT_RUNTIME_ENV"
   systemctl stop "$HEARTH_TEST_SLOT_MAIN_SERVICE"
@@ -62,7 +62,7 @@ hearth_test_slot_end() {
   fi
   rm -f -- "$HEARTH_TEST_SLOT_RUNTIME_ENV"
   if [[ -f "$manifest" ]]; then
-    HEARTH_TEST_SLOT_LOCK_HELD=1 /opt/hearth-native/source/current/deploy/teardown-staging-test-slot.sh --manifest "$manifest" || status=1
+    HEARTH_TEST_SLOT_LOCK_HELD=1 "$SOURCE_ROOT/deploy/teardown-staging-test-slot.sh" --manifest "$manifest" || status=1
   fi
   restore_started_at="$(date --iso-8601=seconds)"
   systemctl start "$HEARTH_TEST_SLOT_MAIN_SERVICE" || status=1

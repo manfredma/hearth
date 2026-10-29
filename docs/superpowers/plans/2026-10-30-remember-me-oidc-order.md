@@ -44,3 +44,5 @@
 实际链首次授权回归在修复前返回 invalid_request/principal，修复后通过。2026-10-30 完整本地质量门禁通过，变更 Java 类行/分支/方法覆盖率均 100%。独立审查无新正确性发现。发布准备兼容门禁先增加失败用例，再修复；存在的实际发布前置差异是 staging binding 缺失及 GitHub 默认分支仍为历史 docs 分支，按 canonical API 核对。
 
 发布前置已通过 canonical API 补齐 Hearth staging→129 的绑定，并将 GitHub 历史默认分支校正为 main、刷新 source binding。准备 v0.1.3，第二次审查发现的前导零 SemVer 问题已用失败回归修复。GitHub connector 创建 PR 权限不足，使用已有 gh 认证创建 #6。
+
+首次平台候选 `8bf5ab8a-c9eb-41e1-b562-1b676417d012` / SHA `ac86e65e2339b9573d3ac0ce99e2c87538d92411` 的 QUALITY task `72544c48-e8c3-49ac-a725-19f454bdf4b6` 真实失败：CONFIGURATION_MISSING，Host Agent 未适配 Hearth 元数据，未构建/部署。必要修复分为平台声明式元数据条目与 Hearth immutable snapshot/attempt runner 兼容，不降低原用例或证据要求。

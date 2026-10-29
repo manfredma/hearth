@@ -41,7 +41,7 @@ sudo -n -u ubuntu -- test -r "$SOURCE_ROOT/pom.xml" \
 exec 9>>"$MAVEN_REPOSITORY_LOCK"
 flock -x 9
 
-commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
+commit="$(cat "$SOURCE_ROOT/.release-platform-source-commit")"
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || { printf 'Hearth source SHA is invalid for Maven bootstrap.\n' >&2; exit 1; }
 
 if hearth_maven_runtime_manifest_matches "$INPUTS_MANIFEST" "$SOURCE_ROOT"; then

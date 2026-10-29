@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
-readonly SOURCE_ROOT=/opt/hearth-native/source/current
+readonly SOURCE_ROOT="${RELEASE_PLATFORM_TEST_SOURCE_ROOT:?Platform source snapshot is required}"
 readonly STATE_ROOT=/var/lib/hearth-staging
-readonly HISTORY="$STATE_ROOT/deploy-history"
-readonly EVIDENCE="$STATE_ROOT/test-history/staging-integration"
-readonly LOCK="$STATE_ROOT/deployment-test.lock"
+readonly HISTORY="${RELEASE_PLATFORM_TEST_DEPLOY_HISTORY:?Platform deployment history is required}"
+readonly EVIDENCE="${RELEASE_PLATFORM_TEST_EVIDENCE_DIR:?Platform evidence directory is required}/staging-integration"
+readonly LOCK="${RELEASE_PLATFORM_TEST_LOCK_FILE:?Platform deployment lock is required}"
 readonly MAVEN_REPOSITORY=/opt/shared-maven/repository
 readonly MAVEN_REPOSITORY_LOCK=/opt/shared-maven/repository.lock
 readonly BASE=https://staging-hearth.bytedepth.cn
 readonly DOMAIN=staging-hearth.bytedepth.cn
+source "$SOURCE_ROOT/deploy/lib/platform-staging-context.sh"
+hearth_platform_test_context "$@"
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
 source "$SOURCE_ROOT/deploy/lib/invalidate-staging-evidence.sh"
 source "$SOURCE_ROOT/deploy/lib/pipeline-status.sh"
 source "$SOURCE_ROOT/deploy/lib/check-warning-log.sh"
-commit="$(cat "$SOURCE_ROOT/.hearth-commit")"
+commit="$(cat "$SOURCE_ROOT/.release-platform-source-commit")"
 deployed="$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")"
 [[ "$commit" == "$deployed" && "$commit" =~ ^[0-9a-f]{40}$ ]] || { printf 'Hearth integration SHA is not deployed.\n' >&2; exit 1; }
 install -d -o ubuntu -g ubuntu -m 0700 "$STATE_ROOT/test-history"
 touch "$LOCK"
 chown ubuntu:ubuntu "$LOCK"
 chmod 0600 "$LOCK"
-exec 9>>"$LOCK"
-flock -x 9
+# The platform verifier already holds this deployment lock on inherited fd 9.
 hearth_invalidate_staging_evidence "$EVIDENCE"
 run_id="$(hearth_test_slot_new_run_id)"
 cleanup_done=0
@@ -40,6 +41,7 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
+HEARTH_STAGING_DEPLOYMENT_LOCK_HELD=1 "$SOURCE_ROOT/deploy/bootstrap-staging-maven-runtime.sh"
 hearth_test_slot_begin integration "$run_id"
 [[ -d "$MAVEN_REPOSITORY" && -r "$MAVEN_REPOSITORY" && -r "$MAVEN_REPOSITORY_LOCK" ]] || {
   printf 'The shared read-only Maven repository or its global lock is unavailable.\n' >&2
@@ -66,9 +68,9 @@ systemd-run --expand-environment=no --unit="hearth-staging-integration-$run_id.s
     [[ -n "${HEARTH_REDIS_PASSWORD:-}" ]] || { printf "Test-slot Redis password is missing.\\n" >&2; exit 1; }
     export HEARTH_IT_REDIS_PASSWORD="$HEARTH_REDIS_PASSWORD"
     export MAVEN_OPTS=-Xmx160m
-    cd /opt/hearth-native/source/current
+    cd "$1"
     exec sudo -n -u ubuntu --preserve-env=HEARTH_DATASOURCE_URL,HEARTH_DATASOURCE_USERNAME,HEARTH_DATASOURCE_PASSWORD,HEARTH_REDIS_HOST,HEARTH_REDIS_PORT,HEARTH_REDIS_DATABASE,HEARTH_REDIS_PASSWORD,HEARTH_SESSION_REDIS_NAMESPACE,HEARTH_IT_REDIS_PASSWORD,MAVEN_OPTS -- ./mvnw --offline -B -Dmaven.repo.local=/opt/shared-maven/repository -Pstaging-integration -pl hearth-start -am verify
-  ' 2>&1 | tee "$maven_log"
+  ' hearth-integration "$SOURCE_ROOT" 2>&1 | tee "$maven_log"
 pipeline_statuses=("${PIPESTATUS[@]}")
 set -e
 hearth_assert_log_has_no_warning "$maven_log" || { printf 'Hearth Maven staging integration emitted WARNING or its log could not be scanned.\n' >&2; exit 1; }
@@ -103,8 +105,10 @@ rm -f -- "$maven_log"
 maven_log=""
 hearth_test_slot_end "$HEARTH_TEST_SLOT_MANIFEST"
 cleanup_done=1
-[[ "$(cat "$SOURCE_ROOT/.hearth-commit")" == "$commit" && "$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")" == "$commit" ]] || { printf 'Hearth integration candidate SHA changed during test.\n' >&2; exit 1; }
-printf 'commit=%s\ncommand=run-staging-integration-tests\nresult=passed\n' "$commit" > "$EVIDENCE.tmp"
+tests_total="$completed"
+[[ "$(cat "$SOURCE_ROOT/.release-platform-source-commit")" == "$commit" && "$(awk -F= '$1 == "commit" {v=$2} END {print v}' "$HISTORY")" == "$commit" ]] || { printf 'Hearth integration candidate SHA changed during test.\n' >&2; exit 1; }
+hearth_platform_test_context "$@"
+printf 'commit=%s\nartifact_digest=%s\nattempt_nonce=%s\ncommand=run-staging-integration-tests\nresult=passed\ncleanup=result=passed\ntests_total=%s\n' "$commit" "$RELEASE_PLATFORM_TEST_ARTIFACT_DIGEST" "$RELEASE_PLATFORM_TASK_NONCE" "$tests_total" > "$EVIDENCE.tmp"
 chown ubuntu:ubuntu "$EVIDENCE.tmp"
 chmod 0600 "$EVIDENCE.tmp"
 mv "$EVIDENCE.tmp" "$EVIDENCE"

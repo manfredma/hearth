@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [[ $EUID -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
-readonly SOURCE_ROOT=/opt/hearth-native/source/current
+readonly SOURCE_ROOT="${RELEASE_PLATFORM_TEST_SOURCE_ROOT:?Platform source snapshot is required}"
 readonly STATE_ROOT=/var/lib/hearth-staging
 readonly RUNTIME_ROOT=/opt/hearth-native/e2e-runtime
 readonly CHROME=/opt/shared-e2e/chrome-linux64/chrome

@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 bash "$SOURCE_ROOT/scripts/test-platform-version-contract.sh"
+python3 "$SOURCE_ROOT/scripts/tests/test_platform_staging_context.py"
 bash "$SOURCE_ROOT/scripts/test-hearth-documentation.sh"
 git -C "$SOURCE_ROOT" diff --check
 test -f "$SOURCE_ROOT/docs/architecture/decisions/0001-unified-identity-and-authorization-boundary.md"
