@@ -4,6 +4,8 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
+## [0.1.3] - 2026-10-30
+
 ### Added
 
 - 登记 `TD-HEARTH-002`：Hearth 当前退出只清理中央 Session，不会主动失效 Career、release-platform/devops 等业务系统的本地 Session；后续评估 OIDC Back-Channel/Front-Channel Logout 或 Session introspection。

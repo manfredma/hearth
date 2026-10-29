@@ -10,7 +10,7 @@ check_changelog() {
   awk '
     /^## Unreleased$/ {inside=1; sections++; next}
     /^## / {
-      if (inside == 1 && !unreleasedContent && $0 ~ /^## \[v?[0-9]+\.[0-9]+\.[0-9]+\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) {
+      if (inside == 1 && !unreleasedContent && $0 ~ /^## \[v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) {
         inside=2; category=0; next
       }
       inside=0
@@ -43,7 +43,7 @@ elif [[ $# -eq 2 && ( "$1" == --candidate || "$1" == --production ) ]]; then
     # with the previous immutable release, even after the candidate is merged.
     base="$(git rev-list --max-parents=0 "$commit")"
     while IFS= read -r previous; do
-      [[ "$previous" != "$ref" && "$previous" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+      [[ "$previous" != "$ref" && "$previous" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
       [[ "$(git cat-file -t "$previous")" == tag ]] || continue
       base="$(git rev-parse "$previous^{commit}")"
       break

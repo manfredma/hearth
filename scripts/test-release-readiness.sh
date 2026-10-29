@@ -60,4 +60,8 @@ printf '# Changelog\n\n## Unreleased\n\n## [1.0.2] - 2026-10-30\n\n### Whatever\
 reject
 printf '# Changelog\n\n## Unreleased\n\n### Fixed\n\n## [1.0.2] - 2026-10-30\n### Fixed\n- Prepared fix.\n' > docs/releases/CHANGELOG.md
 reject
+for version in 01.2.3 1.02.3 1.2.03; do
+  printf '# Changelog\n\n## Unreleased\n\n## [%s] - 2026-10-30\n\n### Fixed\n- Prepared fix.\n' "$version" > docs/releases/CHANGELOG.md
+  reject
+done
 printf 'Hearth release readiness tests passed.\n'
