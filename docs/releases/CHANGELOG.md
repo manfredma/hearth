@@ -4,6 +4,10 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
+### Added
+
+- 增加 native release slots 只读检查及离线回归，记录旧 tag 回滚目录接入新版 release-platform 时的安全恢复流程。
+
 ## [0.1.3] - 2026-10-30
 
 ### Fixed
