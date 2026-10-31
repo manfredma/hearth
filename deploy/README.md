@@ -80,3 +80,17 @@ Hearth 的 AI Agent 只在项目仓库内修改代码、创建分支、运行本
 在 release-platform 的项目配置中绑定 `manfredma/hearth`、既有 staging/production 主机和对应环境。平台按已登记的 `hearth-v1` 适配器构建 JAR，生成标准 `META-INF/build-info.properties`，部署后通过 `/version` 校验 commit、版本和构建时间。发布、日志、重试、验收和回滚均以 release-platform 页面及审计记录为准。
 
 当前接入及 Agent API 入口见 [平台发布流程](../docs/engineering/unified-release-pipeline.md)。本页前文保留的一次性维护和历史测试命令不是本次发布入口；候选验证只由 canonical 平台和 Host Agent 编排。
+
+### 旧发布目录接入前检查
+
+首次接入或升级 Host Agent 前，通过平台正式会话在目标主机执行只读检查：
+
+```bash
+python3 scripts/check-release-slots.py /opt/hearth-native
+```
+
+脚本可由平台上传到临时路径执行；不要为此使用 SSH、修改平台固定任务或运行项目历史部署脚本。它要求 runtime root 和 releases 为真实目录，current 以及存在的 rollback 直接指向 releases 下以完整 40 位 SHA 命名的真实目录。质量入口使用临时目录测试合法、旧 tag、越界、间接链接和缺失路径；本机不访问远端文件系统。
+
+2026-10-31 的 v0.1.3 首次生产晋级在切换前被遗留 rollback 拦截：current 已使用 SHA 目录，但 rollback 仍指向 releases/v0.1.2。部署与自动回滚均被平台边界检查拒绝，旧版仍健康。不要关闭边界检查，也不要凭 tag 猜测旧 JAR 的提交身份。
+
+该次人工恢复经正式 Host Agent 会话持有 deployment-test.lock：核对 current 的 manifest、JAR 摘要和服务健康；归档原 rollback 链接并保留原制品；将 rollback 原子指向已确认健康的 current SHA 目录；再次确认 current 和两个制品的字节均未变化，保存审计回执。随后按平台建议重试失败的回滚任务，等待真实恢复验证通过，才重试生产部署。若无法核实 current 身份或制品摘要，应保持人工接管状态。目录检查仅证明路径边界，不能替代平台的签名、制品摘要、版本及健康验证。
