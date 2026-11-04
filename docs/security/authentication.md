@@ -40,9 +40,9 @@ Spring Security 7.1.0 会在默认 Remember-Me 过滤器之前预校验授权请
 
 接入方从自己的正常 Authorization Code + PKCE 入口生成请求（保留服务端保存的 verifier、state、nonce 和原目标路径），加入 `prompt=none` 与 `scope=openid` 后导航到当前环境的 Hearth authorization_endpoint。不得重新生成 state、复用已消费请求、读取 Hearth Cookie 或让业务应用保存 Hearth 凭据。
 
-Hearth 仅允许配置的授权路径 GET/POST 且 prompt 精确为 none 的请求通过外层访问门禁；Spring Security 7.1.0 的前置校验和协议 Provider 仍负责完整检查。GET 与合法表单 POST 请求在 Session 或 Remember-Me 有效且无需交互时返回正常 code；没有有效认证时为 login_required；尚需授权同意时为 consent_required。Hearth 不为静默请求自动批准 consent。缺少必填表单字段的 POST 安全返回本地 400，不转登录页；接入方使用正常入口生成的 GET 请求。
+Hearth 仅允许配置的授权路径 GET/POST 且 prompt 精确为 none 的请求通过外层访问门禁；Spring Security 7.1.0 的前置校验和协议 Provider 仍负责完整检查。GET 与合法表单 POST 请求在 Session 或 Remember-Me 有效且无需交互时返回正常 code；没有有效认证时为 login_required；尚需授权同意时为 consent_required。Hearth 不为静默请求自动批准 consent。缺少必填表单字段的 POST 安全返回本地错误，不转登录页；接入方使用正常入口生成的 GET 请求。
 
-协议错误仅回到框架验证过的 redirect_uri，并保留 state；重复参数、无效 client 或未登记回调可能本地 400，不能假设每个非法请求都有回调。缺失 PKCE、非 S256 和 none 与 login/consent/select_account 混用应拒绝。code 仍须在原 RP 会话使用对应 verifier 换取 Token，错误 verifier 返回 invalid_grant。
+协议错误仅回到框架验证过的 redirect_uri，并保留 state；重复参数、无效 client 或未登记回调在本地安全拒绝，不能假设每个非法请求都有回调。框架 sendError(400) 在真实 Servlet 容器中经受保护的 ERROR 分派可表现为 403；staging 对无效 client/回调已观察到本地 403 且无 Location。回归需同时接受这两种本地拒绝，并严格禁止登录或不可信回调重定向，不能把 mock Servlet 的 400 当作真实容器唯一状态。缺失 PKCE、非 S256 和 none 与 login/consent/select_account 混用应拒绝。code 仍须在原 RP 会话使用对应 verifier 换取 Token，错误 verifier 返回 invalid_grant。
 
 ByteDepth 收到 login_required、consent_required 或 interaction_required 时，应校验 state，结束本轮自动尝试，回到原公开页面或提供显式交互式登录。用户选择登录后重新生成普通请求，不携带 prompt=none；不要对错误继续自动重试。网络错误、非法请求和服务错误也应有有界回退。Hearth 此修复不实现 ByteDepth 的触发策略、页面刷新或持久恢复提示。
 

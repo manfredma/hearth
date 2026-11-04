@@ -24,3 +24,7 @@ Hearth 的 Spring Boot 4.1.0 管理 Spring Security 7.1.0。完整真实安全�
 ## 验证与防复发
 
 真实安全链覆盖 Session、Cookie-only、匿名、错误/过期签名、consent、client/redirect/PKCE/prompt 拒绝、普通登录和两种退出。staging 通过真实登记客户端的正常入口生成 state/nonce/PKCE，新增 prompt=none；隔离上下文只保留 Remember-Me、首个请求直接授权，禁止预热 /api/session。错误与成功均只输出布尔断言或固定诊断，不输出 Cookie、state、nonce、code、Token 和凭据。仅 staging，不发布生产。
+
+## Staging 验证发现
+
+无效 client 与未登记 redirect_uri 的框架 sendError(400) 在完整 Servlet 容器经受保护的 ERROR 分派后表现为本地 403，无 Location；mock FilterChainProxy 则直接保留 400。二者均安全拒绝，E2E 检查本地 400/403 且禁止重定向；PKCE/prompt 等已可安全回调的错误仍严格校验标准错误与 state。不要为统一错误状态放宽普通 Web 错误路径的访问规则。

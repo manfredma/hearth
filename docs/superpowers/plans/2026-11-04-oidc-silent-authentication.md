@@ -9,7 +9,7 @@
 
 ## Global Constraints
 
-- 仅 Hearth；不生产部署；不放宽协议检查；不输出认证工件。
+- 2026-11-04 追加授权：Agent 验收通过后由平台晋级 production；必要时可配套修改 ByteDepth。不放宽协议检查，不输出认证工件。
 - 本机仅断网 mock/fake，真实 OIDC 仅 staging。
 
 ## Review Focus
@@ -32,4 +32,10 @@
 - [x] 扩展现有 Playwright 隔离测试，保留真实 ByteDepth 请求生成和回调，逐场景固定诊断。
 - [x] 更新权威认证文档、CHANGELOG 和 ByteDepth 接入错误/回退说明。
 - [ ] 独立审查，提交 PR；按平台版本准备同一候选，QUALITY/BUILD/DEPLOY_STAGING/VERIFY_STAGING。
-- [ ] 核对 SHA/digest/清理回执，明确真实与未验证场景，不提交 acceptance。
+- [ ] 核对 SHA/digest/清理回执，明确真实与未验证场景；所有门禁通过后才提交 acceptance。
+
+### Task 3: 追加授权的生产晋级
+
+- [ ] 核对当前 SHA 的 integration/E2E、逐场景固定诊断和清理回执后，由 Agent 验收。
+- [ ] 提交平台 acceptance v0.1.4，核对 main/tag、production 同一 SHA/digest 和 verify PASS。
+- [ ] 更新 PR 交付证据并清理已合并 worktree。
