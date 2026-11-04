@@ -35,3 +35,17 @@ Spring Security 7.1.0 会在默认 Remember-Me 过滤器之前预校验授权请
 授权服务器链使用 `AuthorizationServerRememberMeConfigurer` 将单个框架恢复过滤器放在 LogoutFilter 之后；保留 provider 验证、共享 SecurityContextRepository 和 SessionAuthenticationStrategy，包括会话持久化与 session ID 轮换。普通 Web 链仍使用默认 Remember-Me 配置。设计依据见 [ADR-0016](../architecture/decisions/0016-remember-me-before-authorization-validation.md)。
 
 防复发入口为 `RememberMeAuthorizationFilterChainTest`：加载真实 Hearth 安全配置及 Spring FilterChainProxy，以 mock servlet 和内存授权仓储验证首次授权、无/无效/过期 Cookie、已有 Session 优先、Session 复用、PKCE 及 CSRF 保护的退出。`OidcLogoutFilterChainTest` 覆盖 RP logout。staging 的 `tests/e2e/native-oidc.spec.mjs` 使用只保留持久 Cookie 的新浏览器上下文，第一跳直接授权，再验证 code exchange、nonce、auth_time 和 userinfo；不得先访问 `/api/session` 掩盖时序问题。本机不执行跨进程 OIDC 验收。
+
+## OIDC 静默认证与 ByteDepth 接入
+
+接入方从自己的正常 Authorization Code + PKCE 入口生成请求（保留服务端保存的 verifier、state、nonce 和原目标路径），加入 `prompt=none` 与 `scope=openid` 后导航到当前环境的 Hearth authorization_endpoint。不得重新生成 state、复用已消费请求、读取 Hearth Cookie 或让业务应用保存 Hearth 凭据。
+
+Hearth 仅允许配置的授权路径 GET/POST 且 prompt 精确为 none 的请求通过外层访问门禁；Spring Security 7.1.0 的前置校验和协议 Provider 仍负责完整检查。GET 与合法表单 POST 请求在 Session 或 Remember-Me 有效且无需交互时返回正常 code；没有有效认证时为 login_required；尚需授权同意时为 consent_required。Hearth 不为静默请求自动批准 consent。缺少必填表单字段的 POST 安全返回本地 400，不转登录页；接入方使用正常入口生成的 GET 请求。
+
+协议错误仅回到框架验证过的 redirect_uri，并保留 state；重复参数、无效 client 或未登记回调可能本地 400，不能假设每个非法请求都有回调。缺失 PKCE、非 S256 和 none 与 login/consent/select_account 混用应拒绝。code 仍须在原 RP 会话使用对应 verifier 换取 Token，错误 verifier 返回 invalid_grant。
+
+ByteDepth 收到 login_required、consent_required 或 interaction_required 时，应校验 state，结束本轮自动尝试，回到原公开页面或提供显式交互式登录。用户选择登录后重新生成普通请求，不携带 prompt=none；不要对错误继续自动重试。网络错误、非法请求和服务错误也应有有界回退。Hearth 此修复不实现 ByteDepth 的触发策略、页面刷新或持久恢复提示。
+
+普通 POST /api/session/logout 保持 CSRF 校验；RP-Initiated Logout 保持 id_token_hint 和已登记回调校验。两者使当前 Session 无效并用 Set-Cookie 清除浏览器 Remember-Me，浏览器应用删除后，静默请求应 login_required。签名 Cookie 为无状态凭据，服务器不能单独撤销外部保存的复制品；此限制见 ADR-0011、ADR-0017，不把删除浏览器 Cookie 宣称为服务器防重放。
+
+自动回归：RememberMeAuthorizationFilterChainTest / OidcLogoutFilterChainTest 使用完整 Servlet 安全链；NativeSilentAuthenticationIT 仅 staging 以隔离槽随机 key 和 snapshot 中的 credential hash 在内存生成真实过期签名 Cookie；silent-oidc.spec.mjs 经真实 ByteDepth 登记客户端验证 cookie-only 首请求及业务回调，并检查 consent、非法参数和退出。所有 Cookie、code、state、nonce、Token 与凭据不进入诊断输出。本机 mock 通过不能替代真实 staging 记录。

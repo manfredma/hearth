@@ -39,6 +39,25 @@ class AuthorizationServerSecurityConfigTest {
     }
 
     @Test
+    void silentMatcherUsesConfiguredEndpointAndOnlyExactNone() {
+        var matcher = AuthorizationServerSecurityConfig.silentAuthorizationEndpointMatcher("/custom/authorize");
+        for (String method : new String[]{"GET", "POST", "DELETE"}) {
+            for (String path : new String[]{"/custom/authorize", "/oauth2/authorize", "/api/session"}) {
+                for (String prompt : new String[]{"none", "login", "none login", ""}) {
+                    var request = new MockHttpServletRequest(method, path);
+                    request.setServletPath(path);
+                    request.setParameter("prompt", prompt);
+                    assertThat(matcher.matches(request)).isEqualTo(
+                            !"DELETE".equals(method) && "/custom/authorize".equals(path) && "none".equals(prompt));
+                }
+            }
+        }
+        var missing = new MockHttpServletRequest("GET", "/custom/authorize");
+        missing.setServletPath("/custom/authorize");
+        assertThat(matcher.matches(missing)).isFalse();
+    }
+
+    @Test
     void matchesOnlyTheOidcLogoutRequestPath() {
         MockHttpServletRequest logout = new MockHttpServletRequest("GET", "/connect/logout");
         MockHttpServletRequest other = new MockHttpServletRequest("GET", "/oauth2/authorize");

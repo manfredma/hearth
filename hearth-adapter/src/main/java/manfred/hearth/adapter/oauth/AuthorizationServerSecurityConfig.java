@@ -16,6 +16,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.http.HttpMethod;
 import manfred.hearth.adapter.web.security.HearthRememberMeServices;
 import manfred.hearth.adapter.web.security.LegacyHearthPrincipalMigrationFilter;
 
@@ -55,6 +59,11 @@ public class AuthorizationServerSecurityConfig {
                 // outer chain must let the protocol filter receive the request.
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(oidcLogoutEndpointMatcher()).permitAll()
+                        // Anonymous prompt=none must reach the protocol provider,
+                        // which validates the request before returning login_required.
+                        // Ordinary authorization still uses the interactive entry point.
+                        .requestMatchers(silentAuthorizationEndpointMatcher(
+                                authorizationServerSettings.getAuthorizationEndpoint())).permitAll()
                         .anyRequest().authenticated())
                 // OAuth's one-time state parameter protects the browser consent
                 // POST. Exclude the dedicated Authorization Server endpoints
@@ -88,6 +97,13 @@ public class AuthorizationServerSecurityConfig {
 
     static RequestMatcher oidcLogoutEndpointMatcher() {
         return request -> "/connect/logout".equals(request.getRequestURI());
+    }
+
+    static RequestMatcher silentAuthorizationEndpointMatcher(String endpoint) {
+        var paths = PathPatternRequestMatcher.withDefaults();
+        return new AndRequestMatcher(
+                new OrRequestMatcher(paths.matcher(HttpMethod.GET, endpoint), paths.matcher(HttpMethod.POST, endpoint)),
+                request -> "none".equals(request.getParameter("prompt")));
     }
 
     /**

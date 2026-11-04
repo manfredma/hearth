@@ -69,7 +69,7 @@ systemd-run --expand-environment=no --unit="hearth-staging-integration-$run_id.s
     export HEARTH_IT_REDIS_PASSWORD="$HEARTH_REDIS_PASSWORD"
     export MAVEN_OPTS=-Xmx160m
     cd "$1"
-    exec sudo -n -u ubuntu --preserve-env=HEARTH_DATASOURCE_URL,HEARTH_DATASOURCE_USERNAME,HEARTH_DATASOURCE_PASSWORD,HEARTH_REDIS_HOST,HEARTH_REDIS_PORT,HEARTH_REDIS_DATABASE,HEARTH_REDIS_PASSWORD,HEARTH_SESSION_REDIS_NAMESPACE,HEARTH_IT_REDIS_PASSWORD,MAVEN_OPTS -- ./mvnw --offline -B -Dmaven.repo.local=/opt/shared-maven/repository -Pstaging-integration -pl hearth-start -am verify
+    exec sudo -n -u ubuntu --preserve-env=HEARTH_REMEMBER_ME_KEY,HEARTH_DATASOURCE_URL,HEARTH_DATASOURCE_USERNAME,HEARTH_DATASOURCE_PASSWORD,HEARTH_REDIS_HOST,HEARTH_REDIS_PORT,HEARTH_REDIS_DATABASE,HEARTH_REDIS_PASSWORD,HEARTH_SESSION_REDIS_NAMESPACE,HEARTH_IT_REDIS_PASSWORD,MAVEN_OPTS -- ./mvnw --offline -B -Dmaven.repo.local=/opt/shared-maven/repository -Pstaging-integration -pl hearth-start -am verify
   ' hearth-integration "$SOURCE_ROOT" 2>&1 | tee "$maven_log"
 pipeline_statuses=("${PIPESTATUS[@]}")
 set -e

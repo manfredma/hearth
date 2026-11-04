@@ -72,6 +72,26 @@ class OidcLogoutFilterChainTest {
             var afterResponse = new MockHttpServletResponse();
             chain.doFilter(after, afterResponse, new MockFilterChain());
             assertThat(afterResponse.getStatus()).isEqualTo(403);
+            // A browser applies the deletion cookies; no pre-logout credential is retained.
+            var silent = new MockHttpServletRequest("GET", "/oauth2/authorize");
+            silent.setServletPath("/oauth2/authorize");
+            silent.addParameter("response_type", "code");
+            silent.addParameter("client_id", "client");
+            silent.addParameter("redirect_uri", "https://client.test/callback");
+            silent.addParameter("scope", "openid");
+            silent.addParameter("nonce", "logout-nonce");
+            silent.addParameter("code_challenge", "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+            silent.addParameter("code_challenge_method", "S256");
+            silent.addParameter("prompt", "none");
+            silent.addParameter("state", "logout-state");
+            silent.setQueryString("response_type=code&client_id=client&redirect_uri=https%3A%2F%2Fclient.test%2Fcallback&scope=openid&prompt=none&state=logout-state&nonce=logout-nonce&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256");
+            var silentResponse = new MockHttpServletResponse();
+            chain.doFilter(silent, silentResponse, new MockFilterChain());
+            var location = java.net.URI.create(silentResponse.getRedirectedUrl());
+            assertThat(location.getPath()).isEqualTo("/callback");
+            assertThat(location.getQuery().contains("error=login_required")).isTrue();
+            assertThat(location.getQuery().contains("state=logout-state")).isTrue();
+            assertThat(location.getQuery().contains("code=")).isFalse();
             // An RP may repeat a valid logout without a Hearth session.
             var anonymousLogout = new MockHttpServletRequest("GET", "/connect/logout");
             anonymousLogout.setServletPath("/connect/logout");

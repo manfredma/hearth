@@ -58,6 +58,163 @@ class RememberMeAuthorizationFilterChainTest {
     }
 
     @Test
+    void silentAuthorizationWithoutCookieReturnsLoginRequired() throws Exception {
+        var request = authorizationRequest();
+        request.addParameter("prompt", "none");
+        request.setQueryString(request.getQueryString() + "&prompt=none");
+        var response = filter(request);
+        assertThat(response.getStatus()).isEqualTo(302);
+        assertProtocolError(response, "login_required");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"missing", "invalid", "expired"})
+    void silentUnavailableCookieReturnsProtocolErrorWithoutSavingLogin(String kind) throws Exception {
+        var request = silentRequest();
+        if ("invalid".equals(kind)) request.setCookies(new Cookie("hearth-remember-me", "invalid"));
+        if ("expired".equals(kind)) request.setCookies(new ExpiredCookieServices().expiredCookie());
+        var response = filter(request);
+        assertProtocolError(response, "login_required");
+        var session = request.getSession(false);
+        assertThat(session == null ? null : session.getAttribute("SPRING_SECURITY_SAVED_REQUEST")).isNull();
+        assertThat(session == null ? null : session.getAttribute("SPRING_SECURITY_CONTEXT")).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void silentAuthorizationUsesSessionOrOnlyRememberMe(boolean withSession) throws Exception {
+        var request = silentRequest();
+        if (withSession) {
+            var login = authorizationRequest();
+            login.setCookies(rememberedCookie());
+            assertCode(filter(login));
+            request.setSession((MockHttpSession) login.getSession(false));
+        } else {
+            assertThat(request.getSession(false)).isNull();
+            request.setCookies(rememberedCookie());
+        }
+        assertCode(filter(request));
+    }
+
+    @Test
+    void silentAuthorizationRequiringConsentDoesNotGrantIt() throws Exception {
+        requireConsent();
+        var request = silentRequest();
+        request.setParameter("scope", "openid profile");
+        request.setCookies(rememberedCookie());
+        assertProtocolError(filter(request), "consent_required");
+        assertThat(context.getBean(OAuth2AuthorizationConsentService.class).findById("client-id", "admin")).isNull();
+        context.getBean(OAuth2AuthorizationConsentService.class).save(
+                OAuth2AuthorizationConsent.withId("client-id", "admin").scope("openid").scope("profile").build());
+        var granted = silentRequest();
+        granted.setParameter("scope", "openid profile");
+        granted.setCookies(rememberedCookie());
+        assertCode(filter(granted));
+    }
+
+    @Test
+    void ordinaryAuthorizationStillShowsRequiredConsent() throws Exception {
+        requireConsent();
+        var request = authorizationRequest();
+        request.setParameter("scope", "openid profile");
+        request.setCookies(rememberedCookie());
+        var response = filter(request);
+        assertThat(java.net.URI.create(response.getRedirectedUrl()).getPath()).isEqualTo("/oauth2/consent");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"client", "redirect"})
+    void silentInvalidClientOrRedirectFailsLocally(String kind) throws Exception {
+        var request = silentRequest();
+        request.setParameter("client".equals(kind) ? "client_id" : "redirect_uri",
+                "client".equals(kind) ? "unknown-client" : "https://untrusted.test/callback");
+        var response = filter(request);
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getRedirectedUrl()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"missing-pkce", "plain-pkce", "none login", "none consent", "none select_account", "duplicate-prompt"})
+    void silentMalformedRequestIsRejectedBeforeAuthorization(String kind) throws Exception {
+        var request = silentRequest();
+        if ("missing-pkce".equals(kind)) request.removeParameter("code_challenge");
+        else if ("plain-pkce".equals(kind)) request.setParameter("code_challenge_method", "plain");
+        else if ("duplicate-prompt".equals(kind)) request.addParameter("prompt", "none");
+        else request.setParameter("prompt", kind);
+        var response = filter(request);
+        if ("duplicate-prompt".equals(kind)) {
+            assertThat(response.getStatus()).isEqualTo(400);
+            assertThat(response.getRedirectedUrl()).isNull();
+        } else assertProtocolError(response, "invalid_request");
+    }
+
+    @Test
+    void authorizationPostWithOnlyQueryParametersFailsLocally() throws Exception {
+        var request = silentRequest();
+        request.setMethod("POST");
+        var response = filter(request);
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getRedirectedUrl()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void silentFormPostUsesProtocolAuthentication(boolean authenticated) throws Exception {
+        var request = silentRequest();
+        request.setMethod("POST");
+        request.setQueryString(null);
+        request.setContentType("application/x-www-form-urlencoded");
+        if (authenticated) request.setCookies(rememberedCookie());
+        var response = filter(request);
+        if (authenticated) assertCode(response);
+        else assertProtocolError(response, "login_required");
+    }
+
+    @Test
+    void issuedCodeStillRejectsWrongPkceVerifier() throws Exception {
+        var request = silentRequest();
+        request.setCookies(rememberedCookie());
+        var authorizationResponse = filter(request);
+        assertCode(authorizationResponse);
+        String code = org.springframework.web.util.UriComponentsBuilder.fromUriString(
+                authorizationResponse.getRedirectedUrl()).build().getQueryParams().getFirst("code");
+        var token = new MockHttpServletRequest("POST", "/oauth2/token");
+        token.setServletPath("/oauth2/token");
+        token.addHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString("client:secret".getBytes(StandardCharsets.UTF_8)));
+        token.addParameter("grant_type", "authorization_code");
+        token.addParameter("redirect_uri", "https://client.test/callback");
+        token.addParameter("code", code);
+        token.addParameter("code_verifier", "wrong-verifier");
+        var response = filter(token);
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getContentAsString().contains("invalid_grant")).isTrue();
+        assertThat(response.getContentAsString().contains("access_token")).isFalse();
+    }
+
+    private void requireConsent() {
+        var clients = context.getBean(RegisteredClientRepository.class);
+        clients.save(RegisteredClient.from(clients.findByClientId("client"))
+                .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build()).build());
+    }
+
+    private MockHttpServletRequest silentRequest() {
+        var request = authorizationRequest();
+        request.addParameter("prompt", "none");
+        request.setQueryString(request.getQueryString() + "&prompt=none");
+        return request;
+    }
+
+    private void assertProtocolError(MockHttpServletResponse response, String error) {
+        assertThat(response.getStatus()).isEqualTo(302);
+        // Compare parsed booleans to avoid echoing OAuth values on failure.
+        var uri = org.springframework.web.util.UriComponentsBuilder.fromUriString(response.getRedirectedUrl()).build();
+        assertThat("https://client.test/callback".equals(uri.getScheme() + "://" + uri.getHost() + uri.getPath())).isTrue();
+        assertThat(error.equals(uri.getQueryParams().getFirst("error"))).isTrue();
+        assertThat("test-state".equals(uri.getQueryParams().getFirst("state"))).isTrue();
+        assertThat(uri.getQueryParams().containsKey("code")).isFalse();
+    }
+
+    @Test
     void firstAuthorizationWithOnlyRememberMeCookieIssuesCode() throws Exception {
         var request = authorizationRequest();
         request.setCookies(rememberedCookie());
@@ -170,6 +327,7 @@ class RememberMeAuthorizationFilterChainTest {
         assertThat(session.isInvalid()).isTrue();
         assertThat(response.getCookie("hearth-remember-me").getMaxAge()).isZero();
         assertThat(filter(authorizationRequest()).getRedirectedUrl()).contains("/login?continue=");
+        assertProtocolError(filter(silentRequest()), "login_required");
     }
 
     private MockHttpServletResponse filter(MockHttpServletRequest request) throws Exception {
@@ -232,10 +390,10 @@ class RememberMeAuthorizationFilterChainTest {
         @Bean JwtDecoder decoder() { return mock(JwtDecoder.class); }
         @Bean AuthorizationServerSettings settings() { return AuthorizationServerSettings.builder().issuer("https://hearth.test").build(); }
         @Bean RegisteredClientRepository clients() {
-            return new InMemoryRegisteredClientRepository(RegisteredClient.withId("client-id").clientId("client")
+            return new InMemoryRegisteredClientRepository(RegisteredClient.withId("client-id").clientId("client").clientSecret("{noop}secret")
                     .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                     .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                    .redirectUri("https://client.test/callback").scope("openid")
+                    .redirectUri("https://client.test/callback").scope("openid").scope("profile")
                     .clientSettings(ClientSettings.builder().requireProofKey(true).build()).build());
         }
         @Bean OAuth2AuthorizationService authorizations() { return new InMemoryOAuth2AuthorizationService(); }

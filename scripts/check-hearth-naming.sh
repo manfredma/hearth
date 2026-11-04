@@ -45,6 +45,7 @@ for relative_file in "${files[@]}"; do
       esac
       case "$line" in
         *'staging-hearth.bytedepth.cn'*|*'staging-career.bytedepth.cn'*|*'hearth.bytedepth.cn'*|\
+        *'staging-bytedepth.bytedepth.cn'*|*"get('client_id') === 'bytedepth-staging'"*|\
         *'/data/bytedepth-native-staging/'*|*'/data/bytedepth-native-production/'*|\
         *'/etc/bytedepth/'*|*'bytedepth-production-public-nginx.service'*|\
         *'bytedepth-staging-e2e'*|\

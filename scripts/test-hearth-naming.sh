@@ -15,6 +15,7 @@ fi
 
 rm "$fixture_dir/deploy/illegal.yml"
 printf '%s\n' 'services:' '  hearth-app:' > "$fixture_dir/deploy/legal.yml"
+printf '%s\n' 'source_app_domain: staging-bytedepth.bytedepth.cn' >> "$fixture_dir/deploy/legal.yml"
 printf '%s\n' 'source_app_domain: staging-career.bytedepth.cn' >> "$fixture_dir/deploy/legal.yml"
 printf '%s\n' 'oidc_issuer: https://hearth.bytedepth.cn' >> "$fixture_dir/deploy/legal.yml"
 printf '%s\n' 'shared_redis_config: /data/bytedepth-native-staging/redis/redis.conf' >> "$fixture_dir/deploy/legal.yml"

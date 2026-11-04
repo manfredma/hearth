@@ -37,6 +37,8 @@
 
 | [ADR-0016](0016-remember-me-before-authorization-validation.md) | 授权预校验前恢复 Remember-Me 身份 | Accepted | 2026-10-30 |
 
+| [ADR-0017](0017-oidc-silent-authentication.md) | 将静默认证交给 OIDC 协议处理器 | Accepted | 2026-11-04 |
+
 ## 维护边界
 
 ADR 只记录 Hearth 的长期架构事实，不记录临时部署日志、个人记忆或业务应用内部权限规则。已经不适用于 Hearth 的模板内容应删除或重写，而不是继续作为隐含约束。

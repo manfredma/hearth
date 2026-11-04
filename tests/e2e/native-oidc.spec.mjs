@@ -296,6 +296,22 @@ test('admin login, consent, token exchange, RP logout, and Career callback', asy
     expect(new URL(logoutCallbackUrl).searchParams.get('state') === logoutState).toBe(true);
     const sessionAfterLogout = await page.request.get(path('/api/session'));
     expect(sessionAfterLogout.status()).toBe(403);
+    expect((await page.context().cookies(base)).some(cookie => cookie.name === 'hearth-remember-me')).toBe(false);
+    const silentEntry = await page.request.get('https://staging-bytedepth.bytedepth.cn/oauth2/authorization/hearth', {maxRedirects: 0});
+    expect(silentEntry.status()).toBe(302);
+    const silentRequest = new URL(silentEntry.headers().location);
+    expect(silentRequest.origin === new URL(base).origin).toBe(true);
+    silentRequest.searchParams.set('prompt', 'none');
+    let silentResponse;
+    try { silentResponse = await page.request.get(silentRequest.toString(), {maxRedirects: 0}); }
+    catch { throw new Error('Private post-logout authorization failed'); }
+    expect(silentResponse.status()).toBe(302);
+    const silentResult = new URL(silentResponse.headers().location, base);
+    expect(silentResult.origin + silentResult.pathname === silentRequest.searchParams.get('redirect_uri')).toBe(true);
+    expect(silentResult.searchParams.get('error') === 'login_required').toBe(true);
+    expect(silentResult.searchParams.get('state') === silentRequest.searchParams.get('state')).toBe(true);
+    expect(silentResult.searchParams.has('code')).toBe(false);
+    console.log('SILENT_SCENARIO rp-logout-no-restore: PASS');
     // Hearth logout alone does not invalidate Career's local session. Exercise
     // Career's real logout button and its RP-initiated logout navigation too.
     await page.goto('https://staging-career.bytedepth.cn/calendar');

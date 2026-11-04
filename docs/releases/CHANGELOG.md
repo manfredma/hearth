@@ -4,6 +4,10 @@ Hearth 使用 Semantic Versioning。用户可见、运行时、部署或配置�
 
 ## Unreleased
 
+### Fixed
+
+- 让 OIDC prompt=none 请求到达完整协议校验与处理器：有效 Session/Remember-Me 可静默授权，匿名或需要 consent 时返回标准错误，保留普通登录与退出语义；增加完整安全链及真实 staging 回归。
+
 ## [0.1.3] - 2026-10-30
 
 ### Fixed
