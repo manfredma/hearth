@@ -23,7 +23,7 @@ Hearth 的 Spring Boot 4.1.0 管理 Spring Security 7.1.0。完整真实安全�
 
 ## 验证与防复发
 
-真实安全链覆盖 Session、Cookie-only、匿名、错误/过期签名、consent、client/redirect/PKCE/prompt 拒绝、普通登录和两种退出。staging 通过真实登记客户端的正常入口生成 state/nonce/PKCE，新增 prompt=none；隔离上下文只保留 Remember-Me、首个请求直接授权，禁止预热 /api/session。错误与成功均只输出布尔断言或固定诊断，不输出 Cookie、state、nonce、code、Token 和凭据。仅 staging，不发布生产。
+真实安全链覆盖 Session、Cookie-only、匿名、错误/过期签名、consent、client/redirect/PKCE/prompt 拒绝、普通登录和两种退出。staging 通过真实登记客户端的正常入口生成 state/nonce/PKCE，新增 prompt=none；隔离上下文只保留 Remember-Me、首个请求直接授权，禁止预热 /api/session。错误与成功均只输出布尔断言或固定诊断，不输出 Cookie、state、nonce、code、Token 和凭据。真实集成与 E2E 仅在 staging 执行。2026-11-04 项目所有者追加授权由 Agent 验收；所有 staging 门禁通过后，才由 canonical release-platform 将同一候选与制品晋级 production。
 
 ## Staging 验证发现
 
